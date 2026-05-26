@@ -92,3 +92,127 @@ button[data-log]:hover {
   background: #fff7e6;
   border-color: #f0d9b5;
 }
+
+/* Per-event affordances (Plan 01-04 / D-12) */
+.dayEvents .rowEdit,
+.dayEvents .rowDel {
+  margin-left: auto;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.dayEvents .rowEdit {
+  margin-left: auto;
+}
+
+.dayEvents .rowDel {
+  margin-left: 0.35rem;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.dayEvents .rowEdit:hover {
+  background: #f1f5f9;
+}
+
+.dayEvents .rowDel:hover {
+  background: #fee2e2;
+}
+
+/* "+ Add event" button (Plan 01-04 / D-10 modal trigger) */
+.addEventBtn {
+  display: block;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 1px dashed #94a3b8;
+  border-radius: 0.375rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.addEventBtn:hover {
+  background: #f1f5f9;
+  border-color: #4f46e5;
+  color: #1e293b;
+}
+
+/* Manual-entry modal (Plan 01-04 / D-13, D-14, RESEARCH §Pattern 6) */
+#manualEntry {
+  padding: 1.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  max-width: 22rem;
+  width: 90vw;
+  background: #fff;
+}
+
+#manualEntry::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+#manualEntry h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.15rem;
+}
+
+#manualEntry form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+#manualEntry label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+#manualEntry input,
+#manualEntry select {
+  padding: 0.4rem 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+}
+
+#manualEntry .hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+#manualEntry menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0 0;
+  padding: 0;
+}
+
+#manualEntry menu button {
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+#manualEntry menu button[type="submit"] {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+#manualEntry menu button[type="submit"]:hover {
+  background: #4338ca;
+}

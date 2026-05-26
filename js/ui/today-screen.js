@@ -1,11 +1,14 @@
 // js/ui/today-screen.js
-// Phase 1 Today screen: 4 quick-log buttons + day-grouped event list.
-// Source: 01-PATTERNS.md "js/ui/today-screen.js" + 01-CONTEXT.md D-10/D-11/D-12/D-15/D-17.
+// Phase 1 Today screen: 4 quick-log buttons + day-grouped event list +
+// per-row [edit][×] affordances + "+ Add event" modal trigger.
+// Source: 01-PATTERNS.md "js/ui/today-screen.js" + 01-CONTEXT.md D-10/D-11/D-12/D-15/D-17 +
+// 01-PLAN.md Plan 01-04 (manual entry + edit + delete).
 //
 // Security invariants (T-07 / V5 XSS):
 //   - Every dynamic value goes through textContent (via dom.el helper), never innerHTML.
 //   - The list is cleared via clear() / replaceChildren(), never `innerHTML = ""`.
 //   - data-attributes carry behavior keys; no untrusted string is ever assigned to innerHTML.
+//   - [edit] / [×] button labels are static literals via el({textContent}) — not user input.
 //
 // Other invariants:
 //   - No domain-time Date constructor here — the clock-adapter seam (Plan 01-01 D-07)
@@ -17,8 +20,12 @@
 //     T-06 surfacing (read-side enforcement lives in lib/day-bucket.js).
 //   - Buttons are derived from a single Object.freeze'd BUTTONS config so the four-type
 //     contract has exactly one source of truth.
+//   - Edit/delete dispatch use explicit `mode: 'add' | 'edit'` per Pitfall #6 (T-05) —
+//     the brittle `existing ? edit : add` branch is rejected by the modal entry guard.
+//   - Delete uses native window.confirm() per RESEARCH §Open Question #3 (Phase 1).
 
 import { el, clear } from './dom.js';
+import { openManualEntry } from './manual-entry.js';
 
 /** Single source of truth for the 4 quick-log button definitions (D-10). */
 const BUTTONS = Object.freeze([
@@ -46,6 +53,9 @@ const DEBOUNCE_MS = 300;
  *   root: HTMLElement,
  *   eventLog: {
  *     addEvent: (type: string) => object,
+ *     addEventAt: (type: string, at: string) => object,
+ *     editEvent: (id: string, patch: object) => object,
+ *     deleteEvent: (id: string) => boolean,
  *     listEvents: () => Array<object>,
  *     daysByCalendar: (limit?: number) => Array<object>,
  *   },
@@ -73,7 +83,15 @@ export function mountTodayScreen({ root, eventLog }) {
   // Build the day-grouped list mount point.
   const dayList = el('section', { className: 'dayList', 'data-role': 'events' });
 
-  root.replaceChildren(quickLog, dayList);
+  // "+ Add event" trigger (D-10 modal trigger). Lives at the bottom of <main>.
+  const addEventBtn = el('button', {
+    type: 'button',
+    id: 'addEventBtn',
+    className: 'addEventBtn',
+    textContent: '+ Add event',
+  });
+
+  root.replaceChildren(quickLog, dayList, addEventBtn);
 
   // Single delegated click listener on the quick-log row.
   quickLog.addEventListener('click', (event) => {
@@ -89,6 +107,55 @@ export function mountTodayScreen({ root, eventLog }) {
 
     eventLog.addEvent(type);
     render();
+  });
+
+  // Delegated click listener for per-row affordances (D-12).
+  //   .rowEdit → openManualEntry(mode='edit') → eventLog.editEvent
+  //   .rowDel  → window.confirm → eventLog.deleteEvent (Open Question #3)
+  dayList.addEventListener('click', (event) => {
+    const editBtn = event.target.closest('button.rowEdit');
+    const delBtn = event.target.closest('button.rowDel');
+
+    if (editBtn) {
+      const eventId = editBtn.getAttribute('data-event-id');
+      const existing = eventLog.listEvents().find((e) => e.id === eventId);
+      if (!existing) return; // Stale row — defensive no-op.
+      openManualEntry({
+        mode: 'edit',
+        existing,
+        onSave: (patch) => {
+          // editEvent mutates in place (D-03). Pitfall #6 guard: the mode
+          // parameter on openManualEntry is what prevents this branch from
+          // ever calling addEventAt instead.
+          eventLog.editEvent(existing.id, patch);
+          render();
+        },
+      });
+      return;
+    }
+
+    if (delBtn) {
+      const eventId = delBtn.getAttribute('data-event-id');
+      const existing = eventLog.listEvents().find((e) => e.id === eventId);
+      if (!existing) return;
+      // Open Question #3 — native confirm acceptable for Phase 1.
+      if (window.confirm(`Delete this event at ${existing.at}?`)) {
+        eventLog.deleteEvent(eventId);
+        render();
+      }
+    }
+  });
+
+  // "+ Add event" click → openManualEntry({ mode: 'add' }).
+  addEventBtn.addEventListener('click', () => {
+    openManualEntry({
+      mode: 'add',
+      existing: null,
+      onSave: ({ type, at }) => {
+        eventLog.addEventAt(type, at);
+        render();
+      },
+    });
   });
 
   render();
@@ -129,8 +196,10 @@ function renderDay(day) {
 }
 
 /**
- * Render a single event row as `<li data-event-id="...">` with a `<time>` and
- * `<span>` for the label. Both fields use textContent only (T-07).
+ * Render a single event row as `<li data-event-id="...">` with a `<time>`,
+ * `<span>` for the label, and per-row [edit] / [×] affordances (D-12).
+ * All textContent — never innerHTML (T-07). data-event-id is set via the el
+ * helper's data-* attribute path so the delegated handlers can read it back.
  *
  * @param {{ id: string, type: string, at: string }} evt
  * @returns {HTMLElement}
@@ -139,6 +208,24 @@ function renderEventRow(evt) {
   const li = el('li', { className: 'event', 'data-event-id': evt.id });
   li.appendChild(el('time', { className: 'eventTime', textContent: hhmm(evt.at) }));
   li.appendChild(el('span', { className: 'eventLabel', textContent: labelFor(evt.type) }));
+  // [edit] and [×] affordances (D-12). Labels via textContent only (T-07).
+  li.appendChild(
+    el('button', {
+      type: 'button',
+      className: 'rowEdit',
+      'data-event-id': evt.id,
+      textContent: 'edit',
+    }),
+  );
+  li.appendChild(
+    el('button', {
+      type: 'button',
+      className: 'rowDel',
+      'data-event-id': evt.id,
+      'aria-label': 'Delete event',
+      textContent: '×',
+    }),
+  );
   return li;
 }
 
