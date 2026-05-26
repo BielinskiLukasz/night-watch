@@ -79,18 +79,38 @@ export function openManualEntry({ mode, existing, onSave }) {
   // Close handler: dispatch onSave only when returnValue === 'save'
   // (form submit), never on cancel / ESC / backdrop click. ESC and
   // cancel both produce a non-'save' returnValue.
+  //
+  // The Save button uses formnovalidate (so the HTML5 step="5" constraint
+  // doesn't block submit; silent normalization is the modal's contract per
+  // Open Question #2). JS does the actual validation here:
+  //   - Empty / missing fields → no dispatch (defense against formnovalidate).
+  //   - Hour out of 0..23 or Minute out of 0..55 → no dispatch.
+  //   - Type not in the 4-option whitelist → no dispatch (store would throw,
+  //     but catching it earlier keeps the failure mode clean).
   const onClose = () => {
     try {
       if (dlg.returnValue === 'save') {
         const data = new FormData(form);
         const date = String(data.get('date') ?? '');
-        const rawHour = Number(data.get('hour'));
-        const rawMinute = Number(data.get('minute'));
+        const rawHourStr = String(data.get('hour') ?? '');
+        const rawMinuteStr = String(data.get('minute') ?? '');
         const type = String(data.get('type') ?? '');
 
+        // JS-level required-field guard (formnovalidate bypasses HTML5 required).
+        if (!date || rawHourStr === '' || rawMinuteStr === '' || !type) return;
+
+        const rawHour = Number(rawHourStr);
+        const rawMinute = Number(rawMinuteStr);
+
+        // JS-level range guard (formnovalidate bypasses min/max too).
+        // Bounds match index.html: hour 0-23, minute 0-55.
+        if (!Number.isFinite(rawHour) || rawHour < 0 || rawHour > 23) return;
+        if (!Number.isFinite(rawMinute) || rawMinute < 0 || rawMinute > 55) return;
+
         // Open Question #2 + LOG-07: silently normalize minute to nearest 5.
-        // The store's roundTo5 will also re-round on save, but normalizing
-        // here keeps the UI value stable for the next open in the same session.
+        // The store's roundTo5 will also re-round on save (defense in depth) so
+        // even if this normalization were bypassed, the canonical 5-min
+        // invariant still holds at the store boundary.
         const normalizedMinute = Math.round(rawMinute / 5) * 5;
 
         const pad = (n) => String(n).padStart(2, '0');
