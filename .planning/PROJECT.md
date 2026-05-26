@@ -73,6 +73,10 @@ compared to reality.
 - [ ] UI language: English only
 - [ ] Theme: calm but distinct — same overall tone as mindful-breathing (dark, minimal, ambient) but its own identity (different accent / different glyphs)
 - [ ] Notifications: in-app only (a prominent "next event" card on the Today screen; no browser/OS push)
+- [ ] App logic is unit-testable via Node's built-in `node:test` runner; tests live in `tests/unit/` and run separately from the deployed PWA bundle (excluded from service-worker precache and GitHub Pages output).
+- [ ] Integration tests in `tests/integration/` compose multiple modules together in Node via thin adapters for DOM, `localStorage`, and the system clock; runtime stays zero-dependency.
+- [ ] End-to-end UI tests via Playwright as a dev-only dependency (`devDependencies` only — never shipped to Pages); E2E tests in `tests/e2e/` drive a real headless browser. Same GitHub Action runs unit + integration + E2E on push/PR.
+- [ ] TDD is the primary discipline: strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with at least one E2E test as a regression guard.
 
 ### Out of Scope
 
@@ -109,6 +113,7 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - **Time precision**: 5-minute rounding — Both at entry and display; matches typical human entry behavior and the spreadsheet's effective precision.
 - **Language**: English UI only — v1; Polish column names live in import/migration code only.
 - **Browser support**: Modern evergreen — Chrome/Edge/Firefox/Safari current versions. Same matrix as mindful-breathing.
+- **Runtime dependencies**: Zero — `package.json` may exist for `devDependencies` only (Playwright + lockfile). The deployed PWA bundle (everything served from GitHub Pages) contains no `node_modules/`, no bundled libraries, no runtime npm imports.
 
 ## Key Decisions
 
@@ -126,6 +131,10 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | 5-minute precision | Cleaner stats; matches typical entry behavior | — Pending |
 | Three success metrics on the Accuracy dashboard | User wanted all three (within max_delta / within tighter band / inside probability band) shown side-by-side | — Pending |
 | Direct .xlsx import not in v1 | A pure-vanilla, no-dependency app cannot parse .xlsx without bundling a heavy library; user converts to CSV one-time | — Pending |
+| Unit tests via Node's built-in `node:test`, runtime stays dependency-free | Tests are dev-time only; logic structured as ESM modules so the same files import in both browser (`<script type="module">`) and Node. Unit tests live under `tests/unit/`, excluded from PWA precache. CI uses zero-install `node --test`. | — Pending |
+| Integration tests in Node via DOM/storage/clock adapters | App structured with thin adapters so modules can be composed and exercised together in Node without a real browser. Drives clean seams from Phase 1 onward. Zero npm dependency. Lives under `tests/integration/`. | — Pending |
+| Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | — Pending |
+| Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | — Pending |
 
 ## Evolution
 

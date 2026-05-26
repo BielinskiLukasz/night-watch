@@ -10,7 +10,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 - Integer phases (1, 2, 3, ...): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data
+- [ ] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data. Establishes the full testing scaffold (ESM modules, adapter pattern, unit + integration + Playwright E2E, CI) and TDD discipline for all later phases.
 - [ ] **Phase 2: Configuration & Settings** - Settings UI for subject name, prediction thresholds, outlier rules, window size, stat blend, time format, day cutover; all persisted
 - [ ] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card
 - [ ] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation
@@ -25,13 +25,17 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 **Goal**: User can log sleep events and see them survive reload, enabling the smallest possible usable app for dogfooding.
 **Mode**: mvp
 **Depends on**: Nothing (first phase)
-**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05, LOG-06, LOG-07, LOG-08, LOG-09
+**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05, LOG-06, LOG-07, LOG-08, LOG-09, DATA-04, PLAT-08, PLAT-09, PLAT-10, PLAT-11
 **Success Criteria** (what must be TRUE):
   1. User taps "Woke up" quick-log button and sees a timestamp appear in a list on the same screen
   2. User taps "Going to sleep", "Nap start", and "Nap end" buttons and each records a distinct event at the current time rounded to 5 minutes
   3. User manually enters or edits an event via a date/time form for today or any past day, and the change persists
   4. User deletes an event and it disappears from the list
   5. After logging several events, user refreshes the browser page and all events are still there (localStorage survives reload)
+  6. Pure-logic modules (time rounding, day-boundary bucketing, localStorage codec) are exercised by unit tests in `tests/unit/` with `node --test`
+  7. Integration tests in `tests/integration/` wire store + storage adapter + clock adapter together and assert end-to-end data flow without a browser
+  8. Playwright E2E tests in `tests/e2e/` drive a real headless browser through the four quick-log buttons + form + reload-persistence flow
+  9. A GitHub Action runs unit + integration + E2E on push/PR; every shipped behavior is covered by at least one test (TDD discipline established)
 **Plans**: TBD
 
 ### Phase 2: Configuration & Settings
