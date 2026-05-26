@@ -13,9 +13,9 @@
 - [ ] **LOG-04**: User can tap a "Nap end" quick-log button that records a nap-end event at the current time, rounded to 5 minutes.
 - [ ] **LOG-05**: User can manually enter or edit any event time via a form (date + time picker) for the current day or any past day.
 - [ ] **LOG-06**: User can delete a logged event from history.
-- [ ] **LOG-07**: All event times are captured, stored, and displayed at 5-minute precision.
-- [ ] **LOG-08**: Events that belong to the same subjective night/day are grouped under one "day" record using a configurable cutover hour (default ~04:00).
-- [ ] **LOG-09**: Each day record contains at most one nap (a single start/end pair).
+- [x] **LOG-07**: All event times are captured, stored, and displayed at 5-minute precision.
+- [x] **LOG-08**: Events that belong to the same subjective night/day are grouped under one "day" record using a configurable cutover hour (default ~04:00).
+- [x] **LOG-09**: Each day record contains at most one nap (a single start/end pair).
 
 ### Configuration
 
@@ -118,9 +118,9 @@ Which phases cover which requirements.
 | LOG-04 | Phase 1 | Pending |
 | LOG-05 | Phase 1 | Pending |
 | LOG-06 | Phase 1 | Pending |
-| LOG-07 | Phase 1 | Pending |
-| LOG-08 | Phase 1 | Pending |
-| LOG-09 | Phase 1 | Pending |
+| LOG-07 | Phase 1 | Complete |
+| LOG-08 | Phase 1 | Complete |
+| LOG-09 | Phase 1 | Complete |
 | CFG-01 | Phase 2 | Pending |
 | CFG-02 | Phase 2 | Pending |
 | CFG-03 | Phase 2 | Pending |
@@ -163,6 +163,7 @@ Which phases cover which requirements.
 | PLAT-11 | Phase 1 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 51 total
 - Mapped to phases: 51
 - Unmapped: 0
