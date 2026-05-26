@@ -51,7 +51,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [ ] 01-04-PLAN.md (Wave 3): Extend slice — manual entry modal + edit (mutate-in-place) + delete affordances
+  - [x] 01-04-PLAN.md (Wave 3): Extend slice — manual entry modal + edit (mutate-in-place) + delete affordances
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -167,7 +167,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Log & Persist | 3/5 | In Progress|  |
+| 1. Log & Persist | 4/5 | In Progress|  |
 | 2. Configuration & Settings | 0/TBD | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
