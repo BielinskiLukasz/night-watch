@@ -200,3 +200,131 @@ describe('event-log: persistence / rehydration (D-05 invariant)', () => {
     assert.equal(events[0].at, '2026-05-26T06:35');
   });
 });
+
+// =====================================================================
+// Plan 01-04 / Task 1 — addEventAt / editEvent / deleteEvent surface.
+// LOG-05 (manual entry / edit), LOG-06 (delete), LOG-07 (5-min rounding
+// preserved on every write path), Pitfall #6 (edit-creates-duplicate
+// regression guard via assert.equal(events.length, 1)).
+// =====================================================================
+
+describe('event-log: addEventAt (LOG-05 manual entry / back-fill)', () => {
+  test('addEventAt("wake", "2026-05-25T06:35") persists with at "2026-05-25T06:35" (already-rounded passthrough)', () => {
+    const { log, storage } = makeTestLog();
+    const evt = log.addEventAt('wake', '2026-05-25T06:35');
+
+    assert.equal(evt.type, 'wake');
+    assert.equal(evt.at, '2026-05-25T06:35');
+    assert.equal(typeof evt.id, 'string');
+    assert.deepEqual(storage._snapshot(), {
+      version: 1,
+      events: [{ id: 'e1', type: 'wake', at: '2026-05-25T06:35' }],
+    });
+  });
+
+  test('addEventAt re-rounds non-5-minute inputs (typed 06:33 → stored 06:35; LOG-07)', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEventAt('wake', '2026-05-25T06:33');
+    assert.equal(evt.at, '2026-05-25T06:35', 'round-to-nearest 5min applied on manual entry');
+  });
+
+  test('addEventAt accepts a past date (LOG-05 back-fill)', () => {
+    const { log } = makeTestLog({
+      frozenAt: new Date(2026, 4, 26, 6, 35),
+    });
+    const evt = log.addEventAt('bedtime', '2026-04-01T22:10');
+    assert.equal(evt.at, '2026-04-01T22:10', 'past-day back-fill stored verbatim after rounding');
+  });
+
+  test('addEventAt rejects invalid type with /Invalid event type/ (T-01 reused)', () => {
+    const { log } = makeTestLog();
+    assert.throws(
+      () => log.addEventAt('snore', '2026-05-25T06:35'),
+      /Invalid event type/,
+    );
+  });
+
+  test('addEventAt rejects malformed at-string "2026/05/25T06:35" (T-02 via parseLocalISO)', () => {
+    const { log } = makeTestLog();
+    assert.throws(
+      () => log.addEventAt('wake', '2026/05/25T06:35'),
+      /Invalid local ISO timestamp/,
+      'parseLocalISO regex rejects wrong separator (T-02)',
+    );
+  });
+});
+
+describe('event-log: editEvent (D-03 mutate-in-place; Pitfall #6 regression guard)', () => {
+  test('editEvent mutates in place — events.length unchanged after edit (Pitfall #6)', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEvent('wake');
+    log.editEvent(evt.id, { at: '2026-05-26T07:00' });
+    // The canonical Pitfall #6 assertion — events.length stays at 1, no duplicate.
+    assert.equal(log.listEvents().length, 1, 'editEvent must not create a duplicate (Pitfall #6)');
+    assert.equal(log.listEvents()[0].at, '2026-05-26T07:00');
+  });
+
+  test('editEvent re-rounds at on save (typed 06:33 saves as 06:35; LOG-07)', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEvent('wake');
+    const edited = log.editEvent(evt.id, { at: '2026-05-26T06:33' });
+    assert.equal(edited.at, '2026-05-26T06:35', 'edit re-rounds at to nearest 5 min');
+  });
+
+  test('editEvent rejects invalid type (T-01)', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEvent('wake');
+    assert.throws(
+      () => log.editEvent(evt.id, { type: 'snore' }),
+      /Invalid event type/,
+    );
+  });
+
+  test('editEvent throws /not found/ when id absent', () => {
+    const { log } = makeTestLog();
+    assert.throws(
+      () => log.editEvent('no-such-id', { at: '2026-05-26T07:00' }),
+      /not found/i,
+    );
+  });
+
+  test('editEvent preserves id', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEvent('wake');
+    const edited = log.editEvent(evt.id, { at: '2026-05-26T07:00' });
+    assert.equal(edited.id, evt.id, 'id is preserved across edit');
+  });
+});
+
+describe('event-log: deleteEvent (LOG-06)', () => {
+  test('deleteEvent removes the event from listEvents', () => {
+    const { log } = makeTestLog();
+    const evt = log.addEvent('wake');
+    assert.equal(log.listEvents().length, 1);
+    const result = log.deleteEvent(evt.id);
+    assert.equal(result, true, 'deleteEvent returns true on success');
+    assert.equal(log.listEvents().length, 0);
+  });
+
+  test('deleteEvent returns false when id absent (idempotent)', () => {
+    const { log } = makeTestLog();
+    log.addEvent('wake');
+    const result = log.deleteEvent('no-such-id');
+    assert.equal(result, false, 'deleteEvent returns false when id absent (idempotent)');
+    assert.equal(log.listEvents().length, 1, 'no side effect when id absent');
+  });
+
+  test('deleteEvent persists — a fresh createEventLog over the same storage does not see the deleted event (D-05 invariant)', () => {
+    const { log, storage } = makeTestLog();
+    const evt = log.addEvent('wake');
+    log.deleteEvent(evt.id);
+
+    // Simulate reload over the SAME storage.
+    const log2 = createEventLog({
+      storage,
+      clock: createClockFixed(new Date(2026, 4, 26, 7, 0)),
+      id: () => 'unused',
+    });
+    assert.equal(log2.listEvents().length, 0, 'deletion survives rehydration (D-05)');
+  });
+});
