@@ -1,1 +1,11 @@
+# sen.xlsx — local source spreadsheet (one-time CSV-converted in Phase 5)
 sen.xlsx
+
+# Dev-only test tooling output (D-20: package.json is dev-only, never shipped).
+# These directories are produced by `npm install` / Playwright runs and must
+# not enter version control.
+node_modules/
+playwright-report/
+test-results/
+.playwright/
+*.log
