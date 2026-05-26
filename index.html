@@ -72,7 +72,18 @@
       </label>
       <menu>
         <button type="button" id="manualCancel" formnovalidate>Cancel</button>
-        <button type="submit" value="save">Save</button>
+        <!--
+          formnovalidate on Save: the HTML5 step="5" constraint on the minute
+          input would block form submission for non-5 multiples, but the
+          modal's contract (Open Question #2 + LOG-07) is to SILENTLY round
+          to the nearest 5. The JS submit handler in js/ui/manual-entry.js
+          normalizes via Math.round(rawMinute / 5) * 5; the store re-rounds
+          again via roundTo5 as the second layer of defense. The min/max
+          bounds (0-23 hour, 0-55 minute) and required field checks still
+          fire because formnovalidate is per-button; the input's own
+          ::invalid styling still surfaces the out-of-step value as a hint.
+        -->
+        <button type="submit" value="save" formnovalidate>Save</button>
       </menu>
     </form>
   </dialog>
