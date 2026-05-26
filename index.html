@@ -18,7 +18,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="app"></main>
+  <!--
+    No-JS / pre-hydration skeleton (Plan 01-03 / D-10).
+    js/ui/today-screen.js calls root.replaceChildren(...) on mount, so this
+    skeleton is shown only momentarily during module loading and as a
+    progressive-enhancement fallback when JS is disabled. The data-log
+    attributes here match the four valid types in VALID_TYPES (T-01 contract).
+  -->
+  <main id="app">
+    <div class="quickLog">
+      <button type="button" data-log="wake">Woke up</button>
+      <button type="button" data-log="bedtime">Going to sleep</button>
+      <button type="button" data-log="napStart">Nap start</button>
+      <button type="button" data-log="napEnd">Nap end</button>
+    </div>
+    <section class="dayList" data-role="events"></section>
+  </main>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

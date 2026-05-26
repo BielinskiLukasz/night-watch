@@ -22,6 +22,14 @@ body {
   margin: 0 auto;
 }
 
+/* Quick-log button row (Plan 01-03 / D-10) */
+.quickLog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
 button[data-log] {
   display: inline-block;
   padding: 0.75rem 1.25rem;
@@ -38,17 +46,49 @@ button[data-log]:hover {
   background: #4338ca;
 }
 
-ul[data-role="events"] {
-  list-style: none;
-  padding: 0;
-  margin: 1.5rem 0 0 0;
+/* Day-grouped event list (Plan 01-03 / D-11) */
+.dayList {
+  display: block;
 }
 
-ul[data-role="events"] li {
+.day {
+  margin-bottom: 16px;
+}
+
+.day .dayHeader {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #555;
+}
+
+.dayEvents {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dayEvents li {
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.25rem;
   background: #fff;
   border: 1px solid #e5e5e5;
   border-radius: 0.25rem;
   font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.dayEvents .eventTime {
+  font-weight: 600;
+  min-width: 3.5rem;
+}
+
+/* LOG-09 / T-06: extra-nap surfaced as a faint warning row */
+.dayEvents .extraNap {
+  opacity: 0.6;
+  font-style: italic;
+  background: #fff7e6;
+  border-color: #f0d9b5;
 }
