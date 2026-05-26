@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: In Progress
-stopped_at: Completed Plan 01-04
-last_updated: "2026-05-26T13:03:44.529Z"
-last_activity: 2026-05-26
+status: Phase 1 complete pending verification
+stopped_at: Completed Plan 01-05 — Phase 1 awaiting verifier
+last_updated: "2026-05-26T15:35:00.000Z"
+last_activity: 2026-05-26 -- Plan 01-05 closeout approved by user; SDK mutations landed; phase-complete deferred to verifier
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 01 (log-persist) — EXECUTING
-Plan: 4 of 5 complete
-Next: Plan 01-05 (Wave 4) — persistence smoke + security smoke + supply-chain CI + README
-Last activity: 2026-05-26
+Phase: 01 (log-persist) — COMPLETE pending verification
+Plan: 5 of 5 complete
+Next: Phase 1 verifier run (gsd-verifier subagent via /gsd-execute-phase)
+Last activity: 2026-05-26 -- Plan 01-05 closeout approved by user
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100% (plan-complete; phase-complete awaits verifier)
 
 ### Plan 01-01 final state
 
@@ -65,9 +65,19 @@ Progress: [████████░░] 80%
 - SUMMARY.md: `.planning/phases/NW-01-log-persist/01-04-SUMMARY.md`
 - Tests: node --test 80/80 + Playwright 13/13 (no regression on Plans 01-01/02/03)
 
-### Phase 1 outstanding
+### Plan 01-05 final state
 
-- Plan 01-05 (Wave 4): persistence smoke + security smoke + supply-chain CI + README (not started)
+- Task 1 (auto): COMPLETE — commit `6464b7a` (persistence integration test + storage-local injection seam)
+- Task 2 (auto): COMPLETE — commit `8d3b464` (security-smoke integration test, 9 assertions)
+- Task 3 (auto): COMPLETE — commit `9643d71` (CI supply-chain check + README, 86 non-blank lines)
+- Task 4 (checkpoint:human-verify): COMPLETE — approved 2026-05-26 by user via /gsd-execute-phase checkpoint flow; D-22 coverage matrix audited; manual dogfooding deferred to Phase 2 dogfooding window
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-05-SUMMARY.md`
+- SUMMARY evidence commit: `b460c3e` (D-22 matrix + threat disposition)
+- Tests: node --test 100/100 + Playwright 13/13 (no regression on Plans 01-01..04)
+
+### Phase 1 status
+
+All 5 plans complete. Phase awaits gsd-verifier run to flip ROADMAP/STATE phase-complete and tally requirement traceability.
 
 ### Open follow-ups (non-blocking)
 
@@ -92,6 +102,7 @@ Progress: [████████░░] 80%
 | Phase 1 P2 | 8min | 3 tasks | 5 files |
 | Phase 1 P3 | 10min | 3 tasks | 7 files |
 | Phase 1 P4 | 14min | 3 tasks | 8 files |
+| Phase 1 P5 | 18min | 4 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -112,6 +123,10 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase ?]: Plan 01-04: formnovalidate on Save button + JS-level required+range guards in onClose — reconciles HTML5 step=5 with Open Question #2 silent-rounding contract
 - [Phase ?]: Plan 01-04: explicit mode=add|edit parameter at openManualEntry entry — Pitfall #6 / T-05 architectural mitigation at UI layer (paired with events[i]=next mutate-in-place at store layer)
 - [Phase ?]: Plan 01-04: D-03 mutate-in-place verified at 4 layers — UI mode param, store events[i]=next, integration test events.length===1, E2E test edit-no-duplicate + reload-persistence
+- [Phase 01]: Plan 01-05: createStorageLocal refactored to accept optional ls parameter (defaults to globalThis.localStorage) — backward-compatible test-injection seam without polluting globals
+- [Phase 01]: Plan 01-05: security-smoke exemption tag honored on matching line OR immediately preceding line (eslint-disable-next-line convention) — matches Plan 04's // gsd:allow-ui-clock placement
+- [Phase 01]: Plan 01-05: two-layer supply-chain guard — in-tree smoke (security-smoke.test.js dependencies==={}) + CI fail-fast step before node --test — observable in source AND PR rejection in seconds
+- [Phase 01]: Plan 01-05: clock-seam invariant bans no-arg new Date() only (allows new Date(x) data transforms) — natural seam between side-effecting clock reads and pure data transforms
 
 ### Pending Todos
 
@@ -123,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-26T13:03:44.529Z
-Stopped at: Completed Plan 01-04
+Last session: 2026-05-26T15:35:00.000Z
+Stopped at: Completed Plan 01-05 — Phase 1 awaiting verifier
 Resume file: None

@@ -53,7 +53,7 @@
 - [ ] **DATA-01**: User can export the full dataset as a structured JSON file downloaded via the browser.
 - [ ] **DATA-02**: User can import a previously exported JSON file, after which the in-memory and localStorage state exactly matches the import (lossless round-trip).
 - [ ] **DATA-03**: User can import a CSV file matching the known column schema (translated from the existing `sen.xlsx` Polish columns).
-- [ ] **DATA-04**: App state is cached in localStorage so the app survives reloads and offline use without losing data.
+- [x] **DATA-04**: App state is cached in localStorage so the app survives reloads and offline use without losing data.
 - [ ] **DATA-05**: Exported JSON is treated as canonical truth; localStorage acts as a cache that can be rebuilt from an import.
 
 ### Stages
@@ -70,10 +70,10 @@
 - [ ] **PLAT-05**: UI text is English only.
 - [ ] **PLAT-06**: App has its own visual identity — same calm/dark/minimal/ambient register as `mindful-breathing` but a distinct accent palette and glyph set.
 - [ ] **PLAT-07**: All notifications are surfaced in-app only — no browser or OS push notifications.
-- [ ] **PLAT-08**: App logic is unit-testable via Node's built-in test runner (`node:test` + `node:assert`). Tests live in `tests/unit/` and run separately from the deployed PWA bundle (excluded from service-worker precache and GitHub Pages output). A GitHub Action runs `node --test tests/` on push/PR with zero install.
-- [ ] **PLAT-09**: App is structured into pure-logic modules with thin adapters for DOM, `localStorage`, and the system clock so multiple modules can be composed and exercised together in Node without a browser. Integration tests live in `tests/integration/` and use `node:test`; the runtime stays zero-dependency.
-- [ ] **PLAT-10**: App has end-to-end UI tests using Playwright as a dev-only dependency (`devDependencies` only — never shipped to GitHub Pages). E2E tests live in `tests/e2e/`, drive a real browser, exercise the rendered UI, and run in the same GitHub Action as unit/integration tests. The deployed PWA bundle remains pure vanilla HTML/CSS/JS with no runtime npm dependencies.
-- [ ] **PLAT-11**: Project follows TDD as its primary development discipline. Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with at least one E2E test as a regression guard for every user-visible behavior. Every shipped requirement has at least one automated test covering it.
+- [x] **PLAT-08**: App logic is unit-testable via Node's built-in test runner (`node:test` + `node:assert`). Tests live in `tests/unit/` and run separately from the deployed PWA bundle (excluded from service-worker precache and GitHub Pages output). A GitHub Action runs `node --test tests/` on push/PR with zero install.
+- [x] **PLAT-09**: App is structured into pure-logic modules with thin adapters for DOM, `localStorage`, and the system clock so multiple modules can be composed and exercised together in Node without a browser. Integration tests live in `tests/integration/` and use `node:test`; the runtime stays zero-dependency.
+- [x] **PLAT-10**: App has end-to-end UI tests using Playwright as a dev-only dependency (`devDependencies` only — never shipped to GitHub Pages). E2E tests live in `tests/e2e/`, drive a real browser, exercise the rendered UI, and run in the same GitHub Action as unit/integration tests. The deployed PWA bundle remains pure vanilla HTML/CSS/JS with no runtime npm dependencies.
+- [x] **PLAT-11**: Project follows TDD as its primary development discipline. Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with at least one E2E test as a regression guard for every user-visible behavior. Every shipped requirement has at least one automated test covering it.
 
 ## v2 Requirements
 
@@ -146,7 +146,7 @@ Which phases cover which requirements.
 | DATA-01 | Phase 5 | Pending |
 | DATA-02 | Phase 5 | Pending |
 | DATA-03 | Phase 5 | Pending |
-| DATA-04 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 5 | Pending |
 | STAGE-01 | Phase 6 | Pending |
 | STAGE-02 | Phase 6 | Pending |
@@ -157,10 +157,10 @@ Which phases cover which requirements.
 | PLAT-05 | Phase 8 | Pending |
 | PLAT-06 | Phase 8 | Pending |
 | PLAT-07 | Phase 8 | Pending |
-| PLAT-08 | Phase 1 | Pending |
-| PLAT-09 | Phase 1 | Pending |
-| PLAT-10 | Phase 1 | Pending |
-| PLAT-11 | Phase 1 | Pending |
+| PLAT-08 | Phase 1 | Complete |
+| PLAT-09 | Phase 1 | Complete |
+| PLAT-10 | Phase 1 | Complete |
+| PLAT-11 | Phase 1 | Complete |
 
 **Coverage:**
 

@@ -11,7 +11,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 - Integer phases (1, 2, 3, ...): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data. Establishes the full testing scaffold (ESM modules, adapter pattern, unit + integration + Playwright E2E, CI) and TDD discipline for all later phases.
+- [x] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data. Establishes the full testing scaffold (ESM modules, adapter pattern, unit + integration + Playwright E2E, CI) and TDD discipline for all later phases. (completed 2026-05-26)
 - [ ] **Phase 2: Configuration & Settings** - Settings UI for subject name, prediction thresholds, outlier rules, window size, stat blend, time format, day cutover; all persisted
 - [ ] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card
 - [ ] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation
@@ -55,7 +55,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-  - [ ] 01-05-PLAN.md (Wave 4): Phase gate — persistence + security smoke + CI supply-chain check + README + D-22 audit
+  - [x] 01-05-PLAN.md (Wave 4): Phase gate — persistence + security smoke + CI supply-chain check + README + D-22 audit
 
 ### Phase 2: Configuration & Settings
 
@@ -167,7 +167,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Log & Persist | 4/5 | In Progress|  |
+| 1. Log & Persist | 5/5 | Complete   | 2026-05-26 |
 | 2. Configuration & Settings | 0/TBD | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
