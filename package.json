@@ -1,0 +1,34 @@
+{
+  "name": "nightwatch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nightwatch - vanilla-JS offline-first PWA for tracking and forecasting sleep events",
+  "scripts": {
+    "test:unit": "node --test",
+    "test:e2e": "playwright test",
+    "test": "node --test && playwright test",
+    "serve": "node scripts/serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BielinskiLukasz/night-watch.git"
+  },
+  "keywords": [
+    "sleep",
+    "tracker",
+    "pwa",
+    "vanilla-js",
+    "offline-first"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/BielinskiLukasz/night-watch/issues"
+  },
+  "homepage": "https://github.com/BielinskiLukasz/night-watch#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
