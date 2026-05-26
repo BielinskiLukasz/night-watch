@@ -28,6 +28,11 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
+      - name: Supply-chain check (T-08, D-20)
+        # Fail-fast: reject any PR that introduces a runtime dependency before
+        # spending time on the test suite. See .planning/REQUIREMENTS.md
+        # (PLAT-11) and .planning/phases/NW-01-log-persist/01-CONTEXT.md (D-20).
+        run: node -e "const p=require('./package.json'); const n=Object.keys(p.dependencies||{}).length; if(n>0){console.error('Runtime deps not allowed: '+n+' found'); process.exit(1)} else console.log('OK: zero runtime deps')"
       - name: Run unit + integration tests (node:test)
         run: node --test
       - name: Run E2E tests (Playwright)
