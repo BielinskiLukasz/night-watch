@@ -1,0 +1,54 @@
+/* style.css
+ * Minimal functional styling for the walking skeleton.
+ * Phase 8 introduces the real theme; Phase 1 just needs the buttons to be
+ * tappable and the list to be readable.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 1.5rem;
+  line-height: 1.4;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+#app {
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+button[data-log] {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+  background: #4f46e5;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+button[data-log]:hover {
+  background: #4338ca;
+}
+
+ul[data-role="events"] {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0 0;
+}
+
+ul[data-role="events"] li {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
