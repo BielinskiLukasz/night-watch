@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Phase 1 context gathered
-last_updated: "2026-05-26T12:28:56.991Z"
+status: In Progress
+stopped_at: Completed Plan 01-03
+last_updated: "2026-05-26T12:43:05.901Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: 01 (log-persist) — EXECUTING
-Plan: 2 of 5
-Next: Plan 01-02 (Wave 1) — not yet started; user chose to stop after Wave 0
+Plan: 3 of 5 complete
+Next: Plan 01-04 (Wave 3) — manual entry + edit + delete
 Last activity: 2026-05-26
 
-Progress: [██░░░░░░░░] 20%
+Progress: [██████░░░░] 60%
 
 ### Plan 01-01 final state
 
@@ -41,10 +41,24 @@ Progress: [██░░░░░░░░] 20%
 - SUMMARY.md: `.planning/phases/NW-01-log-persist/01-01-SUMMARY.md`
 - Diagnostic commits during checkpoint window: `27f3f44` (state pause), `85318c2` (ci: workflow_dispatch escape hatch)
 
+### Plan 01-02 final state
+
+- Task 1 (auto, TDD): COMPLETE — RED `602dcb1` → GREEN `5aad092` (time.js round-to-nearest)
+- Task 2 (auto, TDD): COMPLETE — RED `afff38b` → GREEN `86b25c6` (day-bucket.js, LOG-08, LOG-09)
+- Task 3 (auto, TDD): COMPLETE — RED-codify `e7e9eed` → docs `a0ad600` (id.js contract)
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-02-SUMMARY.md`
+- Closeout commit: `4e1ba34`
+
+### Plan 01-03 final state
+
+- Task 1 (auto, TDD): COMPLETE — RED `f4e1054` → GREEN `192460a` (store daysByCalendar passthrough + T-01 full coverage)
+- Task 2 (auto): COMPLETE — `11b0d6e` (js/ui/dom.js + 4-button today-screen + day-grouped list + extraNap surfacing)
+- Task 3 (auto): COMPLETE — `910f83b` (Playwright quick-log.spec.js — 6 specs covering all 4 buttons + double-click idempotency + extraNap row)
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-03-SUMMARY.md`
+- Tests: node --test 55/55 + Playwright 7/7 (no regression on Plan 01-01 reload.spec.js)
+
 ### Phase 1 outstanding
 
-- Plan 01-02 (Wave 1): TDD pure logic — time.js round-to-nearest, day-bucket.js, id.js (not started)
-- Plan 01-03 (Wave 2): 4 quick-log buttons + day-grouped list + idempotency (not started)
 - Plan 01-04 (Wave 3): manual entry + edit + delete (not started)
 - Plan 01-05 (Wave 4): persistence smoke + security smoke + supply-chain CI + README (not started)
 
@@ -69,6 +83,7 @@ Progress: [██░░░░░░░░] 20%
 
 *Updated after each plan completion*
 | Phase 1 P2 | 8min | 3 tasks | 5 files |
+| Phase 1 P3 | 10min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -83,6 +98,9 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase ?]: Plan 01-02: parseLocalISO typeof guard — null/non-string inputs throw the same descriptive Error (T-02)
 - [Phase ?]: Plan 01-02: subjective-night cutover boundary is hour < cutoverHour → previous day; at-or-after = current
 - [Phase ?]: Plan 01-02: LOG-09 read-side enforcement via dayRecord.extraNaps (RESEARCH Open Question #1)
+- [Phase ?]: Plan 01-03: Static no-JS button skeleton in index.html + JS replaceChildren on mount — satisfies both grep gate and render directive
+- [Phase ?]: Plan 01-03: UI debounce uses performance.now() (non-domain monotonic clock) — keeps clock-adapter seam clean (D-07)
+- [Phase ?]: Plan 01-03: DEFAULT_CUTOVER_HOUR=4 named constant on store.daysBySubjectiveNight default arg documents Phase 2 / CFG-08 injection seam
 
 ### Pending Todos
 
@@ -94,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-26T12:28:00.385Z
-Stopped at: Phase 1 context gathered
+Last session: 2026-05-26T12:42:11.085Z
+Stopped at: Completed Plan 01-03
 Resume file: None
