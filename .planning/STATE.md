@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-05-26T10:27:25.736Z"
-last_activity: 2026-05-26 -- Phase 01 planning complete
+stopped_at: Plan 01-01 Task 3 (checkpoint:human-verify) — awaiting user approval
+last_updated: "2026-05-26T10:47:59Z"
+last_activity: 2026-05-26 -- Plan 01-01 Tasks 1+2 complete; awaiting human-verify checkpoint
 progress:
   total_phases: 8
   completed_phases: 0
@@ -22,16 +22,21 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase 1 (Log & Persist)
+**Current focus:** Phase 1 — log-persist
 
 ## Current Position
 
-Phase: 1 of 8 (Log & Persist)
-Plan: None yet assigned
-Status: Ready to execute
-Last activity: 2026-05-26 -- Phase 01 planning complete
+Phase: 1 (log-persist) — EXECUTING
+Plan: 1 of 5 (01-01 Walking Skeleton) — paused at Task 3 checkpoint:human-verify
+Status: Awaiting human-verify (manual smoke + CI green)
+Last activity: 2026-05-26 -- Plan 01-01 Tasks 1 (7e4d807) + 2 (fe9783a) complete
 
 Progress: [░░░░░░░░░░] 0%
+
+### Plan 01-01 task state
+- Task 1 (auto): COMPLETE — commit `7e4d807` (dev tooling scaffold)
+- Task 2 (auto, TDD): COMPLETE — commit `fe9783a` (runtime + tests, node:test 8/8 green, Playwright 1/1 green, all architectural greps clean)
+- Task 3 (checkpoint:human-verify, blocking): AWAITING USER — see 01-01-PLAN.md `<how-to-verify>` steps
 
 ## Performance Metrics
 
