@@ -43,7 +43,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 **Wave 1**
 
   - [x] 01-01-PLAN.md (Wave 0): Walking Skeleton — scaffolding, composition root, 1 button, reload spec, CI workflow
-  - [ ] 01-02-PLAN.md (Wave 1): TDD pure logic — time.js (round-to-nearest), day-bucket.js (calendar + subjective + LOG-09), id.js
+  - [x] 01-02-PLAN.md (Wave 1): TDD pure logic — time.js (round-to-nearest), day-bucket.js (calendar + subjective + LOG-09), id.js
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -167,7 +167,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Log & Persist | 1/5 | In Progress|  |
+| 1. Log & Persist | 2/5 | In Progress|  |
 | 2. Configuration & Settings | 0/TBD | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
