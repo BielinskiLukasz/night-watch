@@ -33,8 +33,10 @@
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 
-/** Single source of truth for the 4 quick-log button definitions (D-10). */
-const BUTTONS = Object.freeze([
+/** Single source of truth for the 4 quick-log button definitions (D-10).
+ *  Exported (Plan 01-08 / 01-UAT.md gap 1) so the integration test can pin
+ *  the label/button parity invariant at the module-API layer. */
+export const BUTTONS = Object.freeze([
   Object.freeze({ type: 'wake', label: 'Woke up' }),
   Object.freeze({ type: 'bedtime', label: 'Going to sleep' }),
   Object.freeze({ type: 'napStart', label: 'Nap start' }),
@@ -263,7 +265,9 @@ function hhmm(at) {
   return at.slice(11, 16);
 }
 
-/** Map event type → display label, falling back to the raw type for unknowns. */
-function labelFor(type) {
+/** Map event type -> display label, falling back to the raw type for unknowns.
+ *  Exported (Plan 01-08 / 01-UAT.md gap 1) so the integration test can pin
+ *  labelFor(button.type) === button.label for every BUTTONS entry. */
+export function labelFor(type) {
   return EVENT_LABEL[type] ?? type;
 }

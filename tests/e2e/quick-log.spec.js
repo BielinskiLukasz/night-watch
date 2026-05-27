@@ -118,3 +118,52 @@ test('a 3-nap day renders 3 actionable rows; the 3rd is faint (LOG-09) — 01-UA
     await expect(napRows.nth(i).locator('button.rowDel')).toHaveCount(1);
   }
 });
+
+test('each quick-log button produces a row with the SAME label text as the button (01-UAT.md gap 1 regression)', async ({ page }) => {
+  // Plan 01-08 / UAT gap 1: previously the 'Woke up' button produced a row
+  // labeled 'Wake' and the 'Going to sleep' button produced 'Bedtime'. After
+  // the EVENT_LABEL -> Object.fromEntries(BUTTONS.map(...)) collapse, every
+  // row label byte-matches the button that created it. This spec encodes
+  // that contract end-to-end (button text -> row text).
+  //
+  // Note on test design: all 4 clicks in this test wall-clock-fall into the
+  // same 5-min rounding bucket, so the 4 events share an identical `at`
+  // string and the renderer's newest-first sort is a no-op tie-break
+  // (stable sort -> insertion order preserved). Asserting on '.first()'
+  // would be wrong because '.first()' is the oldest-inserted of the ties.
+  // Instead, after each click, count rows that match the expected label --
+  // that's the contract we actually care about: 'clicking button X creates
+  // a row containing X's text, byte-for-byte'.
+  //
+  // Wait past the 300ms debounce between clicks so each is a distinct event.
+  const cases = [
+    { name: /^woke up$/i, expectedRow: /Woke up/ },
+    { name: /^going to sleep$/i, expectedRow: /Going to sleep/ },
+    { name: /^nap start$/i, expectedRow: /Nap start/ },
+    { name: /^nap end$/i, expectedRow: /Nap end/ },
+  ];
+
+  for (const { name, expectedRow } of cases) {
+    const before = await page.locator('[data-role="events"] li.event').count();
+    await page.getByRole('button', { name }).click();
+    await page.waitForTimeout(350);
+
+    // Total row count incremented by exactly 1.
+    const after = await page.locator('[data-role="events"] li.event').count();
+    expect(after).toBe(before + 1);
+
+    // Exactly one row containing the button's own label exists. This is the
+    // load-bearing assertion: clicking 'Woke up' must yield a row containing
+    // 'Woke up' (and crucially NOT 'Wake', the old divergent label).
+    const matchingRows = page.locator('[data-role="events"] li.event', { hasText: expectedRow });
+    await expect(matchingRows).toHaveCount(1);
+  }
+
+  // Final cross-check: after all 4 buttons, no row carries the OLD divergent
+  // labels ('Wake' as a standalone word, 'Bedtime'). Word-boundary regex so
+  // 'Woke' doesn't accidentally match 'Wake' (different letters anyway, but
+  // this guards future label changes that might re-overlap).
+  const list = page.locator('[data-role="events"]');
+  await expect(list).not.toContainText(/\bWake\b/);
+  await expect(list).not.toContainText(/\bBedtime\b/);
+});
