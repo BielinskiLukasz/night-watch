@@ -35,9 +35,10 @@ test('open modal via + Add event, submit a past-day wake event, verify it appear
   // Click Save (the submit button with value="save" triggers form close with returnValue='save').
   await page.locator('#manualEntry button[type="submit"]').click();
 
-  // The event should appear in the list under its calendar date.
+  // The event should appear in the list under its calendar date. Row label
+  // matches the 'Woke up' button label (01-UAT.md gap 1 closure -- not 'Wake').
   const list = page.locator('[data-role="events"]');
-  await expect(list).toContainText(/Wake/);
+  await expect(list).toContainText(/Woke up/);
   await expect(list).toContainText(/2026-05-20/);
 
   // Exactly ONE event row should exist (no duplicate).
@@ -211,12 +212,13 @@ test('within a day, newest event renders at the top (presentation reverse of buc
   await page.locator('#manualEntry button[type="submit"]').click();
 
   // Two rows under 2026-05-20. Newest (15:45 bedtime) at top, oldest (07:30 wake) at bottom.
+  // Row labels match button labels (01-UAT.md gap 1 closure -- 'Going to sleep', 'Woke up').
   const rows = page.locator('[data-role="events"] li.event');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText('15:45');
-  await expect(rows.nth(0)).toContainText(/Bedtime/);
+  await expect(rows.nth(0)).toContainText(/Going to sleep/);
   await expect(rows.nth(1)).toContainText('07:30');
-  await expect(rows.nth(1)).toContainText(/Wake/);
+  await expect(rows.nth(1)).toContainText(/Woke up/);
 });
 
 test('Save with date=2026-05-27 23:58 carries to 2026-05-28T00:00 — LOG-07 minute carry post-smoke regression', async ({ page }) => {
@@ -237,12 +239,13 @@ test('Save with date=2026-05-27 23:58 carries to 2026-05-28T00:00 — LOG-07 min
   await page.locator('#manualEntry button[type="submit"]').click();
 
   // Modal closes (no validation error), one row appears under 2026-05-21
-  // (next day, carried by roundTo5 + Date arithmetic).
+  // (next day, carried by roundTo5 + Date arithmetic). Row label is
+  // 'Going to sleep' (01-UAT.md gap 1 closure -- not 'Bedtime').
   await expect(page.locator('#manualEntry')).not.toBeVisible();
   const list = page.locator('[data-role="events"]');
   await expect(list).toContainText('2026-05-21');
   await expect(list).toContainText('00:00');
-  await expect(list).toContainText(/Bedtime/);
+  await expect(list).toContainText(/Going to sleep/);
   await expect(page.locator('[data-role="events"] li.event')).toHaveCount(1);
 });
 

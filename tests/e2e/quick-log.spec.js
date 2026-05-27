@@ -22,8 +22,9 @@ test('click "Going to sleep" records a bedtime event visible in the list (LOG-02
   await expect(btn).toBeVisible();
   await btn.click();
 
+  // Row label matches button label (01-UAT.md gap 1 closure -- no more 'Bedtime' literal).
   const list = page.locator('[data-role="events"]');
-  await expect(list).toContainText(/Bedtime/);
+  await expect(list).toContainText(/Going to sleep/);
 });
 
 test('click "Nap start" records a napStart event visible in the list (LOG-03)', async ({ page }) => {
@@ -54,10 +55,11 @@ test('clicking each of the four buttons sequentially → four events visible', a
   await page.waitForTimeout(350);
   await page.getByRole('button', { name: /^nap end$/i }).click();
 
-  // All four event types should be visible in the list.
+  // All four event types should be visible in the list. Labels match button
+  // labels byte-for-byte (01-UAT.md gap 1 closure -- 'Wake'/'Bedtime' literals gone).
   const list = page.locator('[data-role="events"]');
-  await expect(list).toContainText(/Wake/);
-  await expect(list).toContainText(/Bedtime/);
+  await expect(list).toContainText(/Woke up/);
+  await expect(list).toContainText(/Going to sleep/);
   await expect(list).toContainText(/Nap start/);
   await expect(list).toContainText(/Nap end/);
 
@@ -76,8 +78,9 @@ test('double-clicking "Woke up" within 300ms produces exactly one event (T-05 / 
   // Step past the debounce window before asserting (idle).
   await page.waitForTimeout(400);
 
-  // Exactly ONE event row matching Wake should be visible.
-  const wakeRows = page.locator('[data-role="events"] li.event', { hasText: /Wake/ });
+  // Exactly ONE event row matching the 'Woke up' button label should be visible
+  // (01-UAT.md gap 1: row label === button label, not 'Wake').
+  const wakeRows = page.locator('[data-role="events"] li.event', { hasText: /Woke up/ });
   await expect(wakeRows).toHaveCount(1);
 });
 
