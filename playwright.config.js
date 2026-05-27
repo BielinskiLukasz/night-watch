@@ -7,8 +7,8 @@
 // webServer.command uses `node scripts/serve.js` rather than `python -m http.server`
 // per RESEARCH §Environment Availability Assumption A2 — the project must run
 // without Python on PATH. To swap in Python locally, change the line below to:
-//   command: 'python -m http.server 8080'      (Windows)
-//   command: 'python3 -m http.server 8080'     (Linux/macOS/CI Ubuntu)
+//   command: 'python -m http.server 8081'      (Windows)
+//   command: 'python3 -m http.server 8081'     (Linux/macOS/CI Ubuntu)
 
 import { defineConfig, devices } from '@playwright/test';
 
@@ -19,7 +19,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:8081',
     trace: 'on-first-retry',
   },
   projects: [
@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'node scripts/serve.js',
-    url: 'http://localhost:8080',
+    url: 'http://localhost:8081',
     reuseExistingServer: !process.env.CI,
     timeout: 30 * 1000,
   },

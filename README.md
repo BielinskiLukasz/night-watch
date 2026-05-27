@@ -14,10 +14,10 @@ a window instead of pinning to a single time.
 Nightwatch ships with a 5-line zero-dependency static server:
 
 ```bash
-npm run serve          # starts http://localhost:8080
+npm run serve          # starts http://localhost:8081
 ```
 
-Open <http://localhost:8080>. Click any of the four quick-log buttons
+Open <http://localhost:8081>. Click any of the four quick-log buttons
 (`Woke up`, `Going to sleep`, `Nap start`, `Nap end`) to record an event at
 the current time, rounded to 5 minutes. Use `+ Add event` at the bottom of
 the day list to back-fill a past day. Each row exposes `[edit]` and `[×]`
@@ -34,7 +34,7 @@ npm run test:e2e       # playwright test (e2e specs against the dev server)
 
 `node --test` auto-discovers `tests/**/*.test.js`. Playwright uses
 `playwright.config.js`; its `webServer` block boots `node scripts/serve.js`
-on port 8080.
+on port 8081.
 
 ## Project layout
 

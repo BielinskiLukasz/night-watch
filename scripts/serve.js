@@ -3,13 +3,18 @@
 // Resolves RESEARCH §Environment Availability Assumption A2 — keeps the project
 // independent of Python being on PATH. Serves files relative to process.cwd().
 //
-// Usage: node scripts/serve.js  (then open http://localhost:8080/)
+// Usage: node scripts/serve.js  (then open http://localhost:8081/)
+//
+// Default port is 8081 (not the more common 8080) so Nightwatch can coexist
+// with the developer's other static-site projects on the same machine
+// without a port-clash that would silently serve the wrong app to Playwright.
+// Override with `PORT=NNNN node scripts/serve.js` when needed.
 
 import { createServer } from 'node:http';
 import { createReadStream, statSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 
-const PORT = Number(process.env.PORT) || 8080;
+const PORT = Number(process.env.PORT) || 8081;
 const ROOT = process.cwd();
 
 const MIME = {
