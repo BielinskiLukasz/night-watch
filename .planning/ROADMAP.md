@@ -63,7 +63,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 ### Phase 2: Configuration & Settings
 
-**Goal**: User can customize the app's behavior (subject name, prediction thresholds, outlier rules, time format, rolling window, stats blend, day cutover) and all settings persist across sessions.
+**Goal**: As a parent tracking a child's sleep, I want to set the day-cutover hour and have it stick across reloads, so that day-grouping matches our household's actual sleep cycle, not a hardcoded default.
 **Mode**: mvp
 **Depends on**: Phase 1
 **Requirements**: CFG-01, CFG-02, CFG-03, CFG-04, CFG-05, CFG-06, CFG-07, CFG-08, CFG-09
