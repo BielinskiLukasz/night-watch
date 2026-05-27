@@ -187,6 +187,33 @@ test('Save with future date keeps modal open, shows future-date error, no row ad
   expect(rowsAfter).toBe(rowsBefore);
 });
 
+test('Save with date=2026-05-27 23:58 carries to 2026-05-28T00:00 — LOG-07 minute carry post-smoke regression', async ({ page }) => {
+  // Post-smoke fix-up to Plan 01-07: the original 0-55 minute guard rejected
+  // valid clock minutes 56-59. Manual smoke flagged it; the fix accepts
+  // 0-59 and routes through roundTo5 so 23:58 carries to next day 00:00.
+  // 2026-05-27 is a past date relative to the test wall clock (today is
+  // 2026-05-27 in the project's currentDate but tests can run any time
+  // after); using a clearly past date (2026-05-20) keeps the future-date
+  // guard out of the picture so the carry is the only thing under test.
+  await page.locator('#addEventBtn').click();
+
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  await page.locator('#manualEntry input[name="hour"]').fill('23');
+  await page.locator('#manualEntry input[name="minute"]').fill('58');
+  await page.locator('#manualEntry select[name="type"]').selectOption('bedtime');
+
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  // Modal closes (no validation error), one row appears under 2026-05-21
+  // (next day, carried by roundTo5 + Date arithmetic).
+  await expect(page.locator('#manualEntry')).not.toBeVisible();
+  const list = page.locator('[data-role="events"]');
+  await expect(list).toContainText('2026-05-21');
+  await expect(list).toContainText('00:00');
+  await expect(list).toContainText(/Bedtime/);
+  await expect(page.locator('[data-role="events"] li.event')).toHaveCount(1);
+});
+
 test('Save with hour=25 keeps modal open, shows hour-range error, no row added (01-UAT.md gap 3 regression)', async ({ page }) => {
   await page.locator('#addEventBtn').click();
 

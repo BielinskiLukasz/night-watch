@@ -34,9 +34,14 @@
 //     the modal-side caller passes clock.now() so the test path can inject
 //     clock-fixed. This honors the D-07 clock-adapter seam — validate()
 //     itself routes all clock reads through the injected `now` function.
-//   - LOG-07 silent rounding is preserved: in-range non-5-aligned minutes
-//     round silently AFTER validation accepts the raw value. Out-of-range
-//     hour/minute (e.g. 25 / 600) fails visibly with a field-named error.
+//   - LOG-07 silent rounding is preserved: the full 0–59 clock-minute range
+//     is accepted and silently rounded to the nearest 5 AFTER validation
+//     (post-smoke fix-up to Plan 01-07). The Date-arithmetic chain
+//     parseLocalISO → roundTo5 → formatLocalISO handles the hour-carry
+//     (58/59 → next hour :00) and the day-carry (23:58 on 2026-05-27 →
+//     2026-05-28T00:00) for free, matching time.js's contract used on every
+//     other write path. Out-of-range hour/minute (e.g. 25 / 600) still
+//     fails visibly with a field-named error.
 //
 // Domain time vs UI default-prefill:
 //   - The clock-adapter seam (D-07) reserves domain time for js/adapters/
@@ -46,6 +51,7 @@
 //     Plan 05 Task 2 greps for that literal tag.
 
 import { el, clear } from './dom.js';
+import { roundTo5, formatLocalISO, parseLocalISO } from '../lib/time.js';
 
 /** Pad an integer to 2 chars (shared between validate + UI default-prefill). */
 function pad(n) {
@@ -110,8 +116,14 @@ export function validate({ date, hourStr, minuteStr, type }, { now }) {
   }
   if (minuteStr !== '' && minuteStr !== undefined && minuteStr !== null) {
     minute = Number(minuteStr);
-    if (!Number.isFinite(minute) || minute < 0 || minute > 55) {
-      errors.push({ field: 'minute', message: 'Minute must be 0–55 (rounded to nearest 5).' });
+    // Accept the full clock range 0-59. LOG-07 silent-rounding handles the
+    // out-of-grid values: 56-57 round down to :55, 58-59 carry to the next
+    // hour (and 23:58 carries to next day 00:00 — the existing roundTo5
+    // contract in time.js). The narrow 0-55 guard that Plan 01-07 originally
+    // shipped rejected valid clock minutes the user could read off any
+    // analog/digital display; manual smoke surfaced it as a UX regression.
+    if (!Number.isFinite(minute) || minute < 0 || minute > 59) {
+      errors.push({ field: 'minute', message: 'Minute must be 0–59 (rounded to nearest 5).' });
     }
   }
 
@@ -120,7 +132,7 @@ export function validate({ date, hourStr, minuteStr, type }, { now }) {
   const haveAllRequiredForFutureCheck =
     !!date &&
     Number.isFinite(hour) && hour >= 0 && hour <= 23 &&
-    Number.isFinite(minute) && minute >= 0 && minute <= 55;
+    Number.isFinite(minute) && minute >= 0 && minute <= 59;
 
   if (haveAllRequiredForFutureCheck) {
     // Build a tentative at-string from the raw (pre-rounding) minute so the
@@ -141,9 +153,16 @@ export function validate({ date, hourStr, minuteStr, type }, { now }) {
     return { ok: false, errors };
   }
 
-  // -- Success path: apply LOG-07 silent rounding to the in-range minute --
-  const normalizedMinute = Math.round(minute / 5) * 5;
-  const atString = `${date}T${pad(hour)}:${pad(normalizedMinute)}`;
+  // -- Success path: apply LOG-07 silent rounding via roundTo5 (Date math) --
+  // String interpolation of `${pad(hour)}:${pad(round(minute))}` would mishandle
+  // the carry across hour/day boundaries (minute=58 → 60 → invalid HH:60 string;
+  // hour=23 + minute=58 → next-day midnight must increment the date). Routing
+  // through parseLocalISO → roundTo5 → formatLocalISO lets the Date class
+  // perform the carry naturally, matching time.js's existing 23:58 → next-day
+  // 00:00 contract used by every other write path (addEvent, addEventAt,
+  // editEvent — all of which re-round via the same chain in the store).
+  const rawAt = `${date}T${pad(hour)}:${pad(minute)}`;
+  const atString = formatLocalISO(roundTo5(parseLocalISO(rawAt)));
   return { ok: true, atString, type };
 }
 
