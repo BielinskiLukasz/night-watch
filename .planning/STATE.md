@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 1 all 8 plans complete (5 baseline + 3 UAT gap-closure); awaiting gsd-verifier to flip phase to complete
-stopped_at: Completed Plan 01-08 — UAT gap 1 (label SSOT, minor) closed; all 4 UAT gaps now closed
-last_updated: "2026-05-27T16:00:00.000Z"
-last_activity: 2026-05-27 -- Plan 01-08 label SSOT shipped; 125/125 node:test + 18/18 e2e; ROADMAP Phase 1 flipped to 8/8 Complete
+status: Phase 1 COMPLETE -- gsd-verifier PASS-WITH-FOLLOWUPS (9/9 ROADMAP success criteria, 4/4 UAT gaps closed, 125/125 node:test + 18/18 e2e)
+stopped_at: Phase 1 verified; ready to start Phase 2 (Configuration & Settings)
+last_updated: "2026-05-27T17:00:00.000Z"
+last_activity: 2026-05-27 -- gsd-verifier PASS on Phase 1; VERIFICATION.md written; phase ready to close, Phase 2 ready to start
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
   completed_plans: 8
-  percent: 0
+  percent: 13
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 01 (log-persist) — gap-closure complete, awaiting verifier
+Phase: 01 (log-persist) — COMPLETE (verifier PASS 2026-05-27)
 Plan: 8 of 8 complete (Plans 01-06 + 01-07 + 01-08 closed UAT gaps 4, 2+3, 1 — including the LOG-09 BLOCKER)
-Next: gsd-verifier subagent run on Phase 1 — goal-backward verification; flip STATE+ROADMAP phase to complete on PASS
-Last activity: 2026-05-27 -- Plan 01-08 label SSOT shipped; UAT gap 1 closed; all 4 UAT gaps closed
+Next: Phase 2 (Configuration & Settings) — CFG-01..08, cutover hour, multi-profile seam (still v1 single-profile)
+Last activity: 2026-05-27 -- gsd-verifier PASS-WITH-FOLLOWUPS on Phase 1; VERIFICATION.md written (9/9 success criteria, 4/4 UAT gaps closed)
 
-Progress: [██████████] 100% (8/8 plans; phase awaiting verifier flip)
+Progress: [██████████] 100% (Phase 1 complete; 1 of 8 phases done)
 
 ### Plan 01-01 final state
 
@@ -107,7 +107,14 @@ Progress: [██████████] 100% (8/8 plans; phase awaiting verif
 
 ### Phase 1 status
 
-5 phase plans + 3 UAT-driven gap-closure plans (01-06, 01-07, 01-08) complete. All 4 UAT gaps now CLOSED: gap 4 BLOCKER (LOG-09 double-render), gap 2 (future-date guard), gap 3 (silent-failure visible surface), gap 1 (label SSOT). ROADMAP.md flipped Phase 1 to 8/8 Complete via gsd-tools roadmap update-plan-progress 01 08 complete. Phase awaits gsd-verifier subagent run for goal-backward verification — on PASS the phase status flips here in STATE.md too.
+5 phase plans + 3 UAT-driven gap-closure plans (01-06, 01-07, 01-08) complete. All 4 UAT gaps CLOSED: gap 4 BLOCKER (LOG-09 double-render), gap 2 (future-date guard), gap 3 (silent-failure visible surface), gap 1 (label SSOT). ROADMAP.md = 8/8 Complete (gsd-tools roadmap update-plan-progress). **gsd-verifier PASS-WITH-FOLLOWUPS (2026-05-27)**: 9/9 ROADMAP success criteria, 9/9 user-flow steps, 14/14 Phase-1 REQ-IDs, 4/4 UAT gaps closed, all critical invariants pinned by security-smoke gates (T-07 / D-07 / clock-seam / T-08 / D-03 / D-04 / LOG-09 / LOG-07). Report: `.planning/phases/NW-01-log-persist/VERIFICATION.md`.
+
+Non-blocking follow-ups (carry into Phase 2 / 8):
+- REQUIREMENTS.md line 115 LOG-01 row still reads "Pending" — stale; one-line doc fix.
+- First CI green-run on `main` still awaits a successful GitHub Actions push (workflow file in place).
+- Plan 01-07 flaky-edit-spec under 4-worker parallel runs — flagged for Phase 8 PWA-hardening.
+- `<input type="date">` OS-locale display — user-side config, no app change.
+- `nw-research-test/` untracked at repo root — pre-existing scratch, triage when convenient.
 
 ### Open follow-ups (non-blocking)
 
@@ -175,6 +182,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-27T16:00:00.000Z
-Stopped at: Completed Plan 01-08 — UAT gap 1 (label SSOT) closed; all 4 UAT gaps + all 8 plans done; awaiting gsd-verifier subagent run for Phase 1 goal-backward verification
+Last session: 2026-05-27T17:00:00.000Z
+Stopped at: Phase 1 COMPLETE — gsd-verifier PASS-WITH-FOLLOWUPS; VERIFICATION.md written; ready to start Phase 2 (Configuration & Settings)
 Resume file: None
