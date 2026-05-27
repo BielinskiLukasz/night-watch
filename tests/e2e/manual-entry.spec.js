@@ -75,7 +75,14 @@ test('edit an existing event — events.length stays at 1 after save (Pitfall #6
   // Step 2: click the [edit] button on that row.
   await page.locator('.rowEdit').first().click();
 
-  // Step 3: change the Minute input to 40 in the modal.
+  // Step 3: change the event to a clearly past day+time. The quick-log click
+  // above recorded the event at "now" (rounded to 5min); to test edit-in-place
+  // without tripping the Plan 01-07 future-date guard, we move the edit target
+  // to 2026-05-20 04:40 — far enough in the past to survive any reasonable
+  // clock offset between test runs. The point of this spec is the
+  // events.length===1 invariant (Pitfall #6 / T-05), not the time value.
+  await page.fill('#manualEntry input[name="date"]', '2026-05-20');
+  await page.fill('#manualEntry input[name="hour"]', '4');
   await page.fill('#manualEntry input[name="minute"]', '40');
 
   // Step 4: Save.
@@ -140,4 +147,63 @@ test('press ESC in modal → no event added (native <dialog> ESC-to-close + canc
   // No event should have been added.
   const rows = page.locator('[data-role="events"] li.event');
   await expect(rows).toHaveCount(0);
+});
+
+// -----------------------------------------------------------------------------
+// Plan 01-07 — visible-failure regression specs (UAT gaps 2, 3).
+// The two specs below encode the user-facing behavior: an invalid Save attempt
+// keeps the modal OPEN, surfaces an inline error in the <output> block, and
+// adds NO row to the day list. The pure validate() unit-tests in
+// tests/integration/manual-entry.test.js pin the function-level contract;
+// these specs guard the UI wiring (re-open + render-into-output).
+//
+// Playwright cannot easily inject a fixed clock into the page's clock adapter
+// (validate() is exported but openManualEntry's fallback uses real `now`).
+// Using 2099-01-01 for the future-date spec is defensive: guaranteed future
+// regardless of when the test runs.
+// -----------------------------------------------------------------------------
+
+test('Save with future date keeps modal open, shows future-date error, no row added (01-UAT.md gap 2 regression)', async ({ page }) => {
+  await page.locator('#addEventBtn').click();
+
+  // 2099-01-01 is guaranteed to be in the future for any reasonable test run.
+  // The HTML5 max=today on the date input is the belt; the JS validate() is
+  // the suspenders. We bypass the HTML5 picker constraint by using fill()
+  // which sets the value directly — exercises the JS guard.
+  await page.locator('#manualEntry input[name="date"]').fill('2099-01-01');
+  await page.locator('#manualEntry input[name="hour"]').fill('10');
+  await page.locator('#manualEntry input[name="minute"]').fill('00');
+  await page.locator('#manualEntry select[name="type"]').selectOption('wake');
+
+  const rowsBefore = await page.locator('[data-role="events"] li.event').count();
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  // Modal stays open; the future-date error is announced in the errors block.
+  await expect(page.locator('#manualEntry')).toBeVisible();
+  await expect(page.locator('#manualEntryErrors')).toContainText(/future/i);
+
+  // No row added — silent no-op is dead.
+  const rowsAfter = await page.locator('[data-role="events"] li.event').count();
+  expect(rowsAfter).toBe(rowsBefore);
+});
+
+test('Save with hour=25 keeps modal open, shows hour-range error, no row added (01-UAT.md gap 3 regression)', async ({ page }) => {
+  await page.locator('#addEventBtn').click();
+
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  // fill() bypasses HTML5 min/max on the number input — exercises the JS guard.
+  await page.locator('#manualEntry input[name="hour"]').fill('25');
+  await page.locator('#manualEntry input[name="minute"]').fill('30');
+  await page.locator('#manualEntry select[name="type"]').selectOption('wake');
+
+  const rowsBefore = await page.locator('[data-role="events"] li.event').count();
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  // Modal stays open; the hour-range error mentions "0..23".
+  await expect(page.locator('#manualEntry')).toBeVisible();
+  await expect(page.locator('#manualEntryErrors')).toContainText(/0.+23/);
+
+  // No row added.
+  const rowsAfter = await page.locator('[data-role="events"] li.event').count();
+  expect(rowsAfter).toBe(rowsBefore);
 });
