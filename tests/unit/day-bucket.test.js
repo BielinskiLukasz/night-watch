@@ -102,7 +102,12 @@ describe('daysByCalendar: 7-day window (D-10 / D-15)', () => {
 });
 
 describe('daysByCalendar: LOG-09 / T-06 read-side enforcement', () => {
-  test('two napStart events on the same date → napStart=first, extras in extraNaps', () => {
+  test('two nap-pairs on the same date → both within the 2-nap budget; extraNaps stays empty (Plan 01-06 contract)', () => {
+    // Plan 01-06 / UAT gap 4 redefined the user-facing nap budget to 2.
+    // The first two nap pairs render as normal rows; only the 3rd+ overflow
+    // into extraNaps with `extra: true`. The named `dayRecord.napStart` /
+    // `.napEnd` slots stay singular (the FIRST event of each type fills them)
+    // so the Phase 3+ forecast contract is unchanged.
     const events = [
       ev('e1', 'napStart', '2026-05-26T13:00'),
       ev('e2', 'napEnd', '2026-05-26T14:00'),
@@ -112,16 +117,37 @@ describe('daysByCalendar: LOG-09 / T-06 read-side enforcement', () => {
     const days = daysByCalendar(events);
     assert.equal(days.length, 1);
     const day = days[0];
-    assert.equal(day.napStart, events[0], 'napStart should be the FIRST one');
-    assert.equal(day.napEnd, events[1], 'napEnd should match the chosen napStart');
+    assert.equal(day.napStart, events[0], 'napStart slot is the FIRST napStart');
+    assert.equal(day.napEnd, events[1], 'napEnd slot is the FIRST napEnd');
     assert.ok(Array.isArray(day.extraNaps), 'extraNaps must be an array');
-    assert.ok(
-      day.extraNaps.length >= 1,
-      'a second nap-pair must surface in extraNaps (T-06)',
+    assert.equal(
+      day.extraNaps.length,
+      0,
+      'two nap-pairs are WITHIN the budget (=2), so extraNaps is empty',
     );
-    // The extras include the second napStart at minimum.
-    const extraIds = day.extraNaps.map((e) => e.id);
-    assert.ok(extraIds.includes('e3'), 'extraNaps must include the second napStart');
+    // All four events render as normal rows.
+    assert.equal(day.allEvents.length, 4);
+    assert.ok(day.allEvents.every((e) => !e.extra), 'no event carries extra:true within budget');
+  });
+
+  test('three napStart events → only the 3rd surfaces in extraNaps with extra:true (T-06 / Plan 01-06)', () => {
+    const events = [
+      ev('e1', 'napStart', '2026-05-26T13:00'),
+      ev('e2', 'napStart', '2026-05-26T16:00'),
+      ev('e3', 'napStart', '2026-05-26T18:00'),
+    ];
+    const days = daysByCalendar(events);
+    assert.equal(days.length, 1);
+    const day = days[0];
+    assert.equal(day.napStart, events[0], 'napStart slot is the FIRST napStart');
+    assert.equal(day.extraNaps.length, 1, 'exactly one overflow nap (the 3rd)');
+    assert.equal(day.extraNaps[0].id, 'e3');
+    assert.equal(day.extraNaps[0].extra, true);
+    // allEvents has all 3 napStarts; only the 3rd is flagged.
+    assert.equal(day.allEvents.length, 3);
+    assert.ok(!day.allEvents[0].extra);
+    assert.ok(!day.allEvents[1].extra);
+    assert.equal(day.allEvents[2].extra, true);
   });
 
   test('single nap-pair → extraNaps is empty', () => {
@@ -172,14 +198,19 @@ describe('daysBySubjectiveNight: cutover semantics (D-08, D-18, Pitfall #3)', ()
     assert.equal(days[0].date, '2026-12-31');
   });
 
-  test('extraNaps mirrors daysByCalendar for subjective grouping', () => {
+  test('extraNaps mirrors daysByCalendar for subjective grouping (3rd nap is overflow)', () => {
+    // Plan 01-06 budget: 2 naps; the 3rd is the overflow that lands in
+    // extraNaps with extra:true.
     const events = [
       ev('e1', 'napStart', '2026-05-26T13:00'),
-      ev('e2', 'napStart', '2026-05-26T16:00'),
+      ev('e2', 'napStart', '2026-05-26T15:00'),
+      ev('e3', 'napStart', '2026-05-26T17:00'),
     ];
     const days = daysBySubjectiveNight(events, 4);
     assert.equal(days.length, 1);
     assert.equal(days[0].napStart, events[0]);
-    assert.ok(days[0].extraNaps.length >= 1);
+    assert.equal(days[0].extraNaps.length, 1, 'only the 3rd nap is overflow under the 2-nap budget');
+    assert.equal(days[0].extraNaps[0].id, 'e3');
+    assert.equal(days[0].extraNaps[0].extra, true);
   });
 });
