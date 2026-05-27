@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { createEventLog } from '../../js/store/event-log.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
+import { daysByCalendar } from '../../js/lib/day-bucket.js';
 
 function makeTestLog({
   // 2026-05-26 06:35 local (already on a 5-min boundary so the test is
@@ -293,6 +294,113 @@ describe('event-log: editEvent (D-03 mutate-in-place; Pitfall #6 regression guar
     const evt = log.addEvent('wake');
     const edited = log.editEvent(evt.id, { at: '2026-05-26T07:00' });
     assert.equal(edited.id, evt.id, 'id is preserved across edit');
+  });
+});
+
+// =====================================================================
+// Plan 01-06 / Task 1 — day-bucket extra-nap flag dedupe (UAT gap 4).
+// LOG-09 single-render contract: overflow nap events are tagged
+// `extra: true` on a SHALLOW COPY pushed into both extraNaps AND
+// allEvents, so the renderer can paint them once with a faint
+// className AND keep [edit]/[×] affordances. The wire-format events
+// array passed to buildDayRecord is NEVER mutated — the `extra` flag
+// is a runtime annotation, not persisted to localStorage.
+// =====================================================================
+
+describe('day-bucket extra-nap flag — 01-UAT.md gap 4 dedupe', () => {
+  // Helper: build a single-day record from raw events by feeding them
+  // through daysByCalendar and picking the first day record. Keeps each
+  // test focused on the bucketer contract (not the bucketing key).
+  function bucketForOneDay(events) {
+    const days = daysByCalendar(events);
+    assert.equal(days.length, 1, 'fixture must produce exactly one day');
+    return days[0];
+  }
+
+  test('buildDayRecord with 1 napStart returns allEvents containing 1 napStart, no extra flag', () => {
+    const events = [
+      { id: 'n1', type: 'napStart', at: '2026-05-27T13:00' },
+    ];
+    const day = bucketForOneDay(events);
+    assert.equal(day.allEvents.length, 1);
+    assert.equal(day.allEvents[0].type, 'napStart');
+    assert.ok(!day.allEvents[0].extra, 'single napStart must not carry extra flag');
+    assert.equal(day.extraNaps.length, 0, 'no overflow → empty extraNaps');
+  });
+
+  test('buildDayRecord with 3 napStart returns allEvents of length 3', () => {
+    const events = [
+      { id: 'n1', type: 'napStart', at: '2026-05-27T13:00' },
+      { id: 'n2', type: 'napStart', at: '2026-05-27T15:00' },
+      { id: 'n3', type: 'napStart', at: '2026-05-27T17:00' },
+    ];
+    const day = bucketForOneDay(events);
+    const napStarts = day.allEvents.filter((e) => e.type === 'napStart');
+    assert.equal(napStarts.length, 3, 'all 3 napStart events must appear in allEvents');
+  });
+
+  test('buildDayRecord with 3 napStart marks only the 3rd allEvents entry as extra:true', () => {
+    const events = [
+      { id: 'n1', type: 'napStart', at: '2026-05-27T13:00' },
+      { id: 'n2', type: 'napStart', at: '2026-05-27T15:00' },
+      { id: 'n3', type: 'napStart', at: '2026-05-27T17:00' },
+    ];
+    const day = bucketForOneDay(events);
+    assert.ok(!day.allEvents[0].extra, 'first napStart is normal');
+    assert.ok(!day.allEvents[1].extra, 'second napStart is normal (slot consumer, not extra)');
+    assert.equal(day.allEvents[2].extra, true, 'third napStart carries extra:true');
+  });
+
+  test('buildDayRecord with 3 napStart populates extraNaps with the 3rd nap, also flagged extra:true', () => {
+    const events = [
+      { id: 'n1', type: 'napStart', at: '2026-05-27T13:00' },
+      { id: 'n2', type: 'napStart', at: '2026-05-27T15:00' },
+      { id: 'n3', type: 'napStart', at: '2026-05-27T17:00' },
+    ];
+    const day = bucketForOneDay(events);
+    assert.equal(day.extraNaps.length, 1);
+    assert.equal(day.extraNaps[0].extra, true);
+    assert.equal(day.extraNaps[0].id, day.allEvents[2].id, 'extraNaps[0] is same nap as allEvents[2]');
+  });
+
+  test('buildDayRecord with 3 napStart does NOT mutate the input events array (wire-format invariant)', () => {
+    const events = [
+      { id: 'n1', type: 'napStart', at: '2026-05-27T13:00' },
+      { id: 'n2', type: 'napStart', at: '2026-05-27T15:00' },
+      { id: 'n3', type: 'napStart', at: '2026-05-27T17:00' },
+    ];
+    const snapshot = JSON.parse(JSON.stringify(events));
+    bucketForOneDay(events);
+    assert.deepStrictEqual(events, snapshot, 'input events array must be byte-identical after bucketing');
+    // Most-load-bearing assertion: the runtime annotation must not leak
+    // onto the source-of-truth event objects that the store persists.
+    assert.equal(events[2].extra, undefined, 'wire-format event must NOT carry extra after bucketing');
+    assert.equal(events[0].extra, undefined);
+    assert.equal(events[1].extra, undefined);
+  });
+
+  test('buildDayRecord with 3 napEnd applies the same overflow-flag treatment (sanity — same code path)', () => {
+    const events = [
+      { id: 'e1', type: 'napEnd', at: '2026-05-27T13:30' },
+      { id: 'e2', type: 'napEnd', at: '2026-05-27T15:30' },
+      { id: 'e3', type: 'napEnd', at: '2026-05-27T17:30' },
+    ];
+    const snapshot = JSON.parse(JSON.stringify(events));
+    const day = bucketForOneDay(events);
+
+    const napEnds = day.allEvents.filter((e) => e.type === 'napEnd');
+    assert.equal(napEnds.length, 3);
+    assert.ok(!day.allEvents[0].extra);
+    assert.ok(!day.allEvents[1].extra);
+    assert.equal(day.allEvents[2].extra, true);
+
+    assert.equal(day.extraNaps.length, 1);
+    assert.equal(day.extraNaps[0].extra, true);
+    assert.equal(day.extraNaps[0].id, 'e3');
+
+    // Wire-format invariant.
+    assert.deepStrictEqual(events, snapshot);
+    assert.equal(events[2].extra, undefined);
   });
 });
 
