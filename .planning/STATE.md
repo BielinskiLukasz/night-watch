@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 1 UAT gap-closure plan 01-06 complete; LOG-09 dedupe shipped
-stopped_at: Completed Plan 01-06 — UAT gap 4 (BLOCKER) closed; awaiting verifier on remaining UAT gaps
-last_updated: "2026-05-27T00:00:00.000Z"
-last_activity: 2026-05-27 -- Plan 01-06 LOG-09 dedupe shipped; 107/107 node:test + 13/13 e2e
+status: Phase 1 UAT gap-closure plans 01-06 + 01-07 complete; only 01-08 (label SSOT, minor) remaining before verifier
+stopped_at: Completed Plan 01-07 — UAT gaps 2+3 (future-date guard + visible-failure) closed; 01-08 next
+last_updated: "2026-05-27T15:00:00.000Z"
+last_activity: 2026-05-27 -- Plan 01-07 visible-failure + future-date guard shipped; 115/115 node:test + 15/15 e2e
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: 01 (log-persist) — gap-closure in progress
-Plan: 6 of 6+ complete (Plan 01-06 closed UAT gap 4 / LOG-09 dedupe BLOCKER)
-Next: Plan 01-07 (label-consistency fix) or Plan 01-08 (silent-rejection fix) per 01-UAT.md remaining gaps; or Phase 1 verifier re-run
-Last activity: 2026-05-27 -- Plan 01-06 LOG-09 dedupe shipped; UAT gap 4 BLOCKER closed
+Plan: 7 of 8 complete (Plans 01-06 + 01-07 closed UAT gaps 2, 3, 4 — including the LOG-09 BLOCKER)
+Next: Plan 01-08 (label SSOT, UAT gap 1 minor) then Phase 1 verifier re-run
+Last activity: 2026-05-27 -- Plan 01-07 visible-failure + future-date guard shipped; UAT gaps 2+3 closed
 
-Progress: [██████████] 100% (phase plans + gap-closure plan complete; remaining UAT gaps tracked in Plans 01-07 / 01-08)
+Progress: [█████████▒] 87% (7/8 plans; 01-08 remains before phase verification)
 
 ### Plan 01-01 final state
 
@@ -84,9 +84,19 @@ Progress: [██████████] 100% (phase plans + gap-closure plan 
 - UAT.md test 11 + test 13 (BLOCKER) closed: 3-nap day now renders exactly 3 actionable rows; faint 3rd row carries [edit]/[×]; LOG-09 surfacing preserved AND made user-actionable.
 - Deviations: 3 auto-fixed (1 unit-test contract update flowing from bucketer change; 2 documentation-phrasing grep-gate traps — same pattern Plans 01-02 / 01-03 hit)
 
+### Plan 01-07 final state (UAT gap-closure)
+
+- Task 1 (auto, TDD): COMPLETE — RED `5f0f0b3` → GREEN `f30fafc` (pure `validate(input, {now})` exported from manual-entry.js; future-date guard via lexicographic at-string compare; structured `{ok, errors[]}` ValidationResult)
+- Task 2 (auto): COMPLETE — GREEN `f7a09c5` (`<output id="manualEntryErrors" aria-live="polite">` + close-handler renders errors inline + queues `dlg.showModal()` re-open + focuses first errored field; e2e specs +2 for future-date and hour-range)
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-07-SUMMARY.md`
+- Tests: node --test 107/107 → 115/115 (+8) + Playwright 13/13 → 15/15 (+2)
+- UAT.md gap 2 (future-date guard, major) and gap 3 (silent-failure, major) both CLOSED.
+- Notable observation: pre-existing edit-in-place spec was adjusted to use 2026-05-20 04:40 as its edit target so the time is unambiguously in the past (the strict future guard would otherwise reject any wall-clock-future edit target). Spec invariant (events.length===1) preserved.
+- Flaky-test note (non-blocking): one intermittent failure on the edit-in-place spec under 4-worker parallel runs during the executor's wall-clock; re-ran clean both in isolation and in full parallel suite (15/15 green). Likely microtask-timing race in dlg.showModal() re-open under cross-worker contention. Flag for Phase 8 PWA-hardening pass.
+
 ### Phase 1 status
 
-5 phase plans + 1 UAT-driven gap-closure plan (01-06) complete. UAT gap 4 BLOCKER (LOG-09 double-render) closed. Remaining UAT gaps tracked in Plans 01-07 (label-consistency) / 01-08 (silent-rejection + future-date validation) — drafted but not executed. Phase still awaits gsd-verifier re-run to flip ROADMAP/STATE phase-complete.
+5 phase plans + 2 UAT-driven gap-closure plans (01-06, 01-07) complete. UAT gap 4 BLOCKER (LOG-09 double-render) + gaps 2 (future-date) + 3 (silent-failure) CLOSED. Only UAT gap 1 (label inconsistency, minor) remains — tracked in Plan 01-08 (Wave 1, depends on 01-06). Phase still awaits gsd-verifier re-run to flip ROADMAP/STATE phase-complete.
 
 ### Open follow-ups (non-blocking)
 
