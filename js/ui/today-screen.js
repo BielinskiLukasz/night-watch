@@ -193,7 +193,18 @@ function renderDay(day) {
   // (the UAT gap 4 regression we just fixed). The bucketer's overflow
   // array remains for non-rendering downstream consumers (Phase 3+ forecast
   // can still skip overflow naps without re-reading bucketer internals).
-  for (const evt of day.allEvents) {
+  //
+  // Post-smoke fix-up (2026-05-27): newest-first within a day so the user
+  // reads the most recent log at the top, matching the day-level newest-
+  // first sort the bucketer already does. Presentation-only reverse — the
+  // bucketer keeps chronological order in day.allEvents so Phase 3+
+  // forecast consumers can still iterate time-series forward without
+  // re-sorting. Snapshot-copy via [...] so we never mutate the bucketer's
+  // array (it is the same object the renderer's next render() call reads).
+  const eventsNewestFirst = [...day.allEvents].sort(
+    (a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0),
+  );
+  for (const evt of eventsNewestFirst) {
     ul.appendChild(renderEventRow(evt));
   }
 

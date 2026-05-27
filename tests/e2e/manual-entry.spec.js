@@ -187,6 +187,38 @@ test('Save with future date keeps modal open, shows future-date error, no row ad
   expect(rowsAfter).toBe(rowsBefore);
 });
 
+test('within a day, newest event renders at the top (presentation reverse of bucketer chronological order)', async ({ page }) => {
+  // Post-smoke fix-up (2026-05-27): the bucketer sorts events within a day
+  // chronologically (oldest first) so downstream forecast/predict consumers
+  // (Phase 3+) can iterate time-series forward. The renderer reverses that
+  // for display so the user reads the most recent log at the top, matching
+  // the day-level newest-first sort. Using two distinct-time manual entries
+  // (07:30 wake, 15:45 bedtime) keeps the test deterministic regardless of
+  // wall-clock — same 5-min bucket would tie and rely on stable-sort
+  // behavior; distinct buckets exercise the reverse path unambiguously.
+  await page.locator('#addEventBtn').click();
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  await page.locator('#manualEntry input[name="hour"]').fill('7');
+  await page.locator('#manualEntry input[name="minute"]').fill('30');
+  await page.locator('#manualEntry select[name="type"]').selectOption('wake');
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  await page.locator('#addEventBtn').click();
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  await page.locator('#manualEntry input[name="hour"]').fill('15');
+  await page.locator('#manualEntry input[name="minute"]').fill('45');
+  await page.locator('#manualEntry select[name="type"]').selectOption('bedtime');
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  // Two rows under 2026-05-20. Newest (15:45 bedtime) at top, oldest (07:30 wake) at bottom.
+  const rows = page.locator('[data-role="events"] li.event');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('15:45');
+  await expect(rows.nth(0)).toContainText(/Bedtime/);
+  await expect(rows.nth(1)).toContainText('07:30');
+  await expect(rows.nth(1)).toContainText(/Wake/);
+});
+
 test('Save with date=2026-05-27 23:58 carries to 2026-05-28T00:00 — LOG-07 minute carry post-smoke regression', async ({ page }) => {
   // Post-smoke fix-up to Plan 01-07: the original 0-55 minute guard rejected
   // valid clock minutes 56-59. Manual smoke flagged it; the fix accepts
