@@ -93,6 +93,8 @@ Progress: [█████████▒] 87% (7/8 plans; 01-08 remains before 
 - UAT.md gap 2 (future-date guard, major) and gap 3 (silent-failure, major) both CLOSED.
 - Notable observation: pre-existing edit-in-place spec was adjusted to use 2026-05-20 04:40 as its edit target so the time is unambiguously in the past (the strict future guard would otherwise reject any wall-clock-future edit target). Spec invariant (events.length===1) preserved.
 - Flaky-test note (non-blocking): one intermittent failure on the edit-in-place spec under 4-worker parallel runs during the executor's wall-clock; re-ran clean both in isolation and in full parallel suite (15/15 green). Likely microtask-timing race in dlg.showModal() re-open under cross-worker contention. Flag for Phase 8 PWA-hardening pass.
+- Post-smoke fix-up `e49393d` (LOG-07 minute carry): user manual smoke flagged that the 0-55 guard rejected valid clock minutes 56-59. Widened to 0-59 with hour/day carry via the canonical parseLocalISO → roundTo5 → formatLocalISO chain (time.js already documented "23:58 → 00:00 next day, midnight rollover, intentional" on line 9-10). Tests: node --test 115 → 122 (+7); Playwright 15 → 16 (+1). Future-date guard semantics preserved.
+- Smoke-test deferred item (out of scope for app code): `<input type="date">` display format follows OS/browser locale, not page locale. User to switch Windows regional format → Polski (or Chrome/Edge language → Polski) for DD.MM.YYYY display. Stored value remains canonical ISO YYYY-MM-DD regardless. No app change needed.
 
 ### Phase 1 status
 
