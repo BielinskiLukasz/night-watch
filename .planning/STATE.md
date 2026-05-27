@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 1 UAT gap-closure plans 01-06 + 01-07 complete; only 01-08 (label SSOT, minor) remaining before verifier
-stopped_at: Completed Plan 01-07 — UAT gaps 2+3 (future-date guard + visible-failure) closed; 01-08 next
-last_updated: "2026-05-27T15:00:00.000Z"
-last_activity: 2026-05-27 -- Plan 01-07 visible-failure + future-date guard shipped; 115/115 node:test + 15/15 e2e
+status: Phase 1 all 8 plans complete (5 baseline + 3 UAT gap-closure); awaiting gsd-verifier to flip phase to complete
+stopped_at: Completed Plan 01-08 — UAT gap 1 (label SSOT, minor) closed; all 4 UAT gaps now closed
+last_updated: "2026-05-27T16:00:00.000Z"
+last_activity: 2026-05-27 -- Plan 01-08 label SSOT shipped; 125/125 node:test + 18/18 e2e; ROADMAP Phase 1 flipped to 8/8 Complete
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 8
+  completed_plans: 8
   percent: 0
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 01 (log-persist) — gap-closure in progress
-Plan: 7 of 8 complete (Plans 01-06 + 01-07 closed UAT gaps 2, 3, 4 — including the LOG-09 BLOCKER)
-Next: Plan 01-08 (label SSOT, UAT gap 1 minor) then Phase 1 verifier re-run
-Last activity: 2026-05-27 -- Plan 01-07 visible-failure + future-date guard shipped; UAT gaps 2+3 closed
+Phase: 01 (log-persist) — gap-closure complete, awaiting verifier
+Plan: 8 of 8 complete (Plans 01-06 + 01-07 + 01-08 closed UAT gaps 4, 2+3, 1 — including the LOG-09 BLOCKER)
+Next: gsd-verifier subagent run on Phase 1 — goal-backward verification; flip STATE+ROADMAP phase to complete on PASS
+Last activity: 2026-05-27 -- Plan 01-08 label SSOT shipped; UAT gap 1 closed; all 4 UAT gaps closed
 
-Progress: [█████████▒] 87% (7/8 plans; 01-08 remains before phase verification)
+Progress: [██████████] 100% (8/8 plans; phase awaiting verifier flip)
 
 ### Plan 01-01 final state
 
@@ -96,9 +96,18 @@ Progress: [█████████▒] 87% (7/8 plans; 01-08 remains before 
 - Post-smoke fix-up `e49393d` (LOG-07 minute carry): user manual smoke flagged that the 0-55 guard rejected valid clock minutes 56-59. Widened to 0-59 with hour/day carry via the canonical parseLocalISO → roundTo5 → formatLocalISO chain (time.js already documented "23:58 → 00:00 next day, midnight rollover, intentional" on line 9-10). Tests: node --test 115 → 122 (+7); Playwright 15 → 16 (+1). Future-date guard semantics preserved.
 - Smoke-test deferred item (out of scope for app code): `<input type="date">` display format follows OS/browser locale, not page locale. User to switch Windows regional format → Polski (or Chrome/Edge language → Polski) for DD.MM.YYYY display. Stored value remains canonical ISO YYYY-MM-DD regardless. No app change needed.
 
+### Plan 01-08 final state (UAT gap-closure)
+
+- Task 1 (auto): COMPLETE — GREEN `0ddc192` (EVENT_LABEL derived from BUTTONS via `Object.freeze(Object.fromEntries(BUTTONS.map(...)))`; file-header comment extended with `01-UAT.md gap 1 closure` audit anchor)
+- Task 2 (auto): COMPLETE — GREEN `2c83a80` (BUTTONS + labelFor exported; integration `describe('label/button parity — 01-UAT.md gap 1')` block with parity + D-04 token + unknown-type fallback assertions; e2e per-button click → row text parity spec with word-boundary OLD-labels exclusion guard)
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-08-SUMMARY.md`
+- Tests: node --test 122/122 → 125/125 (+3) + Playwright 17/17 → 18/18 (+1)
+- UAT.md gap 1 (label inconsistency, minor) CLOSED. Single source of truth restored — Plan 01-03 file-header claim is now literally true.
+- D-04 wire format preserved: `event.type` tokens on disk are unchanged (`wake`/`bedtime`/`napStart`/`napEnd`); only the rendered LABEL moved to derivation from BUTTONS.
+
 ### Phase 1 status
 
-5 phase plans + 2 UAT-driven gap-closure plans (01-06, 01-07) complete. UAT gap 4 BLOCKER (LOG-09 double-render) + gaps 2 (future-date) + 3 (silent-failure) CLOSED. Only UAT gap 1 (label inconsistency, minor) remains — tracked in Plan 01-08 (Wave 1, depends on 01-06). Phase still awaits gsd-verifier re-run to flip ROADMAP/STATE phase-complete.
+5 phase plans + 3 UAT-driven gap-closure plans (01-06, 01-07, 01-08) complete. All 4 UAT gaps now CLOSED: gap 4 BLOCKER (LOG-09 double-render), gap 2 (future-date guard), gap 3 (silent-failure visible surface), gap 1 (label SSOT). ROADMAP.md flipped Phase 1 to 8/8 Complete via gsd-tools roadmap update-plan-progress 01 08 complete. Phase awaits gsd-verifier subagent run for goal-backward verification — on PASS the phase status flips here in STATE.md too.
 
 ### Open follow-ups (non-blocking)
 
@@ -125,6 +134,8 @@ Progress: [█████████▒] 87% (7/8 plans; 01-08 remains before 
 | Phase 1 P4 | 14min | 3 tasks | 8 files |
 | Phase 1 P5 | 18min | 4 tasks | 5 files |
 | Phase 1 P6 | 13min | 2 tasks | 5 files |
+| Phase 1 P7 | 18min | 2 tasks | 5 files |
+| Phase 1 P8 | 8min  | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -152,6 +163,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 01]: Plan 01-06: nap-budget-per-day = 2 (BUCKET_CONFIG.napBudgetPerDay named constant) — the user-facing render policy; named slots dayRecord.napStart/.napEnd stay singular so Phase 3+ forecast contract is unchanged
 - [Phase 01]: Plan 01-06: extra:true is a runtime-only annotation on overflow nap entries via shallow copy `{ ...evt, extra: true }` — never mutates the input events array, never leaks into the canonical D-04 wire format on disk
 - [Phase 01]: Plan 01-06: renderer single-iterates day.allEvents; compound className 'event extraNap' (both classes) keeps overflow rows actionable AND faint; renderExtraNapRow helper deleted entirely — single source of truth for "what to render" closes UAT gap 4 BLOCKER
+- [Phase 01]: Plan 01-08: EVENT_LABEL derived from BUTTONS via Object.fromEntries at module load — single source of truth for type→label mapping closes UAT gap 1 (label SSOT). BUTTONS + labelFor exported so the integration test pins parity at the module API layer (vs. duplicating the 4-entry table in test code — explicitly forbidden by gap-1 remediation). D-04 wire format unchanged on disk.
 
 ### Pending Todos
 
@@ -163,6 +175,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-27T00:00:00.000Z
-Stopped at: Completed Plan 01-06 — UAT gap 4 BLOCKER closed; phase awaiting remaining UAT gap-closure (Plans 01-07 / 01-08) + verifier re-run
+Last session: 2026-05-27T16:00:00.000Z
+Stopped at: Completed Plan 01-08 — UAT gap 1 (label SSOT) closed; all 4 UAT gaps + all 8 plans done; awaiting gsd-verifier subagent run for Phase 1 goal-backward verification
 Resume file: None
