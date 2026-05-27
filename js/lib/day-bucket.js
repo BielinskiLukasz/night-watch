@@ -31,10 +31,28 @@
 //    (and its matching napEnd) in the primary slots; any additional nap
 //    events spill into `dayRecord.extraNaps` so the UI can warn the user
 //    and the prediction engine can use only the first pair.
+//
+// 5. Overflow-flag dedupe (Plan 01-06 / UAT gap 4). Overflow napStart and
+//    napEnd events are flagged with `extra: true` on a SHALLOW COPY before
+//    being pushed into BOTH `dayRecord.allEvents` AND `dayRecord.extraNaps`.
+//    Critically, the raw `events` array passed in is NEVER mutated — the
+//    `extra` flag is a runtime annotation that lives only on the bucketer's
+//    output, not on the canonical D-04 wire format the storage adapter
+//    persists. The renderer in js/ui/today-screen.js iterates `allEvents`
+//    ONLY and reads `evt.extra` to decide row styling — replacing the prior
+//    double-render path where extras appeared once as a normal row AND
+//    once as a separate faint summary row with no [edit]/[×] affordances.
 
 /** Frozen config: bucketing defaults. */
 const BUCKET_CONFIG = Object.freeze({
   defaultCutoverHour: 4, // D-18; Phase 2 makes this user-configurable (CFG-08)
+  // Nap budget per day: napStart/napEnd events beyond this count are flagged
+  // overflow (extra: true) on a shallow copy AND mirrored into extraNaps so
+  // downstream consumers (Phase 3+ forecast) can skip them. Plan 01-06 / UAT
+  // gap 4 settled on 2 naps as the budget: morning + afternoon nap is a
+  // common toddler-sleep pattern, the user-facing LOG-09 warning fires only
+  // when the day exceeds it.
+  napBudgetPerDay: 2,
 });
 
 // ---------- helpers ----------
@@ -87,8 +105,27 @@ function subjectiveNightKey(at, cutoverHour) {
 
 /**
  * Build a dayRecord from a list of events that share the same day key.
- * Picks the first wake / bedtime / napStart / matching napEnd; everything
- * beyond the first nap pair spills into extraNaps (T-06 mitigation).
+ *
+ * Slot semantics:
+ *   - wake / bedtime: first event of that type fills the named slot.
+ *   - napStart / napEnd: FIRST event of that type fills the named slot
+ *     (kept singular for the Phase 1 single-canonical-nap LOG-09 model
+ *     and the Phase 3 forecast contract).
+ *
+ * Overflow semantics (Plan 01-06 / UAT gap 4):
+ *   - `BUCKET_CONFIG.napBudgetPerDay` (=2) is the user-facing budget for
+ *     nap events. The FIRST 1..N (N=budget) napStart/napEnd events render
+ *     as normal rows — they are pushed into `allEvents` unmodified, and
+ *     are NOT added to `extraNaps`.
+ *   - The (N+1)-th and beyond napStart/napEnd events are OVERFLOW. A
+ *     SHALLOW COPY `{ ...evt, extra: true }` is pushed into BOTH
+ *     `allEvents` AND `extraNaps`. The renderer reads `evt.extra` to
+ *     paint the row faint AND keep [edit]/[×] affordances (no dead
+ *     summary row).
+ *   - The input `eventsForDay` array's objects are NEVER mutated. The
+ *     `extra: true` annotation is a runtime-only marker; the canonical
+ *     wire format on disk (D-04) does not see it. Integration tests in
+ *     `tests/integration/event-log.test.js` pin this with deep-equality.
  *
  * @param {string} dateKey 'YYYY-MM-DD'
  * @param {Array<{id:string,type:string,at:string}>} eventsForDay  unordered
@@ -96,42 +133,64 @@ function subjectiveNightKey(at, cutoverHour) {
  */
 function buildDayRecord(dateKey, eventsForDay) {
   // Sort ascending by `at` for deterministic "first" selection.
-  const allEvents = [...eventsForDay].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  // Note: spread is a shallow copy of the array, but the same object references
+  // are retained — we MUST NOT assign to evt.extra anywhere; only create
+  // `{ ...evt, extra: true }` shallow copies. The deep-equality test in
+  // tests/integration/event-log.test.js pins this invariant.
+  const sorted = [...eventsForDay].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+
+  const NAP_BUDGET = BUCKET_CONFIG.napBudgetPerDay;
 
   let wake = null;
   let bedtime = null;
   let napStart = null;
   let napEnd = null;
   const extraNaps = [];
-  let napStartConsumed = false;
-  let napEndConsumed = false;
+  const allEvents = [];
+  let napStartCount = 0;
+  let napEndCount = 0;
 
-  for (const evt of allEvents) {
+  for (const evt of sorted) {
     switch (evt.type) {
       case 'wake':
         if (wake === null) wake = evt;
+        allEvents.push(evt);
         break;
       case 'bedtime':
         if (bedtime === null) bedtime = evt;
+        allEvents.push(evt);
         break;
-      case 'napStart':
-        if (!napStartConsumed) {
-          napStart = evt;
-          napStartConsumed = true;
+      case 'napStart': {
+        napStartCount += 1;
+        if (napStart === null) napStart = evt;
+        if (napStartCount <= NAP_BUDGET) {
+          // Within budget: render as a normal row, no overflow flag.
+          allEvents.push(evt);
         } else {
-          extraNaps.push(evt);
+          // Overflow: flag a shallow copy and push into BOTH arrays.
+          // Source `evt` (which lives on the input events array) is untouched.
+          const flagged = { ...evt, extra: true };
+          extraNaps.push(flagged);
+          allEvents.push(flagged);
         }
         break;
-      case 'napEnd':
-        if (!napEndConsumed) {
-          napEnd = evt;
-          napEndConsumed = true;
+      }
+      case 'napEnd': {
+        napEndCount += 1;
+        if (napEnd === null) napEnd = evt;
+        if (napEndCount <= NAP_BUDGET) {
+          allEvents.push(evt);
         } else {
-          extraNaps.push(evt);
+          // Overflow: flag a shallow copy and push into BOTH arrays.
+          const flagged = { ...evt, extra: true };
+          extraNaps.push(flagged);
+          allEvents.push(flagged);
         }
         break;
+      }
       default:
         // Unknown types are still part of allEvents; ignore for named slots.
+        allEvents.push(evt);
         break;
     }
   }
