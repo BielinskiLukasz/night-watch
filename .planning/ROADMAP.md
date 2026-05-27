@@ -171,7 +171,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Log & Persist | 6/6 | Complete (gap-closure 01-06 shipped 2026-05-27) | 2026-05-27 |
+| 1. Log & Persist | 7/8 | In Progress|  |
 | 2. Configuration & Settings | 0/TBD | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
