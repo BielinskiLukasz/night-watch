@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import { createEventLog } from '../../js/store/event-log.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
+import { validate } from '../../js/ui/manual-entry.js';
 
 function makeTestLog({
   frozenAt = new Date(2026, 4, 26, 6, 35),
@@ -138,5 +139,106 @@ describe('manual-entry: deleteEvent (LOG-06)', () => {
       id: () => 'unused',
     });
     assert.equal(log2.listEvents().length, 0, 'deletion is persisted byte-for-byte (D-05)');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Plan 01-07 / Task 1 — gap-closure: pure validate() with future-date guard
+// + structured errors. UAT gap 2 (major: future-date acceptance) and UAT
+// gap 3 (major: silent validation failures) both root-cause to the onClose
+// validator in js/ui/manual-entry.js. The refactor exposes a pure
+// validate(input, { now }) so this integration test can pin the contract
+// without DOM access — the clock-adapter seam (D-07) is honored by passing
+// `now` as a function returning the current at-string.
+// -----------------------------------------------------------------------------
+
+describe('validate() — gap-closure 01-07 (UAT gaps 2, 3)', () => {
+  const fixedNow = '2026-06-15T12:00';
+  const now = () => fixedNow;
+
+  test('validate() returns {ok:true, atString} for a valid past entry', () => {
+    const result = validate(
+      { date: '2026-06-14', hourStr: '22', minuteStr: '30', type: 'napStart' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-06-14T22:30');
+    assert.equal(result.type, 'napStart');
+  });
+
+  test('validate() rejects a future at-string with a date-field error mentioning "future"', () => {
+    const result = validate(
+      { date: '2026-06-16', hourStr: '09', minuteStr: '00', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    assert.ok(Array.isArray(result.errors));
+    const dateErr = result.errors.find((e) => e.field === 'date');
+    assert.ok(dateErr, 'expected an errors entry with field:"date"');
+    assert.match(dateErr.message, /future/i);
+  });
+
+  test('validate() rejects today + future-time as a future event', () => {
+    const result = validate(
+      { date: '2026-06-15', hourStr: '15', minuteStr: '00', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    const dateErr = result.errors.find((e) => e.field === 'date');
+    assert.ok(dateErr, 'expected an errors entry with field:"date"');
+    assert.match(dateErr.message, /future/i);
+  });
+
+  test('validate() rejects hour=25 with a field:"hour" error mentioning "0..23"', () => {
+    const result = validate(
+      { date: '2026-06-14', hourStr: '25', minuteStr: '30', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    const hourErr = result.errors.find((e) => e.field === 'hour');
+    assert.ok(hourErr, 'expected an errors entry with field:"hour"');
+    assert.match(hourErr.message, /0.+23/);
+  });
+
+  test('validate() rejects minute=600 with a field:"minute" error mentioning "0..55"', () => {
+    const result = validate(
+      { date: '2026-06-14', hourStr: '10', minuteStr: '600', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    const minuteErr = result.errors.find((e) => e.field === 'minute');
+    assert.ok(minuteErr, 'expected an errors entry with field:"minute"');
+    assert.match(minuteErr.message, /0.+55/);
+  });
+
+  test('validate() rejects empty date with a field:"date" required error', () => {
+    const result = validate(
+      { date: '', hourStr: '10', minuteStr: '00', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    const dateErr = result.errors.find((e) => e.field === 'date');
+    assert.ok(dateErr, 'expected an errors entry with field:"date"');
+    assert.match(dateErr.message, /required/i);
+  });
+
+  test('validate() collects multiple errors at once (empty type + minute=99)', () => {
+    const result = validate(
+      { date: '2026-06-14', hourStr: '10', minuteStr: '99', type: '' },
+      { now },
+    );
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.length >= 2, `expected ≥2 errors, got ${result.errors.length}`);
+    assert.ok(result.errors.some((e) => e.field === 'type'), 'expected a field:"type" error');
+    assert.ok(result.errors.some((e) => e.field === 'minute'), 'expected a field:"minute" error');
+  });
+
+  test('validate() preserves LOG-07 silent rounding for in-range non-5 minutes (23 → 25)', () => {
+    const result = validate(
+      { date: '2026-06-14', hourStr: '22', minuteStr: '23', type: 'napStart' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-06-14T22:25', 'in-range non-5 minutes round silently per LOG-07');
   });
 });
