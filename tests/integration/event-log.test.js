@@ -16,6 +16,7 @@ import { createEventLog } from '../../js/store/event-log.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
 import { daysByCalendar } from '../../js/lib/day-bucket.js';
+import { BUTTONS, labelFor } from '../../js/ui/today-screen.js';
 
 function makeTestLog({
   // 2026-05-26 06:35 local (already on a 5-min boundary so the test is
@@ -434,5 +435,41 @@ describe('event-log: deleteEvent (LOG-06)', () => {
       id: () => 'unused',
     });
     assert.equal(log2.listEvents().length, 0, 'deletion survives rehydration (D-05)');
+  });
+});
+
+// =====================================================================
+// Plan 01-08 / Task 2 — label/button parity (01-UAT.md gap 1).
+// User clicked 'Woke up' expecting that label on the rendered row; saw
+// 'Wake' instead because js/ui/today-screen.js maintained two parallel
+// type->label tables. Plan 01-08 collapsed EVENT_LABEL to derive from
+// BUTTONS via Object.fromEntries. This test pins the contract at the
+// module-API layer so any future regression (e.g. someone re-introducing
+// a manually-maintained EVENT_LABEL) fails in <1s.
+// =====================================================================
+
+describe('label/button parity — 01-UAT.md gap 1', () => {
+  test('labelFor(type) === BUTTONS[type].label for every BUTTONS entry', () => {
+    for (const button of BUTTONS) {
+      assert.strictEqual(
+        labelFor(button.type),
+        button.label,
+        `Expected labelFor("${button.type}") to be "${button.label}" but got "${labelFor(button.type)}"`,
+      );
+    }
+  });
+
+  test('BUTTONS has exactly the 4 expected entries (wake/bedtime/napStart/napEnd) — D-04 wire-format tokens unchanged', () => {
+    const types = BUTTONS.map((b) => b.type);
+    assert.deepStrictEqual(
+      types.slice().sort(),
+      ['bedtime', 'napEnd', 'napStart', 'wake'],
+      'BUTTONS type tokens are the canonical D-04 wire-format types; any change here ripples to the store and disk',
+    );
+  });
+
+  test('labelFor falls back to the raw type for unknown inputs (existing contract preserved)', () => {
+    assert.strictEqual(labelFor('snore'), 'snore', 'unknown type returns the raw type token (fallback)');
+    assert.strictEqual(labelFor(''), '', 'empty string falls back to itself');
   });
 });
