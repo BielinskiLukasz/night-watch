@@ -20,11 +20,12 @@ test('click "Woke up", event appears, reload, event still visible', async ({ pag
   await expect(wakeButton).toBeVisible();
   await wakeButton.click();
 
-  // The event row should appear after the click (textContent contains "Wake")
+  // The event row should appear after the click. Row label is 'Woke up'
+  // (matches button label; 01-UAT.md gap 1 closure -- not 'Wake').
   const eventsList = page.locator('[data-role="events"]');
-  await expect(eventsList).toContainText(/Wake/i);
+  await expect(eventsList).toContainText(/Woke up/i);
 
   // Reload — the event must survive (DATA-04, D-05)
   await page.reload();
-  await expect(eventsList).toContainText(/Wake/i);
+  await expect(eventsList).toContainText(/Woke up/i);
 });

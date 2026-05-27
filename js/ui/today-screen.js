@@ -23,6 +23,9 @@
 //     the prior double-render path.
 //   - Buttons are derived from a single Object.freeze'd BUTTONS config so the four-type
 //     contract has exactly one source of truth.
+//     The event-row LABEL for each type is also derived from BUTTONS via
+//     EVENT_LABEL (Object.fromEntries(...)); 'Woke up' button -> 'Woke up' row
+//     (01-UAT.md gap 1 closure).
 //   - Edit/delete dispatch use explicit `mode: 'add' | 'edit'` per Pitfall #6 (T-05) —
 //     the brittle `existing ? edit : add` branch is rejected by the modal entry guard.
 //   - Delete uses native window.confirm() per RESEARCH §Open Question #3 (Phase 1).
@@ -38,13 +41,12 @@ const BUTTONS = Object.freeze([
   Object.freeze({ type: 'napEnd', label: 'Nap end' }),
 ]);
 
-/** Map event.type → display label for list rows. */
-const EVENT_LABEL = Object.freeze({
-  wake: 'Wake',
-  bedtime: 'Bedtime',
-  napStart: 'Nap start',
-  napEnd: 'Nap end',
-});
+/** Map event.type -> display label for list rows. Derived from BUTTONS -- DO NOT
+ *  maintain a parallel table here; the BUTTONS array on lines above is the
+ *  single source of truth (per 01-UAT.md gap 1 + Plan 01-03 file-header claim). */
+const EVENT_LABEL = Object.freeze(
+  Object.fromEntries(BUTTONS.map((b) => [b.type, b.label])),
+);
 
 /** Pitfall #5 / T-05 debounce window. */
 const DEBOUNCE_MS = 300;
