@@ -216,3 +216,26 @@ button[data-log]:hover {
 #manualEntry menu button[type="submit"]:hover {
   background: #4338ca;
 }
+
+/* Plan 01-07 — inline validation errors (UAT gaps 2 + 3 closure).
+ * Hidden when empty (:empty); visible-failure styling when populated.
+ * Color stays neutral per the calm-theme decision in PROJECT.md — only
+ * the border-left + background tint signals the warning state. */
+#manualEntry .manualEntryErrors {
+  display: none;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #7f1d1d;
+}
+
+#manualEntry .manualEntryErrors:not(:empty) {
+  display: block;
+}
+
+#manualEntry .manualEntryErrors p {
+  margin: 0.125rem 0;
+}

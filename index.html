@@ -70,6 +70,14 @@
           <option value="napEnd">Nap end</option>
         </select>
       </label>
+      <!--
+        Plan 01-07 — inline validation surface (UAT gaps 2 + 3 closure).
+        js/ui/manual-entry.js writes per-field error <p> children into this
+        block via el({ textContent }) (T-07: never innerHTML). aria-live
+        announces errors to screen readers when they appear. The block is
+        hidden via :empty CSS when no errors are present.
+      -->
+      <output id="manualEntryErrors" class="manualEntryErrors" aria-live="polite"></output>
       <menu>
         <button type="button" id="manualCancel" formnovalidate>Cancel</button>
         <!--
