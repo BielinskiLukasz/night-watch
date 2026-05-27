@@ -81,16 +81,37 @@ test('double-clicking "Woke up" within 300ms produces exactly one event (T-05 / 
   await expect(wakeRows).toHaveCount(1);
 });
 
-test('a second "Nap start" on the same calendar date renders as an extraNap row (LOG-09 / T-06)', async ({ page }) => {
-  const btn = page.getByRole('button', { name: /^nap start$/i });
-  await btn.click();
-  // Wait past the 300ms debounce so the second click is accepted as a distinct event.
-  await page.waitForTimeout(400);
-  await btn.click();
+test('a 3-nap day renders 3 actionable rows; the 3rd is faint (LOG-09) — 01-UAT.md gap 4 regression', async ({ page }) => {
+  // Plan 01-06 / UAT gap 4 contract: a day with 3 napStart events renders
+  // EXACTLY 3 <li> rows (not 4 -- no dead summary row). The 1st and 2nd
+  // are normal; the 3rd is faint via the .extraNap class (LOG-09 surfacing
+  // preserved). Every row -- including the faint 3rd -- carries [edit]/[x]
+  // affordances so the user can act on any nap they see.
+  const napStart = page.getByRole('button', { name: /^nap start$/i });
 
-  // Plan 02 read-side enforcement puts the second napStart into dayRecord.extraNaps;
-  // Plan 03's render maps it to <li class="extraNap">. Expect exactly one such row.
-  const extraNapRows = page.locator('.extraNap');
-  await expect(extraNapRows).toHaveCount(1);
-  await expect(extraNapRows.first()).toContainText(/Extra nap/);
+  await napStart.click();
+  // Wait past the 300ms debounce so each click is accepted as a distinct event.
+  await page.waitForTimeout(350);
+  await napStart.click();
+  await page.waitForTimeout(350);
+  await napStart.click();
+
+  // Exactly 3 nap-start rows -- not 4 (no dead summary row).
+  const napRows = page
+    .locator('[data-role="events"] li.event')
+    .filter({ hasText: /Nap start/ });
+  await expect(napRows).toHaveCount(3);
+
+  // 1st and 2nd are normal; 3rd carries .extraNap (LOG-09 surfacing preserved).
+  await expect(napRows.nth(0)).not.toHaveClass(/extraNap/);
+  await expect(napRows.nth(1)).not.toHaveClass(/extraNap/);
+  await expect(napRows.nth(2)).toHaveClass(/extraNap/);
+
+  // Every row -- including the faint 3rd -- has both [edit] and [x] (the
+  // 01-UAT.md gap 4 user-acceptance criterion: user can act on every nap
+  // they see).
+  for (let i = 0; i < 3; i++) {
+    await expect(napRows.nth(i).locator('button.rowEdit')).toHaveCount(1);
+    await expect(napRows.nth(i).locator('button.rowDel')).toHaveCount(1);
+  }
 });

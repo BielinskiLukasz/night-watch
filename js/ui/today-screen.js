@@ -16,8 +16,11 @@
 //     (T-05 / Pitfall #5) uses `performance.now()` which is a monotonic non-domain
 //     wall clock — deliberately outside the clock-adapter seam.
 //   - The 7-day window literal `daysByCalendar(7)` comes from D-10/D-15.
-//   - dayRecord.extraNaps is rendered as a faint <li class="extraNap"> row per LOG-09 /
-//     T-06 surfacing (read-side enforcement lives in lib/day-bucket.js).
+//   - LOG-09 / T-06 surfacing: overflow nap events render in-position via
+//     `renderEventRow` with className `'event extraNap'` (the bucketer flags
+//     them via `evt.extra`). They keep the same [edit]/[x] affordances as
+//     every other row -- no dead summary row. Plan 01-06 / UAT gap 4 fixed
+//     the prior double-render path.
 //   - Buttons are derived from a single Object.freeze'd BUTTONS config so the four-type
 //     contract has exactly one source of truth.
 //   - Edit/delete dispatch use explicit `mode: 'add' | 'edit'` per Pitfall #6 (T-05) —
@@ -182,13 +185,16 @@ function renderDay(day) {
   article.appendChild(el('h3', { className: 'dayHeader', textContent: day.date }));
 
   const ul = el('ul', { className: 'dayEvents' });
+  // Plan 01-06: single source of truth for "what to render" is day.allEvents.
+  // The bucketer flags overflow naps via evt.extra; renderEventRow paints
+  // the row faint AND keeps [edit]/[x] affordances on every row. The old
+  // second loop over the overflow array is gone -- it would double-render
+  // every overflow nap and produce dead summary rows with no affordances
+  // (the UAT gap 4 regression we just fixed). The bucketer's overflow
+  // array remains for non-rendering downstream consumers (Phase 3+ forecast
+  // can still skip overflow naps without re-reading bucketer internals).
   for (const evt of day.allEvents) {
     ul.appendChild(renderEventRow(evt));
-  }
-
-  // LOG-09 / T-06 surfacing: extra naps render as faint rows at the bottom.
-  for (const extraNap of day.extraNaps) {
-    ul.appendChild(renderExtraNapRow(extraNap));
   }
 
   article.appendChild(ul);
@@ -201,14 +207,24 @@ function renderDay(day) {
  * All textContent — never innerHTML (T-07). data-event-id is set via the el
  * helper's data-* attribute path so the delegated handlers can read it back.
  *
- * @param {{ id: string, type: string, at: string }} evt
+ * Plan 01-06 / UAT gap 4 — LOG-09 surfacing lives here: when `evt.extra`
+ * is true (set by the bucketer for overflow nap events), the row carries
+ * className `'event extraNap'`. The `event` class keeps the row picked up
+ * by the existing list selectors (`li.event`, `.dayEvents .rowEdit`, etc.);
+ * the `extraNap` class triggers the faint-italic styling from style.css.
+ * Crucially, the [edit] / [×] buttons are appended unconditionally — every
+ * row the user sees is actionable, including the faint overflow ones.
+ *
+ * @param {{ id: string, type: string, at: string, extra?: boolean }} evt
  * @returns {HTMLElement}
  */
 function renderEventRow(evt) {
-  const li = el('li', { className: 'event', 'data-event-id': evt.id });
+  const liClassName = evt.extra ? 'event extraNap' : 'event';
+  const li = el('li', { className: liClassName, 'data-event-id': evt.id });
   li.appendChild(el('time', { className: 'eventTime', textContent: hhmm(evt.at) }));
   li.appendChild(el('span', { className: 'eventLabel', textContent: labelFor(evt.type) }));
   // [edit] and [×] affordances (D-12). Labels via textContent only (T-07).
+  // Appended unconditionally so overflow naps stay actionable (UAT gap 4).
   li.appendChild(
     el('button', {
       type: 'button',
@@ -226,22 +242,6 @@ function renderEventRow(evt) {
       textContent: '×',
     }),
   );
-  return li;
-}
-
-/**
- * Render an extra nap as a faint row, distinguished by `class="extraNap"`
- * (LOG-09 surfacing per Plan 02 read-side enforcement).
- *
- * @param {{ id: string, type: string, at: string }} evt
- * @returns {HTMLElement}
- */
-function renderExtraNapRow(evt) {
-  const li = el('li', {
-    className: 'extraNap',
-    'data-event-id': evt.id,
-    textContent: `Extra nap: ${hhmm(evt.at)}`,
-  });
   return li;
 }
 
