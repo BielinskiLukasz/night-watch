@@ -200,7 +200,7 @@ describe('validate() — gap-closure 01-07 (UAT gaps 2, 3)', () => {
     assert.match(hourErr.message, /0.+23/);
   });
 
-  test('validate() rejects minute=600 with a field:"minute" error mentioning "0..55"', () => {
+  test('validate() rejects minute=600 with a field:"minute" error mentioning "0..59"', () => {
     const result = validate(
       { date: '2026-06-14', hourStr: '10', minuteStr: '600', type: 'wake' },
       { now },
@@ -208,7 +208,7 @@ describe('validate() — gap-closure 01-07 (UAT gaps 2, 3)', () => {
     assert.equal(result.ok, false);
     const minuteErr = result.errors.find((e) => e.field === 'minute');
     assert.ok(minuteErr, 'expected an errors entry with field:"minute"');
-    assert.match(minuteErr.message, /0.+55/);
+    assert.match(minuteErr.message, /0.+59/);
   });
 
   test('validate() rejects empty date with a field:"date" required error', () => {
@@ -240,5 +240,82 @@ describe('validate() — gap-closure 01-07 (UAT gaps 2, 3)', () => {
     );
     assert.equal(result.ok, true);
     assert.equal(result.atString, '2026-06-14T22:25', 'in-range non-5 minutes round silently per LOG-07');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Post-smoke fix-up to Plan 01-07: the original guard rejected minutes 56-59
+// as out-of-range. Manual smoke (2026-05-27) reported the regression — users
+// can read 56/57/58/59 off any clock and the silent-rounding LOG-07 contract
+// should fold those into the 5-min grid (56,57 → :55; 58,59 → next hour :00;
+// 23:58 → next day 00:00 — the time.js roundTo5 contract).
+// -----------------------------------------------------------------------------
+
+describe('validate() — LOG-07 minute carry (post-smoke fix-up)', () => {
+  // Anchored well in the past so the future-date guard never fires on these
+  // carry-edge inputs (the carry behavior is independent of "now").
+  const now = () => '2099-01-01T00:00';
+
+  test('minute=56 rounds down to :55 (closer to 55 than to 60)', () => {
+    const result = validate(
+      { date: '2026-05-27', hourStr: '14', minuteStr: '56', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-05-27T14:55');
+  });
+
+  test('minute=57 rounds down to :55 (still closer to 55 than to 60)', () => {
+    const result = validate(
+      { date: '2026-05-27', hourStr: '14', minuteStr: '57', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-05-27T14:55');
+  });
+
+  test('minute=58 carries to the next hour :00 (closer to 60 than to 55)', () => {
+    const result = validate(
+      { date: '2026-05-27', hourStr: '14', minuteStr: '58', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-05-27T15:00');
+  });
+
+  test('minute=59 carries to the next hour :00', () => {
+    const result = validate(
+      { date: '2026-05-27', hourStr: '14', minuteStr: '59', type: 'wake' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-05-27T15:00');
+  });
+
+  test('23:58 on 2026-05-27 carries to next day 00:00 (2026-05-28T00:00)', () => {
+    const result = validate(
+      { date: '2026-05-27', hourStr: '23', minuteStr: '58', type: 'bedtime' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-05-28T00:00');
+  });
+
+  test('23:58 on the last day of a month carries to next month (2026-05-31T23:58 → 2026-06-01T00:00)', () => {
+    const result = validate(
+      { date: '2026-05-31', hourStr: '23', minuteStr: '58', type: 'bedtime' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2026-06-01T00:00');
+  });
+
+  test('23:58 on Dec 31 carries to next year (2026-12-31T23:58 → 2027-01-01T00:00)', () => {
+    const result = validate(
+      { date: '2026-12-31', hourStr: '23', minuteStr: '58', type: 'bedtime' },
+      { now },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.atString, '2027-01-01T00:00');
   });
 });
