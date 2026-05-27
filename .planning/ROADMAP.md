@@ -57,6 +57,10 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
   - [x] 01-05-PLAN.md (Wave 4): Phase gate — persistence + security smoke + CI supply-chain check + README + D-22 audit
 
+**Wave 5** *(UAT gap-closure — inserted after 01-UAT.md identified blockers)*
+
+  - [x] 01-06-PLAN.md (Wave 5): LOG-09 dedupe — UAT gap 4 BLOCKER closed; bucketer flags overflow naps with `extra:true` on shallow copies; UI single-renders via evt.extra; renderExtraNapRow deleted; faint rows keep [edit]/[×]
+
 ### Phase 2: Configuration & Settings
 
 **Goal**: User can customize the app's behavior (subject name, prediction thresholds, outlier rules, time format, rolling window, stats blend, day cutover) and all settings persist across sessions.
@@ -167,7 +171,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Log & Persist | 5/5 | Complete   | 2026-05-26 |
+| 1. Log & Persist | 6/6 | Complete (gap-closure 01-06 shipped 2026-05-27) | 2026-05-27 |
 | 2. Configuration & Settings | 0/TBD | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |

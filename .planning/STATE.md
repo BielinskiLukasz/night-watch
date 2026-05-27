@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 1 complete pending verification
-stopped_at: Completed Plan 01-05 — Phase 1 awaiting verifier
-last_updated: "2026-05-26T15:35:00.000Z"
-last_activity: 2026-05-26 -- Plan 01-05 closeout approved by user; SDK mutations landed; phase-complete deferred to verifier
+status: Phase 1 UAT gap-closure plan 01-06 complete; LOG-09 dedupe shipped
+stopped_at: Completed Plan 01-06 — UAT gap 4 (BLOCKER) closed; awaiting verifier on remaining UAT gaps
+last_updated: "2026-05-27T00:00:00.000Z"
+last_activity: 2026-05-27 -- Plan 01-06 LOG-09 dedupe shipped; 107/107 node:test + 13/13 e2e
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
   percent: 0
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 01 (log-persist) — COMPLETE pending verification
-Plan: 5 of 5 complete
-Next: Phase 1 verifier run (gsd-verifier subagent via /gsd-execute-phase)
-Last activity: 2026-05-26 -- Plan 01-05 closeout approved by user
+Phase: 01 (log-persist) — gap-closure in progress
+Plan: 6 of 6+ complete (Plan 01-06 closed UAT gap 4 / LOG-09 dedupe BLOCKER)
+Next: Plan 01-07 (label-consistency fix) or Plan 01-08 (silent-rejection fix) per 01-UAT.md remaining gaps; or Phase 1 verifier re-run
+Last activity: 2026-05-27 -- Plan 01-06 LOG-09 dedupe shipped; UAT gap 4 BLOCKER closed
 
-Progress: [██████████] 100% (plan-complete; phase-complete awaits verifier)
+Progress: [██████████] 100% (phase plans + gap-closure plan complete; remaining UAT gaps tracked in Plans 01-07 / 01-08)
 
 ### Plan 01-01 final state
 
@@ -75,9 +75,18 @@ Progress: [██████████] 100% (plan-complete; phase-complete a
 - SUMMARY evidence commit: `b460c3e` (D-22 matrix + threat disposition)
 - Tests: node --test 100/100 + Playwright 13/13 (no regression on Plans 01-01..04)
 
+### Plan 01-06 final state (UAT gap-closure)
+
+- Task 1 (auto, TDD): COMPLETE — RED `52cece1` → GREEN `57e10ae` (day-bucket flags overflow naps with extra:true on shallow copies; BUCKET_CONFIG.napBudgetPerDay=2 named constant)
+- Task 2 (auto): COMPLETE — GREEN `84206b2` (UI single-renders via evt.extra; renderExtraNapRow helper deleted; e2e spec REPLACED for new contract)
+- SUMMARY.md: `.planning/phases/NW-01-log-persist/01-06-SUMMARY.md`
+- Tests: node --test 100/100 → 107/107 (+7) + Playwright 13/13 preserved (1 spec replaced, not added)
+- UAT.md test 11 + test 13 (BLOCKER) closed: 3-nap day now renders exactly 3 actionable rows; faint 3rd row carries [edit]/[×]; LOG-09 surfacing preserved AND made user-actionable.
+- Deviations: 3 auto-fixed (1 unit-test contract update flowing from bucketer change; 2 documentation-phrasing grep-gate traps — same pattern Plans 01-02 / 01-03 hit)
+
 ### Phase 1 status
 
-All 5 plans complete. Phase awaits gsd-verifier run to flip ROADMAP/STATE phase-complete and tally requirement traceability.
+5 phase plans + 1 UAT-driven gap-closure plan (01-06) complete. UAT gap 4 BLOCKER (LOG-09 double-render) closed. Remaining UAT gaps tracked in Plans 01-07 (label-consistency) / 01-08 (silent-rejection + future-date validation) — drafted but not executed. Phase still awaits gsd-verifier re-run to flip ROADMAP/STATE phase-complete.
 
 ### Open follow-ups (non-blocking)
 
@@ -103,6 +112,7 @@ All 5 plans complete. Phase awaits gsd-verifier run to flip ROADMAP/STATE phase-
 | Phase 1 P3 | 10min | 3 tasks | 7 files |
 | Phase 1 P4 | 14min | 3 tasks | 8 files |
 | Phase 1 P5 | 18min | 4 tasks | 5 files |
+| Phase 1 P6 | 13min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -127,6 +137,9 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 01]: Plan 01-05: security-smoke exemption tag honored on matching line OR immediately preceding line (eslint-disable-next-line convention) — matches Plan 04's // gsd:allow-ui-clock placement
 - [Phase 01]: Plan 01-05: two-layer supply-chain guard — in-tree smoke (security-smoke.test.js dependencies==={}) + CI fail-fast step before node --test — observable in source AND PR rejection in seconds
 - [Phase 01]: Plan 01-05: clock-seam invariant bans no-arg new Date() only (allows new Date(x) data transforms) — natural seam between side-effecting clock reads and pure data transforms
+- [Phase 01]: Plan 01-06: nap-budget-per-day = 2 (BUCKET_CONFIG.napBudgetPerDay named constant) — the user-facing render policy; named slots dayRecord.napStart/.napEnd stay singular so Phase 3+ forecast contract is unchanged
+- [Phase 01]: Plan 01-06: extra:true is a runtime-only annotation on overflow nap entries via shallow copy `{ ...evt, extra: true }` — never mutates the input events array, never leaks into the canonical D-04 wire format on disk
+- [Phase 01]: Plan 01-06: renderer single-iterates day.allEvents; compound className 'event extraNap' (both classes) keeps overflow rows actionable AND faint; renderExtraNapRow helper deleted entirely — single source of truth for "what to render" closes UAT gap 4 BLOCKER
 
 ### Pending Todos
 
@@ -138,6 +151,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-26T15:35:00.000Z
-Stopped at: Completed Plan 01-05 — Phase 1 awaiting verifier
+Last session: 2026-05-27T00:00:00.000Z
+Stopped at: Completed Plan 01-06 — UAT gap 4 BLOCKER closed; phase awaiting remaining UAT gap-closure (Plans 01-07 / 01-08) + verifier re-run
 Resume file: None
