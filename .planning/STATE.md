@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 02
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-28T12:00:00.000Z"
-last_activity: 2026-05-28 -- Plan 02-04 complete (header + Settings modal UI); resuming Plan 02-05
+last_updated: "2026-05-28T12:30:00.000Z"
+last_activity: 2026-05-28 -- Plan 02-05 complete (CFG-08 MVP user-story); resuming Plan 02-06
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 14
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: 02 (configuration-settings) — EXECUTING (in-session resume)
-Plan: 4 of 6 complete (02-01..02-04 shipped; 02-05, 02-06 remaining)
-Next: continue with Plan 02-05 (day-cutover + grouping toggle on Today)
-Last activity: 2026-05-28 -- Wave 4 complete (header + Settings modal UI; CFG-01 user-visible); E2E 28/28 green
+Plan: 5 of 6 complete (02-01..02-05 shipped; 02-06 remaining)
+Next: continue with Plan 02-06 (12h/24h propagation: manual-entry picker)
+Last activity: 2026-05-28 -- Wave 5 complete (CFG-08 MVP user-story: grouping toggle + cutoverHour wiring); E2E 35/35 green
 
-Progress: [█████████████░░░░░░░] Phase 2 67% (4/6 plans); overall: 1 phase complete + Phase 2 two-thirds done
+Progress: [████████████████░░░░] Phase 2 83% (5/6 plans); overall: 1 phase complete + Phase 2 five-sixths done
 
 ### Phase 02 execution progress
 
@@ -54,7 +54,10 @@ Progress: [█████████████░░░░░░░] Phase 2
   - 2 commits: 4bbb950 (Task 1 feat — index.html + style.css + js/ui/header.js + js/ui/settings-modal.js + js/app.js) → 21af77d (Task 2 test — Playwright E2E + formnovalidate fix)
   - SUMMARY: .planning/phases/NW-02-configuration-settings/02-04-SUMMARY.md
   - Test delta: unit 251/251 unchanged; E2E +10 (18 → 28)
-- Plan 02-05 (Wave 5): PENDING — MVP-critical: day-cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
+- Plan 02-05 (Wave 5): COMPLETE — MVP-critical: day-cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
+  - 2 commits: 16bc1c4 (Task 1 feat — today-screen.js + CSS) → 6e48a72 (Task 2 test — grouping-toggle + regression-phase1 specs)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-05-SUMMARY.md
+  - Test delta: unit 251/251 unchanged; E2E +7 (28 → 35)
 - Plan 02-06 (Wave 6): PENDING — 12h/24h propagation: manual-entry picker + Today list formatTime (CFG-09)
 
 Resume command: /gsd-execute-phase 2 (will pick up at Wave 5 by skipping plans with existing SUMMARY.md)
