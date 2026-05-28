@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 02
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-28T12:30:00.000Z"
-last_activity: 2026-05-28 -- Plan 02-05 complete (CFG-08 MVP user-story); resuming Plan 02-06
+last_updated: "2026-05-28T13:00:00.000Z"
+last_activity: 2026-05-28 -- Phase 2 EXECUTION COMPLETE — all 6 plans shipped (CFG-01..04, 06..09); ready for verifier
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
-  percent: 14
+  completed_plans: 11
+  percent: 15
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 02 (configuration-settings) — EXECUTING (in-session resume)
-Plan: 5 of 6 complete (02-01..02-05 shipped; 02-06 remaining)
-Next: continue with Plan 02-06 (12h/24h propagation: manual-entry picker)
-Last activity: 2026-05-28 -- Wave 5 complete (CFG-08 MVP user-story: grouping toggle + cutoverHour wiring); E2E 35/35 green
+Phase: 02 (configuration-settings) — EXECUTION COMPLETE
+Plan: 6 of 6 complete (02-01..02-06 all shipped); ready for /gsd-verifier
+Next: run gsd-verifier on Phase 2; then start Phase 3 (forecast engine)
+Last activity: 2026-05-28 -- Phase 2 closes with CFG-09 (manual-entry 12h picker + Today list propagation); E2E 40/40 green; unit 251/251
 
-Progress: [████████████████░░░░] Phase 2 83% (5/6 plans); overall: 1 phase complete + Phase 2 five-sixths done
+Progress: [████████████████████] Phase 2 100% (6/6 plans); overall: 1 phase complete + Phase 2 fully shipped (verifier pending)
 
 ### Phase 02 execution progress
 
@@ -58,7 +58,10 @@ Progress: [████████████████░░░░] Phase 2
   - 2 commits: 16bc1c4 (Task 1 feat — today-screen.js + CSS) → 6e48a72 (Task 2 test — grouping-toggle + regression-phase1 specs)
   - SUMMARY: .planning/phases/NW-02-configuration-settings/02-05-SUMMARY.md
   - Test delta: unit 251/251 unchanged; E2E +7 (28 → 35)
-- Plan 02-06 (Wave 6): PENDING — 12h/24h propagation: manual-entry picker + Today list formatTime (CFG-09)
+- Plan 02-06 (Wave 6): COMPLETE — 12h/24h propagation: manual-entry picker + Today list formatTime (CFG-09)
+  - 2 commits: be369b3 (Task 1 feat — manual-entry.js + today-screen.js) → 61fbad3 (Task 2 test + adopt-stale-select fix)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-06-SUMMARY.md
+  - Test delta: unit 251/251 unchanged; E2E +5 (35 → 40)
 
 Resume command: /gsd-execute-phase 2 (will pick up at Wave 5 by skipping plans with existing SUMMARY.md)
 

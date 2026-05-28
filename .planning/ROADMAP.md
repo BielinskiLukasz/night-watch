@@ -89,7 +89,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 **Wave 3** *(blocked on Wave 2 completion — parallel)*
 
   - [x] 02-05-PLAN.md — **MVP-critical**: cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
-  - [ ] 02-06-PLAN.md — Time format propagation: 12h picker in manual-entry + formatTime in Today list (CFG-09)
+  - [x] 02-06-PLAN.md — Time format propagation: 12h picker in manual-entry + formatTime in Today list (CFG-09)
 
 ### Phase 3: Forecast Engine & Today Screen
 
