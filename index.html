@@ -19,6 +19,22 @@
 </head>
 <body>
   <!--
+    App header (Plan 02-04 / D2-10). h1.subjectName is populated by
+    js/ui/header.js via .textContent (T-07 / Pitfall #5 — never innerHTML).
+    The gear button opens the Settings modal via dialog.showModal(). The
+    SVG icon is inline (no external asset) so the header has no network
+    dependency. min-width/height 44px on the trigger satisfies tap target.
+  -->
+  <header class="appHeader">
+    <h1 class="subjectName"></h1>
+    <button type="button" class="settingsTrigger" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l1.11-.83c.1-.08.12-.21.05-.32l-1.05-1.82c-.05-.09-.27-.12-.39-.06l-1.31.99c-.27-.2-.56-.39-.86-.54l-.2-1.36c-.02-.11-.13-.19-.24-.19h-2.1c-.12 0-.23.08-.25.19l-.2 1.36c-.3.15-.59.34-.86.54l-1.31-.99c-.12-.06-.34-.03-.39.06l-1.05 1.82c-.07.11-.05.24.05.32l1.11.83c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-1.11.83c-.1.08-.12.21-.05.32l1.05 1.82c.05.09.27.12.39.06l1.31-.99c.27.2.56.39.86.54l.2 1.36c.02.11.13.19.24.19h2.1c.12 0 .23-.08.25-.19l.2-1.36c.3-.15.59-.34.86-.54l1.31.99c.12.06.34.03.39-.06l1.05-1.82c.07-.11.05-.24-.05-.32l-1.11-.83z" fill="currentColor"/>
+      </svg>
+    </button>
+  </header>
+
+  <!--
     No-JS / pre-hydration skeleton (Plan 01-03 / D-10).
     js/ui/today-screen.js calls root.replaceChildren(...) on mount, so this
     skeleton is shown only momentarily during module loading and as a
@@ -92,6 +108,86 @@
           ::invalid styling still surfaces the out-of-step value as a hint.
         -->
         <button type="submit" value="save" formnovalidate>Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!--
+    Settings modal (Plan 02-04 / D2-12, D2-13, D2-14). Native <dialog> mirrors
+    the manualEntry pattern: form method="dialog", Save submit fires close
+    with returnValue='save', Cancel/ESC fire close with empty returnValue.
+    Three fieldsets group the 9 settings (Profile / Time & Day / Forecast
+    tuning per D2-13 — NO welcome banner). The settingsErrors <output>
+    block uses aria-live="polite" and renders one <p data-field=...> per
+    error via .textContent (T-07).
+  -->
+  <dialog id="settings" aria-labelledby="settingsTitle">
+    <form method="dialog">
+      <h2 id="settingsTitle">Settings</h2>
+
+      <fieldset>
+        <legend>Profile</legend>
+        <label>
+          Subject name
+          <input type="text" name="subjectName" maxlength="40">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Time &amp; Day</legend>
+        <label>
+          Day cutover hour
+          <input type="number" name="cutoverHour" min="0" max="23">
+        </label>
+        <label>
+          View grouping
+          <select name="groupingMode">
+            <option value="calendar">Calendar day</option>
+            <option value="sleepCycle">Sleep cycle</option>
+          </select>
+        </label>
+        <label>
+          Time format
+          <select name="timeFormat">
+            <option value="24h">24-hour</option>
+            <option value="12h">12-hour</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Forecast tuning</legend>
+        <label class="checkboxRow">
+          <input type="checkbox" name="autoOutlier">
+          Auto outlier detection
+        </label>
+        <label>
+          Max delta (minutes)
+          <input type="number" name="maxDelta" min="5" max="120">
+        </label>
+        <label>
+          Min days of history
+          <input type="number" name="minDays" min="1" max="90">
+        </label>
+        <label>
+          Rolling window (days)
+          <input type="number" name="windowDays" min="3" max="90">
+        </label>
+        <label>
+          Statistical blend
+          <select name="statBlend">
+            <option value="median">Median</option>
+            <option value="mean">Mean</option>
+            <option value="blend">Blend</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <output id="settingsErrors" class="settingsErrors" aria-live="polite"></output>
+
+      <menu>
+        <button type="button" id="settingsCancel" formnovalidate>Cancel</button>
+        <button type="submit" value="save">Save</button>
       </menu>
     </form>
   </dialog>

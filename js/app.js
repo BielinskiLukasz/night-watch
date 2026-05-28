@@ -14,6 +14,7 @@ import { newEventId } from './lib/id.js';
 import { createEventLog } from './store/event-log.js';
 import { createSettingsStore } from './store/settings.js';
 import { mountTodayScreen } from './ui/today-screen.js';
+import { mountHeader } from './ui/header.js';
 
 const storage = createStorageLocal('nightwatch:db');
 const clock = createClockSystem();
@@ -25,7 +26,10 @@ const clock = createClockSystem();
 const settings = createSettingsStore({ storage });
 const eventLog = createEventLog({ storage, clock, id: newEventId });
 
-// mountHeader is added by Plan 02-04 (Settings modal + header strip).
+// Plan 02-04 wiring: header reads settings.subjectName for h1 + document.title
+// and exposes the gear → openSettings({settings}) entrypoint.
+mountHeader({ root: document.querySelector('header.appHeader'), settings });
+
 // Today screen accepts a `settings` parameter forward-compatibly; the
 // Plan 02-05 update will start consuming it for cutoverHour / groupingMode.
 mountTodayScreen({ root: document.getElementById('app'), eventLog, settings });
