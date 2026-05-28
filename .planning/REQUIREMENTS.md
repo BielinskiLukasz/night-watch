@@ -19,15 +19,15 @@
 
 ### Configuration
 
-- [ ] **CFG-01**: User can set a single subject profile display name in Settings.
-- [ ] **CFG-02**: User can configure `max_delta` (the prediction-confidence threshold above which the app falls back to a probability band) in Settings.
-- [ ] **CFG-03**: User can configure `min_days` (minimum history days before forecasts are shown) in Settings.
-- [ ] **CFG-04**: User can toggle automatic outlier detection on/off in Settings.
-- [ ] **CFG-05**: User can manually mark any day as "rejected" (outlier) from the History screen, and the toggle is persisted with the day record.
-- [ ] **CFG-06**: User can configure the rolling-window length (in days) used for forecasts in Settings.
-- [ ] **CFG-07**: User can choose the statistical blend used for predictions — median, mean, or a configurable blend — in Settings.
-- [ ] **CFG-08**: User can configure the day-cutover hour in Settings (default ~04:00).
-- [ ] **CFG-09**: User can toggle between 24-hour (default) and 12-hour time format in Settings, with the choice persisted.
+- [x] **CFG-01**: User can set a single subject profile display name in Settings.
+- [x] **CFG-02**: User can configure `max_delta` (the prediction-confidence threshold above which the app falls back to a probability band) in Settings.
+- [x] **CFG-03**: User can configure `min_days` (minimum history days before forecasts are shown) in Settings.
+- [x] **CFG-04**: User can toggle automatic outlier detection on/off in Settings.
+- [x] **CFG-05**: User can manually mark any day as "rejected" (outlier) from the History screen, and the toggle is persisted with the day record.
+- [x] **CFG-06**: User can configure the rolling-window length (in days) used for forecasts in Settings.
+- [x] **CFG-07**: User can choose the statistical blend used for predictions — median, mean, or a configurable blend — in Settings.
+- [x] **CFG-08**: User can configure the day-cutover hour in Settings (default ~04:00).
+- [x] **CFG-09**: User can toggle between 24-hour (default) and 12-hour time format in Settings, with the choice persisted.
 
 ### Prediction
 
@@ -121,15 +121,15 @@ Which phases cover which requirements.
 | LOG-07 | Phase 1 | Complete |
 | LOG-08 | Phase 1 | Complete |
 | LOG-09 | Phase 1 | Complete |
-| CFG-01 | Phase 2 | Pending |
-| CFG-02 | Phase 2 | Pending |
-| CFG-03 | Phase 2 | Pending |
-| CFG-04 | Phase 2 | Pending |
-| CFG-05 | Phase 4 | Pending |
-| CFG-06 | Phase 2 | Pending |
-| CFG-07 | Phase 2 | Pending |
-| CFG-08 | Phase 2 | Pending |
-| CFG-09 | Phase 2 | Pending |
+| CFG-01 | Phase 2 | Complete |
+| CFG-02 | Phase 2 | Complete |
+| CFG-03 | Phase 2 | Complete |
+| CFG-04 | Phase 2 | Complete |
+| CFG-05 | Phase 4 | Complete |
+| CFG-06 | Phase 2 | Complete |
+| CFG-07 | Phase 2 | Complete |
+| CFG-08 | Phase 2 | Complete |
+| CFG-09 | Phase 2 | Complete |
 | PRED-01 | Phase 3 | Pending |
 | PRED-02 | Phase 3 | Pending |
 | PRED-03 | Phase 3 | Pending |
