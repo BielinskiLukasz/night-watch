@@ -94,6 +94,45 @@ button[data-log]:hover {
   background: #4338ca;
 }
 
+/* Grouping-mode quick-toggle (Plan 02-05 / D2-16, UI-SPEC §Grouping-Mode Toggle).
+ * Two buttons sit between quick-log and the day list; aria-pressed reflects
+ * snap.groupingMode. Active button uses font-weight + accent border —
+ * Phase 8 swaps in the accent fill once theming tokens are wired. */
+.groupingToggle {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 1rem;
+}
+
+.groupingToggle button {
+  padding: 8px 16px;
+  min-height: 40px;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.groupingToggle button:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.groupingToggle button[aria-pressed="true"] {
+  font-weight: 600;
+  border-color: #4f46e5;
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.groupingToggle button:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
 /* Day-grouped event list (Plan 01-03 / D-11) */
 .dayList {
   display: block;
