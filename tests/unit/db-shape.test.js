@@ -21,7 +21,7 @@ describe('DEFAULT_SETTINGS', () => {
   });
 
   it('has all 9 D2-03 keys with correct values', () => {
-    assert.equal(DEFAULT_SETTINGS.subjectName, '');
+    assert.equal(DEFAULT_SETTINGS.subjectName, 'Baby');
     assert.equal(DEFAULT_SETTINGS.cutoverHour, 4);
     assert.equal(DEFAULT_SETTINGS.groupingMode, 'calendar');
     assert.equal(DEFAULT_SETTINGS.timeFormat, '24h');

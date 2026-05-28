@@ -39,12 +39,12 @@ test('CFG-01: subject name appears in h1.subjectName and document.title after Sa
   await expect(page).toHaveTitle('Nightwatch — Alice');
 });
 
-test('CFG-01: empty subjectName → document.title = "Nightwatch" (D2-11 empty branch)', async ({ page }) => {
+test('CFG-01: empty subjectName → h1 + document.title both read "Nightwatch" via fallback (D2-11)', async ({ page }) => {
   await page.locator('button.settingsTrigger').click();
   await page.locator('#settings input[name="subjectName"]').fill('');
   await page.locator('#settings button[type="submit"]').click();
 
-  await expect(page.locator('header.appHeader h1.subjectName')).toHaveText('');
+  await expect(page.locator('header.appHeader h1.subjectName')).toHaveText('Nightwatch');
   await expect(page).toHaveTitle('Nightwatch');
 });
 

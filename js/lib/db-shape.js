@@ -32,7 +32,7 @@
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
-  subjectName:  '',          // empty — header shows nothing until set (CFG-01)
+  subjectName:  'Baby',      // CFG-01 default; user can override via Settings modal
   cutoverHour:  4,           // CFG-08, matches Phase 1 D-18
   groupingMode: 'calendar',  // preserves Phase 1 D-11 baseline
   timeFormat:   '24h',       // CFG-09 default

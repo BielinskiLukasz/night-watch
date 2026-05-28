@@ -35,7 +35,7 @@ export function mountHeader({ root, settings }) {
 
   const apply = (snap) => {
     // T-07 / Pitfall #5: textContent ONLY. Never innerHTML.
-    h1.textContent = snap.subjectName;
+    h1.textContent = snap.subjectName || 'Nightwatch';
     // document.title: 'Nightwatch — {name}' when set, 'Nightwatch' when empty (D2-11).
     document.title = snap.subjectName ? `Nightwatch — ${snap.subjectName}` : 'Nightwatch';
   };
