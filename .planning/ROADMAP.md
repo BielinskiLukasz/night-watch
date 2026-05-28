@@ -78,7 +78,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 1** *(pure-logic TDD foundation — parallel)*
 
-  - [ ] 02-01-PLAN.md — TDD: DEFAULT_SETTINGS + validateSettings pure validator (db-shape.js + settings-validate.js); CFG-05 deferred-to-phase-4 owner
+  - [x] 02-01-PLAN.md — TDD: DEFAULT_SETTINGS + validateSettings pure validator (db-shape.js + settings-validate.js); CFG-05 deferred-to-phase-4 owner
   - [ ] 02-02-PLAN.md — TDD: createSettingsStore (get/update/subscribe) + v1→v2 migration integration + cross-store race test
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -187,7 +187,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
-| 2. Configuration & Settings | 0/6 | Not started | — |
+| 2. Configuration & Settings | 1/6 | In Progress|  |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
 | 5. Data Import/Export | 0/TBD | Not started | — |
