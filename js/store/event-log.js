@@ -32,8 +32,9 @@ import {
   daysByCalendar as _daysByCalendar,
   daysBySubjectiveNight as _daysBySubjectiveNight,
 } from '../lib/day-bucket.js';
+import { migrateV1ToV2, DEFAULT_SETTINGS } from '../lib/db-shape.js';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const VALID_TYPES = new Set(['wake', 'bedtime', 'napStart', 'napEnd']);
 
 // D-18 (Plan 01-02): Phase 1 hardcodes the subjective-night cutover at 04:00.
@@ -51,16 +52,26 @@ const DEFAULT_CUTOVER_HOUR = 4;
  */
 export function createEventLog({ storage, clock, id }) {
   // Load once at construction; the in-memory `db` is the working copy.
+  // migrateV1ToV2 runs BEFORE the version check so v1 blobs (Phase 1) succeed
+  // silently and v3+ blobs still throw (T-2-09). Fresh installs (null) become
+  // a canonical v2 blob with default settings injected.
   // Whole-blob rewrite on every mutation (D-02).
-  let db = storage.load();
-  if (db === null) {
-    db = { version: SCHEMA_VERSION, events: [] };
-  }
+  let db = migrateV1ToV2(storage.load(), DEFAULT_SETTINGS);
   if (db.version !== SCHEMA_VERSION) {
     throw new Error(`Unsupported schema version: ${db.version}`);
   }
 
-  const persist = () => storage.save(db);
+  // Cross-store race mitigation symmetric to settings.update() (Pitfall #1 /
+  // T-2-10): re-read the settings slice from storage before each save so an
+  // event-log write that ran with a stale settings copy cannot revert the
+  // user's most-recent settings change.
+  const persist = () => {
+    const fresh = storage.load();
+    if (fresh && fresh.version === 2 && fresh.settings) {
+      db.settings = fresh.settings;
+    }
+    storage.save(db);
+  };
 
   return {
     /**

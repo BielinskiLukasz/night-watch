@@ -12,10 +12,20 @@ import { createStorageLocal } from './adapters/storage-local.js';
 import { createClockSystem } from './adapters/clock-system.js';
 import { newEventId } from './lib/id.js';
 import { createEventLog } from './store/event-log.js';
+import { createSettingsStore } from './store/settings.js';
 import { mountTodayScreen } from './ui/today-screen.js';
 
 const storage = createStorageLocal('nightwatch:db');
 const clock = createClockSystem();
+
+// D2-08: settings + event-log share the SAME storage instance.
+// Both stores call storage.load() independently and migrate their slice.
+// Settings constructed first so any default-injection write (if applicable)
+// happens before event-log writes — though both apply migrateV1ToV2.
+const settings = createSettingsStore({ storage });
 const eventLog = createEventLog({ storage, clock, id: newEventId });
 
-mountTodayScreen({ root: document.getElementById('app'), eventLog });
+// mountHeader is added by Plan 02-04 (Settings modal + header strip).
+// Today screen accepts a `settings` parameter forward-compatibly; the
+// Plan 02-05 update will start consuming it for cutoverHour / groupingMode.
+mountTodayScreen({ root: document.getElementById('app'), eventLog, settings });

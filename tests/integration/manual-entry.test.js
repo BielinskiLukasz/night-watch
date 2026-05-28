@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import { createEventLog } from '../../js/store/event-log.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
+import { DEFAULT_SETTINGS } from '../../js/lib/db-shape.js';
 import { validate } from '../../js/ui/manual-entry.js';
 
 function makeTestLog({
@@ -39,7 +40,8 @@ describe('manual-entry: addEventAt (LOG-05)', () => {
     assert.equal(evt.type, 'wake');
     assert.equal(evt.at, '2026-05-25T06:35');
     assert.deepEqual(storage._snapshot(), {
-      version: 1,
+      version: 2,
+      settings: { ...DEFAULT_SETTINGS },
       events: [{ id: 'e1', type: 'wake', at: '2026-05-25T06:35' }],
     });
   });
