@@ -205,7 +205,14 @@ export function openManualEntry({ mode, existing, onSave, clock, settings }) {
   // unsubSettings holds the disposer from settings.subscribe — we unhook on
   // close to prevent listener accumulation across repeated opens (D2-19 /
   // RESEARCH §Anti-patterns subscriber-leak).
-  let ampmSelect = null;
+  //
+  // We adopt any pre-existing <select name="ampm"> on open — the previous
+  // modal-open invocation creates the element but does NOT remove it from
+  // the DOM on close (the dialog form is reused across opens). Without
+  // this adoption, toggling 12h → close → 24h → open would see ampmSelect
+  // as null while the DOM still carried a stale select, causing the 24h
+  // applyTimeFormat path to skip its remove() branch.
+  let ampmSelect = form.querySelector('select[name="ampm"]');
   let unsubSettings = null;
 
   /**
