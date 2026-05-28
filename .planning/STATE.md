@@ -26,12 +26,35 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 02 (configuration-settings) — EXECUTING
-Plan: 1 of 6
-Next: /gsd-plan-phase 2 — researcher + planner read 02-CONTEXT.md and produce PLAN(s)
-Last activity: 2026-05-28 -- Phase 02 execution started
+Phase: 02 (configuration-settings) — EXECUTING (paused after Wave 3)
+Plan: 3 of 6 complete (02-01, 02-02, 02-03 shipped; 02-04, 02-05, 02-06 remaining)
+Next: /gsd-execute-phase 2 — resumes at Wave 4 (Plan 02-04 header + Settings modal UI)
+Last activity: 2026-05-28 -- Wave 3 complete (composition root + time helpers); paused for review
 
-Progress: [██████████] 100% (Phase 1 complete; 1 of 8 phases done)
+Progress: [██████████░░░░░░░░░░] Phase 2 50% (3/6 plans); overall: 1 phase complete + Phase 2 half done
+
+### Phase 02 execution progress
+
+- Plan 02-01 (Wave 1): COMPLETE — db-shape + settings-validate TDD
+  - 4 commits: 4e649e8 (RED db-shape) → 64f6fe6 (GREEN) → a14fc09 (RED validate) → 9d98fbb (GREEN)
+  - Closeout: c6a0ebb, 546efb3 (tracking)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-01-SUMMARY.md
+  - Test delta: +67 (125 → 192)
+- Plan 02-02 (Wave 2): COMPLETE — createSettingsStore TDD
+  - 3 commits: bbc98c6 (RED settings-store) → 76c49d5 (GREEN settings.js) → 90959ea (integration migration + race)
+  - Closeout: abe324b (SUMMARY.md written retroactively during orphan-commit recovery; previous executor committed code but did not write SUMMARY.md)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-02-SUMMARY.md
+  - Test delta: +26 (192 → 218)
+- Plan 02-03 (Wave 3): COMPLETE — composition root + event-log schema v2 + time helpers
+  - 3 commits: b40610d (schema v2 + composition root, Task 1) → 17c25ef (RED time-helpers) → f86c72a (GREEN time-helpers)
+  - Closeout: 94f1818 (SUMMARY.md + tracking)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-03-SUMMARY.md
+  - Test delta: +33 (218 → 251)
+- Plan 02-04 (Wave 4): PENDING — header strip + Settings modal UI (CFG-01 visible; CFG-02..07 stored-but-inert)
+- Plan 02-05 (Wave 5): PENDING — MVP-critical: day-cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
+- Plan 02-06 (Wave 6): PENDING — 12h/24h propagation: manual-entry picker + Today list formatTime (CFG-09)
+
+Resume command: /gsd-execute-phase 2 (will pick up at Wave 4 by skipping plans with existing SUMMARY.md)
 
 ### Plan 01-01 final state
 
