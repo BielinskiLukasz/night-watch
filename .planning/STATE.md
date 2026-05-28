@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 02
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-28T00:34:39.870Z"
-last_activity: 2026-05-28 -- Phase 02 execution started
+last_updated: "2026-05-28T12:00:00.000Z"
+last_activity: 2026-05-28 -- Plan 02-04 complete (header + Settings modal UI); resuming Plan 02-05
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 14
-  completed_plans: 8
-  percent: 13
+  completed_plans: 9
+  percent: 14
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 02 (configuration-settings) — EXECUTING (paused after Wave 3)
-Plan: 3 of 6 complete (02-01, 02-02, 02-03 shipped; 02-04, 02-05, 02-06 remaining)
-Next: /gsd-execute-phase 2 — resumes at Wave 4 (Plan 02-04 header + Settings modal UI)
-Last activity: 2026-05-28 -- Wave 3 complete (composition root + time helpers); paused for review
+Phase: 02 (configuration-settings) — EXECUTING (in-session resume)
+Plan: 4 of 6 complete (02-01..02-04 shipped; 02-05, 02-06 remaining)
+Next: continue with Plan 02-05 (day-cutover + grouping toggle on Today)
+Last activity: 2026-05-28 -- Wave 4 complete (header + Settings modal UI; CFG-01 user-visible); E2E 28/28 green
 
-Progress: [██████████░░░░░░░░░░] Phase 2 50% (3/6 plans); overall: 1 phase complete + Phase 2 half done
+Progress: [█████████████░░░░░░░] Phase 2 67% (4/6 plans); overall: 1 phase complete + Phase 2 two-thirds done
 
 ### Phase 02 execution progress
 
@@ -50,11 +50,14 @@ Progress: [██████████░░░░░░░░░░] Phase 2
   - Closeout: 94f1818 (SUMMARY.md + tracking)
   - SUMMARY: .planning/phases/NW-02-configuration-settings/02-03-SUMMARY.md
   - Test delta: +33 (218 → 251)
-- Plan 02-04 (Wave 4): PENDING — header strip + Settings modal UI (CFG-01 visible; CFG-02..07 stored-but-inert)
+- Plan 02-04 (Wave 4): COMPLETE — header strip + Settings modal UI (CFG-01 visible; CFG-02..07 stored-but-inert)
+  - 2 commits: 4bbb950 (Task 1 feat — index.html + style.css + js/ui/header.js + js/ui/settings-modal.js + js/app.js) → 21af77d (Task 2 test — Playwright E2E + formnovalidate fix)
+  - SUMMARY: .planning/phases/NW-02-configuration-settings/02-04-SUMMARY.md
+  - Test delta: unit 251/251 unchanged; E2E +10 (18 → 28)
 - Plan 02-05 (Wave 5): PENDING — MVP-critical: day-cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
 - Plan 02-06 (Wave 6): PENDING — 12h/24h propagation: manual-entry picker + Today list formatTime (CFG-09)
 
-Resume command: /gsd-execute-phase 2 (will pick up at Wave 4 by skipping plans with existing SUMMARY.md)
+Resume command: /gsd-execute-phase 2 (will pick up at Wave 5 by skipping plans with existing SUMMARY.md)
 
 ### Plan 01-01 final state
 
