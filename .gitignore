@@ -10,3 +10,6 @@ test-results/
 .playwright/
 *.log
 nw-research-test/sample.test.js
+
+# Per-developer Claude Code permission overrides — never commit personal allows.
+.claude/settings.local.json
