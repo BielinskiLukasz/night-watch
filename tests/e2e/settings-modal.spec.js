@@ -141,3 +141,93 @@ test('a11y: dialog#settings has aria-labelledby="settingsTitle" (D2-13)', async 
   await expect(page.locator('dialog#settings')).toHaveAttribute('aria-labelledby', 'settingsTitle');
   await expect(page.locator('#settingsTitle')).toHaveText('Settings');
 });
+
+// -----------------------------------------------------------------------------
+// Plan 02-06 / CFG-09: 12h time-format propagation into the manual-entry modal.
+// The Settings modal already exposes the 24h/12h select (Plan 02-04); these
+// specs verify that the choice changes the manual-entry picker shape and the
+// Today list display format (D2-19 / D2-20).
+// -----------------------------------------------------------------------------
+
+test('CFG-09: switching to 12h — manual-entry HH input becomes 1-12 range with AM/PM select', async ({ page }) => {
+  await page.locator('button.settingsTrigger').click();
+  await page.locator('#settings select[name="timeFormat"]').selectOption('12h');
+  await page.locator('#settings button[type="submit"]').click();
+
+  await page.locator('#addEventBtn').click();
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('min', '1');
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('max', '12');
+  await expect(page.locator('#manualEntry select[name="ampm"]')).toBeVisible();
+  // Both options present in the static order applyTimeFormat wrote them.
+  await expect(page.locator('#manualEntry select[name="ampm"] option')).toHaveCount(2);
+});
+
+test('CFG-09: switching back to 24h — AM/PM select disappears, HH input restores 0-23', async ({ page }) => {
+  // Establish 12h first
+  await page.locator('button.settingsTrigger').click();
+  await page.locator('#settings select[name="timeFormat"]').selectOption('12h');
+  await page.locator('#settings button[type="submit"]').click();
+
+  // Confirm the 12h shape arrived
+  await page.locator('#addEventBtn').click();
+  await expect(page.locator('#manualEntry select[name="ampm"]')).toBeVisible();
+  await page.locator('#manualCancel').click();
+
+  // Toggle to 24h
+  await page.locator('button.settingsTrigger').click();
+  await page.locator('#settings select[name="timeFormat"]').selectOption('24h');
+  await page.locator('#settings button[type="submit"]').click();
+
+  await page.locator('#addEventBtn').click();
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('min', '0');
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('max', '23');
+  await expect(page.locator('#manualEntry select[name="ampm"]')).toHaveCount(0);
+});
+
+test('CFG-09: time format persists across reload — 12h picker reappears on a fresh load', async ({ page }) => {
+  await page.locator('button.settingsTrigger').click();
+  await page.locator('#settings select[name="timeFormat"]').selectOption('12h');
+  await page.locator('#settings button[type="submit"]').click();
+
+  await page.reload();
+
+  await page.locator('#addEventBtn').click();
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('min', '1');
+  await expect(page.locator('#manualEntry input[name="hour"]')).toHaveAttribute('max', '12');
+  await expect(page.locator('#manualEntry select[name="ampm"]')).toBeVisible();
+});
+
+test('CFG-09: 12h mode — event row time renders as H:MM AM/PM in the Today list', async ({ page }) => {
+  // Switch to 12h
+  await page.locator('button.settingsTrigger').click();
+  await page.locator('#settings select[name="timeFormat"]').selectOption('12h');
+  await page.locator('#settings button[type="submit"]').click();
+
+  // Log a past-day event at 14:30 (PM) — fill via the 12h picker shape.
+  // 14 → 2 PM in 12h. The internal storage stays 24h regardless (D2-20).
+  await page.locator('#addEventBtn').click();
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  await page.locator('#manualEntry input[name="hour"]').fill('2');
+  await page.locator('#manualEntry select[name="ampm"]').selectOption('PM');
+  await page.locator('#manualEntry input[name="minute"]').fill('30');
+  await page.locator('#manualEntry select[name="type"]').selectOption('wake');
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  // formatTime('YYYY-MM-DDT14:30', '12h') → '2:30 PM'
+  await expect(page.locator('[data-role="events"]')).toContainText(/2:30\s+PM/);
+  // The literal 24h string '14:30' MUST NOT appear in 12h mode.
+  await expect(page.locator('[data-role="events"]')).not.toContainText('14:30');
+});
+
+test('CFG-09: 24h mode (default) — event row time renders as HH:MM with no AM/PM', async ({ page }) => {
+  // Default is 24h after localStorage.clear() in beforeEach.
+  await page.locator('#addEventBtn').click();
+  await page.locator('#manualEntry input[name="date"]').fill('2026-05-20');
+  await page.locator('#manualEntry input[name="hour"]').fill('14');
+  await page.locator('#manualEntry input[name="minute"]').fill('30');
+  await page.locator('#manualEntry select[name="type"]').selectOption('wake');
+  await page.locator('#manualEntry button[type="submit"]').click();
+
+  await expect(page.locator('[data-role="events"]')).toContainText('14:30');
+  await expect(page.locator('[data-role="events"]')).not.toContainText(/AM|PM/);
+});
