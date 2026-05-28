@@ -187,7 +187,14 @@
 
       <menu>
         <button type="button" id="settingsCancel" formnovalidate>Cancel</button>
-        <button type="submit" value="save">Save</button>
+        <!--
+          formnovalidate on Save: HTML5 min/max on the number inputs would
+          block submission before validateSettings could surface a structured
+          error in <output id="settingsErrors">. Mirrors the same idiom on
+          #manualEntry's Save (LOG-07 silent rounding) — the JS validator is
+          the source of truth; HTML attributes are belt-and-suspenders hints.
+        -->
+        <button type="submit" value="save" formnovalidate>Save</button>
       </menu>
     </form>
   </dialog>
