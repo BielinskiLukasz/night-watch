@@ -74,7 +74,22 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   3. User toggles automatic outlier detection on/off in Settings and can also manually flag any day as "rejected" from a dedicated control
   4. User sets day-cutover hour (default ~04:00) and 24h vs 12h time format, saves, and all times are displayed according to the choice on reload
 
-**Plans**: TBD
+**Plans**: 6 plans across 3 waves
+
+**Wave 1** *(pure-logic TDD foundation — parallel)*
+
+  - [ ] 02-01-PLAN.md — TDD: DEFAULT_SETTINGS + validateSettings pure validator (db-shape.js + settings-validate.js); CFG-05 deferred-to-phase-4 owner
+  - [ ] 02-02-PLAN.md — TDD: createSettingsStore (get/update/subscribe) + v1→v2 migration integration + cross-store race test
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+  - [ ] 02-03-PLAN.md — event-log schema bump (v1→v2) + composition root settings wiring + formatTime/to24h/to12h helpers
+  - [ ] 02-04-PLAN.md — Header strip + Settings modal UI (CFG-01 fully visible; CFG-02..04, 06..07 stored-but-inert)
+
+**Wave 3** *(blocked on Wave 2 completion — parallel)*
+
+  - [ ] 02-05-PLAN.md — **MVP-critical**: cutover wiring + grouping-mode toggle on Today (CFG-08 user-story)
+  - [ ] 02-06-PLAN.md — Time format propagation: 12h picker in manual-entry + formatTime in Today list (CFG-09)
 
 ### Phase 3: Forecast Engine & Today Screen
 
@@ -172,7 +187,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
-| 2. Configuration & Settings | 0/TBD | Not started | — |
+| 2. Configuration & Settings | 0/6 | Not started | — |
 | 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
 | 5. Data Import/Export | 0/TBD | Not started | — |
