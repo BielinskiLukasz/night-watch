@@ -25,6 +25,7 @@ import { createStorageLocal } from '../../js/adapters/storage-local.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
 import { createEventLog } from '../../js/store/event-log.js';
+import { DEFAULT_SETTINGS } from '../../js/lib/db-shape.js';
 
 // -------------------- helpers --------------------
 
@@ -75,11 +76,13 @@ describe('round-trip lossiness (D-04 + D-05 canonical JSON contract)', () => {
     const blob = storage._snapshot();
     const roundTripped = JSON.parse(JSON.stringify(blob));
     assert.deepEqual(roundTripped, blob, 'JSON round-trip must be lossless');
-    assert.equal(blob.version, 1, 'D-04: top-level version is 1');
+    // Plan 02-03: canonical shape is now v2 with settings slice (D-04 / D2-04).
+    assert.equal(blob.version, 2, 'D2-04: top-level version is 2');
+    assert.deepEqual(blob.settings, { ...DEFAULT_SETTINGS }, 'default settings injected on first save');
     assert.equal(blob.events.length, 10, 'all 10 events persisted');
   });
 
-  test('storage-memory snapshot after 10 mutations exactly equals { version: 1, events: [...] } shape (D-04)', () => {
+  test('storage-memory snapshot after mutations equals { version: 2, settings, events } shape (D-04 / D2-04)', () => {
     const storage = createStorageMemory();
     const clock = createClockFixed(new Date(2026, 4, 25, 6, 35));
     const log = createEventLog({ storage, clock, id: makeCounterId() });
@@ -88,8 +91,9 @@ describe('round-trip lossiness (D-04 + D-05 canonical JSON contract)', () => {
     log.addEventAt('bedtime', '2026-05-25T22:10');
 
     const blob = storage._snapshot();
-    assert.deepEqual(Object.keys(blob).sort(), ['events', 'version']);
-    assert.equal(blob.version, 1);
+    assert.deepEqual(Object.keys(blob).sort(), ['events', 'settings', 'version']);
+    assert.equal(blob.version, 2);
+    assert.deepEqual(blob.settings, { ...DEFAULT_SETTINGS });
     assert.ok(Array.isArray(blob.events));
     for (const evt of blob.events) {
       assert.deepEqual(Object.keys(evt).sort(), ['at', 'id', 'type']);

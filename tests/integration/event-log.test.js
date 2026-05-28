@@ -16,7 +16,15 @@ import { createEventLog } from '../../js/store/event-log.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
 import { daysByCalendar } from '../../js/lib/day-bucket.js';
+import { DEFAULT_SETTINGS } from '../../js/lib/db-shape.js';
 import { BUTTONS, labelFor } from '../../js/ui/today-screen.js';
+
+// Plan 02-03 raises the event-log SCHEMA_VERSION to 2; createEventLog now
+// migrates v1/null blobs through migrateV1ToV2 on construction, so the
+// persisted snapshot carries the v2 canonical shape { version, settings, events }.
+function v2Snapshot(events) {
+  return { version: 2, settings: { ...DEFAULT_SETTINGS }, events };
+}
 
 function makeTestLog({
   // 2026-05-26 06:35 local (already on a 5-min boundary so the test is
@@ -42,11 +50,11 @@ describe('event-log: addEvent', () => {
     assert.equal(typeof evt.id, 'string');
     assert.ok(evt.id.length > 0, 'id should be non-empty string');
 
-    // D-04 canonical JSON shape persisted byte-for-byte (D-05 invariant)
-    assert.deepEqual(storage._snapshot(), {
-      version: 1,
-      events: [{ id: 'e1', type: 'wake', at: '2026-05-26T06:35' }],
-    });
+    // D-04 canonical JSON shape persisted byte-for-byte (D-05 invariant).
+    // Plan 02-03 — shape is v2 with default settings injected on first save.
+    assert.deepEqual(storage._snapshot(), v2Snapshot([
+      { id: 'e1', type: 'wake', at: '2026-05-26T06:35' },
+    ]));
   });
 
   test('rejects invalid type with TypeError matching /Invalid event type/', () => {
@@ -70,10 +78,9 @@ describe('event-log: all four valid types round-trip (Plan 03 / LOG-02, LOG-03, 
     assert.equal(evt.type, 'bedtime');
     assert.equal(evt.at, '2026-05-26T22:10');
     assert.equal(typeof evt.id, 'string');
-    assert.deepEqual(storage._snapshot(), {
-      version: 1,
-      events: [{ id: 'e1', type: 'bedtime', at: '2026-05-26T22:10' }],
-    });
+    assert.deepEqual(storage._snapshot(), v2Snapshot([
+      { id: 'e1', type: 'bedtime', at: '2026-05-26T22:10' },
+    ]));
   });
 
   test('addEvent("napStart") persists with type "napStart" (LOG-03)', () => {
@@ -84,10 +91,9 @@ describe('event-log: all four valid types round-trip (Plan 03 / LOG-02, LOG-03, 
 
     assert.equal(evt.type, 'napStart');
     assert.equal(evt.at, '2026-05-26T13:20');
-    assert.deepEqual(storage._snapshot(), {
-      version: 1,
-      events: [{ id: 'e1', type: 'napStart', at: '2026-05-26T13:20' }],
-    });
+    assert.deepEqual(storage._snapshot(), v2Snapshot([
+      { id: 'e1', type: 'napStart', at: '2026-05-26T13:20' },
+    ]));
   });
 
   test('addEvent("napEnd") persists with type "napEnd" (LOG-04)', () => {
@@ -98,10 +104,9 @@ describe('event-log: all four valid types round-trip (Plan 03 / LOG-02, LOG-03, 
 
     assert.equal(evt.type, 'napEnd');
     assert.equal(evt.at, '2026-05-26T14:05');
-    assert.deepEqual(storage._snapshot(), {
-      version: 1,
-      events: [{ id: 'e1', type: 'napEnd', at: '2026-05-26T14:05' }],
-    });
+    assert.deepEqual(storage._snapshot(), v2Snapshot([
+      { id: 'e1', type: 'napEnd', at: '2026-05-26T14:05' },
+    ]));
   });
 });
 
@@ -218,10 +223,9 @@ describe('event-log: addEventAt (LOG-05 manual entry / back-fill)', () => {
     assert.equal(evt.type, 'wake');
     assert.equal(evt.at, '2026-05-25T06:35');
     assert.equal(typeof evt.id, 'string');
-    assert.deepEqual(storage._snapshot(), {
-      version: 1,
-      events: [{ id: 'e1', type: 'wake', at: '2026-05-25T06:35' }],
-    });
+    assert.deepEqual(storage._snapshot(), v2Snapshot([
+      { id: 'e1', type: 'wake', at: '2026-05-25T06:35' },
+    ]));
   });
 
   test('addEventAt re-rounds non-5-minute inputs (typed 06:33 → stored 06:35; LOG-07)', () => {
