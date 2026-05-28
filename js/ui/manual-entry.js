@@ -51,7 +51,7 @@
 //     Plan 05 Task 2 greps for that literal tag.
 
 import { el, clear } from './dom.js';
-import { roundTo5, formatLocalISO, parseLocalISO } from '../lib/time.js';
+import { roundTo5, formatLocalISO, parseLocalISO, to24h, to12h } from '../lib/time.js';
 
 /** Pad an integer to 2 chars (shared between validate + UI default-prefill). */
 function pad(n) {
@@ -181,7 +181,7 @@ export function validate({ date, hourStr, minuteStr, type }, { now }) {
  *   exempted). The pure validate() never reaches that fallback at the test
  *   path because the test imports validate() directly.
  */
-export function openManualEntry({ mode, existing, onSave, clock }) {
+export function openManualEntry({ mode, existing, onSave, clock, settings }) {
   if (mode !== 'add' && mode !== 'edit') {
     // Pitfall #6 architectural mitigation — the UI cannot dispatch the
     // wrong store method because the dispatcher has no fallback branch.
@@ -197,6 +197,59 @@ export function openManualEntry({ mode, existing, onSave, clock }) {
   const typeInput = form.elements.namedItem('type');
   const cancelBtn = dlg.querySelector('#manualCancel');
   const errorsEl = dlg.querySelector('#manualEntryErrors');
+
+  // ── CFG-09 / Plan 02-06: 12h time-picker support ─────────────────────────
+  // ampmSelect is created dynamically the first time the modal opens in 12h
+  // mode and removed when toggling back to 24h. The internal storage stays
+  // canonical 'YYYY-MM-DDTHH:MM' (24h) regardless of the picker shape.
+  // unsubSettings holds the disposer from settings.subscribe — we unhook on
+  // close to prevent listener accumulation across repeated opens (D2-19 /
+  // RESEARCH §Anti-patterns subscriber-leak).
+  let ampmSelect = null;
+  let unsubSettings = null;
+
+  /**
+   * Reshape the time picker to match snap.timeFormat (CFG-09 / D2-19, D2-20).
+   * Idempotent — safe to call on every settings change without snapshotting
+   * a "previous" state. Conversion of an already-entered hour is skipped
+   * when the input is empty or non-numeric (Pitfall #6: partial-value edge
+   * case — surface a clean blank rather than guess at the user's intent).
+   */
+  const applyTimeFormat = (snap) => {
+    if (snap.timeFormat === '12h') {
+      hourInput.setAttribute('min', '1');
+      hourInput.setAttribute('max', '12');
+      if (ampmSelect === null) {
+        ampmSelect = el('select', { name: 'ampm' });
+        ampmSelect.appendChild(el('option', { value: 'AM', textContent: 'AM' }));
+        ampmSelect.appendChild(el('option', { value: 'PM', textContent: 'PM' }));
+        hourInput.insertAdjacentElement('afterend', ampmSelect);
+      }
+      const raw = hourInput.value;
+      const h24 = raw === '' ? NaN : parseInt(raw, 10);
+      if (Number.isInteger(h24) && h24 >= 0 && h24 <= 23) {
+        const { h12, ampm } = to12h(h24);
+        hourInput.value = String(h12);
+        ampmSelect.value = ampm;
+      }
+    } else {
+      hourInput.setAttribute('min', '0');
+      hourInput.setAttribute('max', '23');
+      if (ampmSelect !== null) {
+        const raw = hourInput.value;
+        const h12 = raw === '' ? NaN : parseInt(raw, 10);
+        let h24 = null;
+        if (Number.isInteger(h12) && h12 >= 1 && h12 <= 12) {
+          // to24h validates ampm too — wrap defensively for select.value
+          // being 'AM'/'PM' guaranteed by the static <option> values above.
+          try { h24 = to24h(String(h12), ampmSelect.value); } catch { /* ignore */ }
+        }
+        ampmSelect.remove();
+        ampmSelect = null;
+        if (h24 !== null) hourInput.value = String(h24);
+      }
+    }
+  };
 
   // Title swap via textContent (T-07: never innerHTML).
   title.textContent = mode === 'edit' ? 'Edit event' : 'Add event';
@@ -259,14 +312,34 @@ export function openManualEntry({ mode, existing, onSave, clock }) {
   const onClose = () => {
     let shouldReopen = false;
     let firstErrorField = null;
+    // Unhook the settings subscriber at the TOP of the close handler so the
+    // listener does not survive a cancel/ESC/save → reopen → repeat cycle
+    // (D2-19 anti-pattern). The reopen path below re-subscribes symmetrically
+    // with the re-attached onClose + onCancel handlers.
+    if (unsubSettings) { unsubSettings(); unsubSettings = null; }
     try {
       if (dlg.returnValue !== 'save') return;
 
       const data = new FormData(form);
+      // CFG-09: when in 12h mode, convert the form's HH+AM/PM pair to a
+      // 24h integer string BEFORE handing it to validate(). The validator
+      // is unchanged — it still asserts hourStr ∈ 0..23. to24h throws on
+      // bad input; the catch surfaces the same hour-range error the
+      // validator would have produced from a malformed 24h string (T-2-22).
+      let hourStr = String(data.get('hour') ?? '');
+      if (settings && settings.get().timeFormat === '12h' && ampmSelect) {
+        try {
+          hourStr = String(to24h(hourStr, String(data.get('ampm') ?? '')));
+        } catch {
+          // Let the validator handle the empty-string fallthrough below.
+          hourStr = '';
+        }
+      }
+
       const result = validate(
         {
           date: String(data.get('date') ?? ''),
-          hourStr: String(data.get('hour') ?? ''),
+          hourStr,
           minuteStr: String(data.get('minute') ?? ''),
           type: String(data.get('type') ?? ''),
         },
@@ -301,6 +374,12 @@ export function openManualEntry({ mode, existing, onSave, clock }) {
           dlg.showModal();
           dlg.addEventListener('close', onClose, { once: true });
           cancelBtn.addEventListener('click', onCancel, { once: true });
+          // Re-subscribe applyTimeFormat for the next attempt — symmetric
+          // with the unsubscribe at the top of onClose. The user cannot
+          // change settings while the modal is open (native <dialog> is
+          // blocking), but the contract D2-19 requires the subscription
+          // to survive across reopens.
+          if (settings) unsubSettings = settings.subscribe(applyTimeFormat);
           if (firstErrorField) {
             const target = form.elements.namedItem(firstErrorField);
             if (target && typeof target.focus === 'function') {
@@ -320,6 +399,16 @@ export function openManualEntry({ mode, existing, onSave, clock }) {
   // close handler skips the dispatch path.
   const onCancel = () => dlg.close('cancel');
   cancelBtn.addEventListener('click', onCancel, { once: true });
+
+  // Initial time-picker shape + subscribe for reactive re-shape on
+  // settings.update (CFG-09 / D2-19). The subscriber will fire if the
+  // user opens Settings between mounts of this modal; while the modal
+  // is open the native <dialog> blocks Settings interaction, so the
+  // subscriber is dormant in practice but kept for D2-19 correctness.
+  if (settings) {
+    applyTimeFormat(settings.get());
+    unsubSettings = settings.subscribe(applyTimeFormat);
+  }
 
   // showModal() gives focus trap + ESC-to-close + aria-modal automatically
   // (V14 zero-deps modal accessibility — RESEARCH §Pattern 6).

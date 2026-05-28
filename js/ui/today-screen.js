@@ -194,6 +194,7 @@ export function mountTodayScreen({ root, eventLog, settings }) {
       openManualEntry({
         mode: 'edit',
         existing,
+        settings, // Plan 02-06 / CFG-09: feeds applyTimeFormat
         onSave: (patch) => {
           // editEvent mutates in place (D-03). Pitfall #6 guard: the mode
           // parameter on openManualEntry is what prevents this branch from
@@ -222,6 +223,7 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     openManualEntry({
       mode: 'add',
       existing: null,
+      settings, // Plan 02-06 / CFG-09: feeds applyTimeFormat
       onSave: ({ type, at }) => {
         eventLog.addEventAt(type, at);
         render();
