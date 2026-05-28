@@ -1,0 +1,422 @@
+// tests/unit/settings-validate.test.js
+// TDD RED → GREEN tests for js/lib/settings-validate.js
+//
+// Covers: validateSettings in mode:'save' (strict) and mode:'load' (lenient),
+//         all 9 fields per D2-21, RULES frozen constant.
+//
+// Phase 2, Plan 01 — TDD red→green, all assertions must FAIL before
+// implementation exists.
+
+import { describe, it, before, after, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { validateSettings, RULES } from '../../js/lib/settings-validate.js';
+import { DEFAULT_SETTINGS } from '../../js/lib/db-shape.js';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a valid settings object using DEFAULT_SETTINGS, optionally overriding
+ * specific fields.
+ */
+function valid(overrides = {}) {
+  return { ...DEFAULT_SETTINGS, ...overrides };
+}
+
+// ---------------------------------------------------------------------------
+// RULES export — frozen, all 9 fields present
+// ---------------------------------------------------------------------------
+
+describe('RULES export', () => {
+  it('is Object.freeze\'d', () => {
+    assert.equal(Object.isFrozen(RULES), true);
+  });
+
+  it('has entries for all 9 field names (D2-21)', () => {
+    const expected = [
+      'subjectName', 'cutoverHour', 'groupingMode', 'timeFormat',
+      'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
+    ];
+    for (const field of expected) {
+      assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
+    }
+    assert.equal(Object.keys(RULES).length, 9);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — valid defaults all pass
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — valid defaults', () => {
+  it('returns {ok:true, errors:[], normalized} for all valid defaults', () => {
+    const result = validateSettings(valid(), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.errors, []);
+    assert.ok(result.normalized, 'normalized should be present');
+  });
+
+  it('normalized contains all 9 keys', () => {
+    const result = validateSettings(valid(), { mode: 'save' });
+    const keys = Object.keys(result.normalized);
+    assert.equal(keys.length, 9);
+    for (const field of Object.keys(DEFAULT_SETTINGS)) {
+      assert.ok(field in result.normalized, `normalized missing: ${field}`);
+    }
+  });
+
+  it('trims whitespace from subjectName', () => {
+    const result = validateSettings(valid({ subjectName: '  Alice  ' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.equal(result.normalized.subjectName, 'Alice');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — subjectName validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — subjectName', () => {
+  it('accepts empty string', () => {
+    const result = validateSettings(valid({ subjectName: '' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts a string of exactly 40 characters', () => {
+    const result = validateSettings(valid({ subjectName: 'x'.repeat(40) }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('rejects a string of 41 characters with error containing "40"', () => {
+    const result = validateSettings(valid({ subjectName: 'x'.repeat(41) }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    const err = result.errors.find((e) => e.field === 'subjectName');
+    assert.ok(err, 'Expected error for subjectName');
+    assert.ok(err.message.includes('40'), `Error message should mention 40: ${err.message}`);
+  });
+
+  it('rejects non-string (number) with error', () => {
+    const result = validateSettings(valid({ subjectName: 42 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'subjectName'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — cutoverHour validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — cutoverHour', () => {
+  it('accepts boundary value 0', () => {
+    assert.equal(validateSettings(valid({ cutoverHour: 0 }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts boundary value 23', () => {
+    assert.equal(validateSettings(valid({ cutoverHour: 23 }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts midrange value 4', () => {
+    assert.equal(validateSettings(valid({ cutoverHour: 4 }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects value 24 (out of range)', () => {
+    const result = validateSettings(valid({ cutoverHour: 24 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'cutoverHour'));
+  });
+
+  it('rejects value -1 (out of range)', () => {
+    const result = validateSettings(valid({ cutoverHour: -1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'cutoverHour'));
+  });
+
+  it('rejects non-integer 4.5', () => {
+    const result = validateSettings(valid({ cutoverHour: 4.5 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'cutoverHour'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — groupingMode validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — groupingMode', () => {
+  it('accepts \'calendar\'', () => {
+    assert.equal(validateSettings(valid({ groupingMode: 'calendar' }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts \'sleepCycle\'', () => {
+    assert.equal(validateSettings(valid({ groupingMode: 'sleepCycle' }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects \'weekly\'', () => {
+    const result = validateSettings(valid({ groupingMode: 'weekly' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'groupingMode'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — timeFormat validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — timeFormat', () => {
+  it('accepts \'24h\'', () => {
+    assert.equal(validateSettings(valid({ timeFormat: '24h' }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts \'12h\'', () => {
+    assert.equal(validateSettings(valid({ timeFormat: '12h' }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects \'locale\'', () => {
+    const result = validateSettings(valid({ timeFormat: 'locale' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'timeFormat'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — autoOutlier validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — autoOutlier', () => {
+  it('accepts true', () => {
+    assert.equal(validateSettings(valid({ autoOutlier: true }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts false', () => {
+    assert.equal(validateSettings(valid({ autoOutlier: false }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects string \'yes\'', () => {
+    const result = validateSettings(valid({ autoOutlier: 'yes' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'autoOutlier'));
+  });
+
+  it('rejects numeric 1', () => {
+    const result = validateSettings(valid({ autoOutlier: 1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'autoOutlier'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — maxDelta validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — maxDelta', () => {
+  it('accepts boundary value 5', () => {
+    assert.equal(validateSettings(valid({ maxDelta: 5 }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts boundary value 120', () => {
+    assert.equal(validateSettings(valid({ maxDelta: 120 }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects value 4 (below min)', () => {
+    const result = validateSettings(valid({ maxDelta: 4 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'maxDelta'));
+  });
+
+  it('rejects value 121 (above max)', () => {
+    const result = validateSettings(valid({ maxDelta: 121 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'maxDelta'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — minDays validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — minDays', () => {
+  it('accepts boundary value 1', () => {
+    assert.equal(validateSettings(valid({ minDays: 1 }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts boundary value 90', () => {
+    assert.equal(validateSettings(valid({ minDays: 90 }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects value 0 (below min)', () => {
+    const result = validateSettings(valid({ minDays: 0 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'minDays'));
+  });
+
+  it('rejects value 91 (above max)', () => {
+    const result = validateSettings(valid({ minDays: 91 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'minDays'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — windowDays validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — windowDays', () => {
+  it('accepts boundary value 3', () => {
+    assert.equal(validateSettings(valid({ windowDays: 3 }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts boundary value 90', () => {
+    assert.equal(validateSettings(valid({ windowDays: 90 }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects value 2 (below min)', () => {
+    const result = validateSettings(valid({ windowDays: 2 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'windowDays'));
+  });
+
+  it('rejects value 91 (above max)', () => {
+    const result = validateSettings(valid({ windowDays: 91 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'windowDays'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — statBlend validation
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — statBlend', () => {
+  it('accepts \'median\'', () => {
+    assert.equal(validateSettings(valid({ statBlend: 'median' }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts \'mean\'', () => {
+    assert.equal(validateSettings(valid({ statBlend: 'mean' }), { mode: 'save' }).ok, true);
+  });
+
+  it('accepts \'blend\'', () => {
+    assert.equal(validateSettings(valid({ statBlend: 'blend' }), { mode: 'save' }).ok, true);
+  });
+
+  it('rejects \'p50\'', () => {
+    const result = validateSettings(valid({ statBlend: 'p50' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'statBlend'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — multiple invalid fields at once (collects ALL errors)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — multiple invalid fields', () => {
+  it('returns one error per invalid field when multiple are invalid', () => {
+    const result = validateSettings(valid({
+      cutoverHour: 99,
+      groupingMode: 'invalid',
+      timeFormat: 'invalid',
+    }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    const errorFields = result.errors.map((e) => e.field);
+    assert.ok(errorFields.includes('cutoverHour'), 'Missing cutoverHour error');
+    assert.ok(errorFields.includes('groupingMode'), 'Missing groupingMode error');
+    assert.ok(errorFields.includes('timeFormat'), 'Missing timeFormat error');
+    assert.equal(result.errors.length, 3);
+  });
+
+  it('errors array has {field, message} shape', () => {
+    const result = validateSettings(valid({ cutoverHour: 99 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    const err = result.errors[0];
+    assert.ok('field' in err, 'Error should have field property');
+    assert.ok('message' in err, 'Error should have message property');
+    assert.equal(typeof err.field, 'string');
+    assert.equal(typeof err.message, 'string');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'load' — lenient (per-field default + console.warn)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'load\' — lenient resets with warn', () => {
+  let warnSpy;
+
+  before(() => {
+    warnSpy = mock.method(console, 'warn', () => {});
+  });
+
+  after(() => {
+    warnSpy.mock.restore();
+  });
+
+  it('returns {ok:true} for cutoverHour:999 and resets to default', () => {
+    warnSpy.mock.resetCalls();
+    const result = validateSettings(valid({ cutoverHour: 999 }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.errors, []);
+    assert.equal(result.normalized.cutoverHour, DEFAULT_SETTINGS.cutoverHour);
+  });
+
+  it('calls console.warn with [nightwatch] prefix for invalid cutoverHour in load mode', () => {
+    warnSpy.mock.resetCalls();
+    validateSettings(valid({ cutoverHour: 999 }), { mode: 'load' });
+    assert.equal(warnSpy.mock.calls.length, 1);
+    const msg = warnSpy.mock.calls[0].arguments[0];
+    assert.ok(msg.startsWith('[nightwatch]'), `Expected [nightwatch] prefix, got: ${msg}`);
+    assert.ok(msg.includes('cutoverHour'), `Expected 'cutoverHour' in warn message: ${msg}`);
+  });
+
+  it('returns {ok:true} for invalid groupingMode and resets to default', () => {
+    warnSpy.mock.resetCalls();
+    const result = validateSettings(valid({ groupingMode: 'invalid' }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.equal(result.normalized.groupingMode, DEFAULT_SETTINGS.groupingMode);
+  });
+
+  it('does NOT call console.warn when all defaults are valid', () => {
+    warnSpy.mock.resetCalls();
+    validateSettings(valid(), { mode: 'load' });
+    assert.equal(warnSpy.mock.calls.length, 0);
+  });
+
+  it('resets multiple invalid fields to their respective defaults in load mode', () => {
+    warnSpy.mock.resetCalls();
+    const result = validateSettings(valid({
+      cutoverHour: 99,
+      statBlend: 'invalid',
+    }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.equal(result.normalized.cutoverHour, DEFAULT_SETTINGS.cutoverHour);
+    assert.equal(result.normalized.statBlend, DEFAULT_SETTINGS.statBlend);
+    assert.equal(warnSpy.mock.calls.length, 2);
+  });
+
+  it('valid fields are preserved unchanged in load mode even when others are reset', () => {
+    warnSpy.mock.resetCalls();
+    const result = validateSettings(valid({ cutoverHour: 99, timeFormat: '12h' }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.equal(result.normalized.timeFormat, '12h');  // valid value preserved
+    assert.equal(result.normalized.cutoverHour, DEFAULT_SETTINGS.cutoverHour);  // reset
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Default mode behavior (no explicit mode → treated as 'save')
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — default mode (no opts)', () => {
+  it('defaults to save mode when no opts supplied — rejects invalid value', () => {
+    const result = validateSettings(valid({ cutoverHour: 99 }));
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'cutoverHour'));
+  });
+
+  it('defaults to save mode when opts={} supplied — rejects invalid value', () => {
+    const result = validateSettings(valid({ cutoverHour: 99 }), {});
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'cutoverHour'));
+  });
+});
