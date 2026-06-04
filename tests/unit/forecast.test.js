@@ -276,6 +276,9 @@ describe('forecast(dayRecords, settings)', () => {
     windowDays: 7,
   };
 
+  // noGateSettings: minDays=0 so cold-start gate never fires (test the prediction logic directly)
+  const noGateSettings = { ...defaultSettings, minDays: 0 };
+
   // Build 7 days with all four event types
   const sevenFullDays = [
     makeDay('06:30', '21:00', '13:00', '14:00'),
@@ -287,44 +290,63 @@ describe('forecast(dayRecords, settings)', () => {
     makeDay('07:00', '22:00', '13:30', '14:30'),
   ];
 
-  it('returns object with wake, bedtime, napStart, napEnd keys', () => {
+  it('returns object with wake, bedtime, napStart, napEnd keys when not cold-start', () => {
+    // 7 days, minDays=7 → isColdStart=false, predictions present
     const result = forecast(sevenFullDays, defaultSettings);
+    assert.strictEqual(result.isColdStart, false);
     assert.ok('wake' in result, 'result should have wake');
     assert.ok('bedtime' in result, 'result should have bedtime');
     assert.ok('napStart' in result, 'result should have napStart');
     assert.ok('napEnd' in result, 'result should have napEnd');
   });
 
-  it('each prediction has { central, min, max } shape', () => {
+  it('each prediction has { central, min, max } shape OR { probabilityBand } shape', () => {
+    // Predictions have either normal min/max shape (band ≤ maxDelta) or
+    // probability-band fallback shape (band > maxDelta). Both are valid.
+    // wake: 06:30..07:00 = 30 min band == maxDelta=30 → normal shape (width not > maxDelta)
+    // bedtime: 21:00..22:00 = 60 min band > maxDelta=30 → probabilityBand
     const result = forecast(sevenFullDays, defaultSettings);
     for (const key of ['wake', 'bedtime', 'napStart', 'napEnd']) {
-      assert.ok('central' in result[key], `${key}.central should exist`);
-      assert.ok('min' in result[key], `${key}.min should exist`);
-      assert.ok('max' in result[key], `${key}.max should exist`);
+      const pred = result[key];
+      const hasNormalShape = 'central' in pred && 'min' in pred && 'max' in pred;
+      const hasBandShape = 'probabilityBand' in pred;
+      assert.ok(hasNormalShape || hasBandShape,
+        `${key} should have either { central, min, max } or { probabilityBand } shape`);
     }
   });
 
-  it('central prediction is an HH:MM string when data is present', () => {
+  it('central prediction is an HH:MM string when data is present and band is narrow', () => {
+    // wake spans only 30 min (== maxDelta) → normal { central, min, max } shape
     const result = forecast(sevenFullDays, defaultSettings);
-    for (const key of ['wake', 'bedtime', 'napStart', 'napEnd']) {
-      const central = result[key].central;
-      if (central !== null) {
-        assert.match(central, /^\d{2}:\d{2}$/, `${key}.central should be HH:MM`);
-      }
-    }
+    const wake = result.wake;
+    // wake band: P10≈06:30, P90≈07:00, width=30 == maxDelta → NOT > maxDelta → normal shape
+    assert.ok('central' in wake, 'wake.central should exist (band ≤ maxDelta)');
+    assert.match(wake.central, /^\d{2}:\d{2}$/, 'wake.central should be HH:MM');
   });
 
-  it('min and max are HH:MM strings when data is present', () => {
+  it('min and max are HH:MM strings when data is present and band is narrow', () => {
+    // Use wake predictions which have a 30-min band == maxDelta (not triggered)
     const result = forecast(sevenFullDays, defaultSettings);
-    for (const key of ['wake', 'bedtime', 'napStart', 'napEnd']) {
-      const { min, max } = result[key];
-      if (min !== null) assert.match(min, /^\d{2}:\d{2}$/, `${key}.min should be HH:MM`);
-      if (max !== null) assert.match(max, /^\d{2}:\d{2}$/, `${key}.max should be HH:MM`);
-    }
+    const wake = result.wake;
+    assert.ok('min' in wake, 'wake.min should exist');
+    assert.ok('max' in wake, 'wake.max should exist');
+    if (wake.min !== null) assert.match(wake.min, /^\d{2}:\d{2}$/, 'wake.min should be HH:MM');
+    if (wake.max !== null) assert.match(wake.max, /^\d{2}:\d{2}$/, 'wake.max should be HH:MM');
   });
 
-  it('empty day records returns null central/min/max for all events', () => {
+  it('empty day records → isColdStart=true when minDays>0', () => {
+    // Empty history with minDays=7: 0 valid days < 7 → cold-start
     const result = forecast([], defaultSettings);
+    assert.strictEqual(result.isColdStart, true);
+    assert.strictEqual(result.validDayCount, 0);
+    assert.strictEqual(result.minDaysRemaining, 7);
+    assert.ok(!('wake' in result), 'wake should not be present during cold-start');
+  });
+
+  it('empty day records with minDays=0 → no cold-start, null central/min/max for all events', () => {
+    // No cold-start gate active: empty history → null predictions
+    const result = forecast([], noGateSettings);
+    assert.strictEqual(result.isColdStart, false);
     for (const key of ['wake', 'bedtime', 'napStart', 'napEnd']) {
       assert.strictEqual(result[key].central, null, `${key}.central should be null for empty history`);
       assert.strictEqual(result[key].min, null, `${key}.min should be null for empty history`);
@@ -334,7 +356,8 @@ describe('forecast(dayRecords, settings)', () => {
 
   it('single day record returns { central, min, max } not null', () => {
     const singleDay = [makeDay('06:45', '21:30', '13:15', '14:15')];
-    const result = forecast(singleDay, defaultSettings);
+    // noGateSettings: minDays=0 so single day doesn't trigger cold-start
+    const result = forecast(singleDay, noGateSettings);
     // Single day: P10, P50, P90 all return the same single value
     assert.strictEqual(result.wake.central, '06:45');
     assert.strictEqual(result.wake.min, '06:45');
@@ -348,7 +371,8 @@ describe('forecast(dayRecords, settings)', () => {
       makeDay('06:45', null, null, null),
       makeDay('07:00', null, null, null),
     ];
-    const result = forecast(wakeOnlyDays, defaultSettings);
+    // noGateSettings: minDays=0 so 3 valid days doesn't trigger cold-start
+    const result = forecast(wakeOnlyDays, noGateSettings);
     // wake should have values; others should be null
     assert.ok(result.wake.central !== null, 'wake should have a central value');
     assert.strictEqual(result.bedtime.central, null, 'bedtime should be null if no bedtime data');
@@ -380,6 +404,11 @@ describe('forecast(dayRecords, settings)', () => {
     // The last 7 days are 06:30..07:00; central should be 06:45, not influenced by 05:00 outliers
     assert.strictEqual(result.wake.central, '06:45');
   });
+
+  it('forecast returns isColdStart=false when data meets minDays threshold', () => {
+    const result = forecast(sevenFullDays, defaultSettings);
+    assert.strictEqual(result.isColdStart, false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -387,9 +416,10 @@ describe('forecast(dayRecords, settings)', () => {
 // ---------------------------------------------------------------------------
 
 describe('downweighting edge cases', () => {
-  it('all days rejected (effective count 3.5 on 7 days): forecast still returns values', () => {
-    // D3-03 edge case: all 7 days rejected, effective count = 3.5
-    // Forecast should still return min/max/central (narrow or same bands)
+  it('all days rejected (effective count 3.5 on 7 days): detectColdStart triggers (0 valid < 7 minDays)', () => {
+    // D3-03 + D3-06 interaction: all 7 days rejected → validDayCount=0 → cold-start gate fires.
+    // The percentile math (3.5 effective count) is still valid; but cold-start is checked first.
+    // Use minDays=0 to bypass cold-start and test the percentile behavior in isolation.
     const allRejected = [
       makeDay('06:30', null, null, null, true),
       makeDay('06:35', null, null, null, true),
@@ -399,8 +429,16 @@ describe('downweighting edge cases', () => {
       makeDay('06:55', null, null, null, true),
       makeDay('07:00', null, null, null, true),
     ];
-    const settings = { minDays: 7, maxDelta: 30, statBlend: 'median', windowDays: 7 };
-    const result = forecast(allRejected, settings);
+    // With minDays=7 and 0 valid days: cold-start fires → no predictions
+    const settingsGated = { minDays: 7, maxDelta: 30, statBlend: 'median', windowDays: 7 };
+    const gatedResult = forecast(allRejected, settingsGated);
+    assert.strictEqual(gatedResult.isColdStart, true, 'all-rejected days triggers cold-start when minDays=7');
+    assert.strictEqual(gatedResult.validDayCount, 0);
+
+    // With minDays=0: cold-start gate bypassed → percentile values still computed from rejected days
+    const settingsNoGate = { minDays: 0, maxDelta: 30, statBlend: 'median', windowDays: 7 };
+    const result = forecast(allRejected, settingsNoGate);
+    assert.strictEqual(result.isColdStart, false, 'minDays=0 bypasses cold-start gate');
     // Should return values, not null — edge case is documented for Phase 3+ threshold floor
     assert.ok(result.wake.central !== null, 'central should still be computed even if all rejected');
     assert.ok(result.wake.min !== null, 'min should still be computed even if all rejected');
