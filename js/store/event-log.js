@@ -73,6 +73,18 @@ export function createEventLog({ storage, clock, id }) {
     storage.save(db);
   };
 
+  // Plan 03-04 — D3-12: subscriber set for reactive forecast updates.
+  // Mirrors the settings.subscribe() pattern (D2-09). Fired synchronously
+  // after every successful addEvent / addEventAt / editEvent / deleteEvent.
+  // Subscriber re-entry safety: snapshot the Set before iteration (Pitfall #3 / T-2-07).
+  const subscribers = new Set();
+
+  /** Fire all subscribers synchronously. Called after every mutation. */
+  const notifySubscribers = () => {
+    const subs = [...subscribers];
+    for (const fn of subs) fn();
+  };
+
   return {
     /**
      * Append a new event with `at = formatLocalISO(roundTo5(clock.now()))`.
@@ -89,6 +101,7 @@ export function createEventLog({ storage, clock, id }) {
       const evt = { id: id(), type, at };
       db.events.push(evt);
       persist();
+      notifySubscribers(); // D3-12: trigger reactive forecast re-render
       return evt;
     },
 
@@ -112,6 +125,7 @@ export function createEventLog({ storage, clock, id }) {
       const evt = { id: id(), type, at };
       db.events.push(evt);
       persist();
+      notifySubscribers(); // D3-12: trigger reactive forecast re-render
       return evt;
     },
 
@@ -145,6 +159,7 @@ export function createEventLog({ storage, clock, id }) {
       // that would re-order, breaking the Pitfall #6 invariant in a subtle way.
       db.events[i] = next;
       persist();
+      notifySubscribers(); // D3-12: trigger reactive forecast re-render
       return next;
     },
 
@@ -164,6 +179,7 @@ export function createEventLog({ storage, clock, id }) {
       if (i === -1) return false;
       db.events.splice(i, 1);
       persist();
+      notifySubscribers(); // D3-12: trigger reactive forecast re-render
       return true;
     },
 
@@ -201,6 +217,23 @@ export function createEventLog({ storage, clock, id }) {
      */
     daysBySubjectiveNight(cutoverHour = DEFAULT_CUTOVER_HOUR, limit) {
       return _daysBySubjectiveNight(db.events, cutoverHour, limit);
+    },
+
+    /**
+     * Register a subscriber that is called synchronously after every
+     * successful mutation (addEvent, addEventAt, editEvent, deleteEvent).
+     *
+     * Mirrors the settings.subscribe() pattern (D2-09 / D3-12). Returns an
+     * unsubscribe function. Subscriber re-entry safety: the notification loop
+     * snapshots the Set before iterating (Pitfall #3 / T-2-07).
+     *
+     * @param {() => void} fn  callback with no arguments (unlike settings.subscribe
+     *                          which passes a snapshot — callers re-read state themselves)
+     * @returns {() => void} unsubscribe function
+     */
+    subscribe(fn) {
+      subscribers.add(fn);
+      return () => subscribers.delete(fn);
     },
   };
 }
