@@ -230,18 +230,118 @@ export function selectCentralTime(times) {
 }
 
 // ---------------------------------------------------------------------------
+// Probability-band generation (D3-04)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a cumulative probability table when the confidence band is too wide.
+ *
+ * Decision D3-04: When the band width (P90 - P10) exceeds maxDelta, the prediction
+ * card switches from "central ± band" to a probability table: P(event by T) = X%.
+ *
+ * Threshold logic: uses STRICT greater-than (>) — equal width means normal min/max UI.
+ * Rationale: at exactly maxDelta, the central-time display is still usable; crossing
+ * the threshold signals that uncertainty is actively misleading.
+ *
+ * @param {number[]} times    sorted (ascending) numeric times in minutes-since-midnight
+ * @param {number}   p10      10th percentile value (numeric minutes)
+ * @param {number}   p90      90th percentile value (numeric minutes)
+ * @param {number}   maxDelta threshold in minutes; band width MUST EXCEED this to activate
+ * @param {number}   [step=5] granularity of time points in minutes (default 5 per LOG-07)
+ * @returns {Array<{time: string, prob: number}>|null}
+ *   null if band width ≤ maxDelta (use normal min/max UI instead).
+ *   Array of { time: 'HH:MM', prob: N } sorted by time if band width > maxDelta.
+ *   prob is 0..100 (integer percentage of times ≤ T).
+ */
+export function generateProbabilityBand(times, p10, p90, maxDelta, step = 5) {
+  // Guard: empty or degenerate input
+  if (!times || times.length === 0) return null;
+
+  const bandWidth = p90 - p10;
+
+  // D3-04 threshold: strictly greater than maxDelta (not >=)
+  // At exactly maxDelta, the central-time card is still meaningful.
+  if (bandWidth <= maxDelta) return null;
+
+  // Generate time points from p10 to p90 at 'step' minute intervals.
+  // Round p10 down to nearest step boundary for clean alignment.
+  const startMinutes = Math.floor(p10 / step) * step;
+  const endMinutes = Math.ceil(p90 / step) * step;
+
+  const table = [];
+  for (let t = startMinutes; t <= endMinutes; t += step) {
+    // Count how many times are ≤ t (cumulative distribution)
+    const count = times.filter(x => x <= t).length;
+    const prob = Math.round(100 * count / times.length);
+    table.push({
+      time: minutesToTime(t),
+      prob,
+    });
+  }
+
+  // T-03-05 mitigation: step is fixed at minimum 5 min, so even a 1000-min span
+  // produces at most 200 time points — no unbounded loop risk.
+
+  return table;
+}
+
+// ---------------------------------------------------------------------------
+// Cold-start detection (D3-06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine whether the cold-start gate should suppress predictions.
+ *
+ * Decision D3-06: When the number of valid (non-rejected) days in history is
+ * less than settings.minDays, predictions are suppressed and an explicit message
+ * is shown. This prevents the algorithm from producing misleading forecasts from
+ * insufficient data.
+ *
+ * @param {object[]} dayRecords  array of day records (each with .rejected boolean)
+ * @param {number}   minDays     minimum valid-day count before predictions are shown
+ * @returns {{ isColdStart: boolean, validDayCount: number, minDaysRemaining?: number }}
+ *   - isColdStart: true when validDayCount < minDays
+ *   - validDayCount: number of non-rejected days
+ *   - minDaysRemaining: how many more valid days are needed (only when isColdStart=true)
+ */
+export function detectColdStart(dayRecords, minDays) {
+  // Count non-rejected days: these are the "valid" data points for predictions
+  const validDayCount = dayRecords.filter(day => !day.rejected).length;
+
+  if (validDayCount < minDays) {
+    return {
+      isColdStart: true,
+      validDayCount,
+      minDaysRemaining: minDays - validDayCount,
+    };
+  }
+
+  return {
+    isColdStart: false,
+    validDayCount,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main forecast function
 // ---------------------------------------------------------------------------
 
 /**
  * Forecast all four sleep event types from a rolling window of day records.
  *
- * For each event type (wake, bedtime, napStart, napEnd):
+ * Cold-start gate (D3-06): If the number of valid (non-rejected) days is below
+ * settings.minDays, returns { isColdStart: true, validDayCount, minDaysRemaining }
+ * with NO prediction fields. The caller (Today screen) should show the cold-start
+ * message instead of prediction cards.
+ *
+ * When cold-start is not active, for each event type (wake, bedtime, napStart, napEnd):
  *   1. Filter to days that have data for that event type
  *   2. Calculate P10/P50/P90 with rejected-day downweighting (D3-03)
- *   3. Convert numeric minutes back to 'HH:MM' strings (5-minute precision)
- *   4. If no days have that event → { central: null, min: null, max: null }
- *      (allows upstream cold-start gating and partial-history handling, D3-06)
+ *   3. Check probability-band fallback (D3-04):
+ *      - If band width > maxDelta: add probabilityBand array to prediction
+ *      - Otherwise: normal { central, min, max } shape
+ *   4. Convert numeric minutes back to 'HH:MM' strings (5-minute precision)
+ *   5. If no days have that event → { central: null, min: null, max: null }
  *
  * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
  *   Each record is expected to have:
@@ -254,12 +354,24 @@ export function selectCentralTime(times) {
  * @param {object} settings  settings snapshot from settings.get()
  *   Expected fields: minDays, maxDelta, statBlend, windowDays
  *
- * @returns {{ wake, bedtime, napStart, napEnd }}
- *   Each value: { central: string|null, min: string|null, max: string|null }
- *   All times are 'HH:MM' strings (or null if insufficient data for that event type).
+ * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd? }}
+ *   When isColdStart=true: no prediction fields present.
+ *   When isColdStart=false: each event has either
+ *     { central: string|null, min: string|null, max: string|null } (low uncertainty)
+ *     or { probabilityBand: [{time, prob}, ...] } (high uncertainty, D3-04)
  */
 export function forecast(dayRecords, settings) {
-  const { windowDays } = settings;
+  const { windowDays, minDays, maxDelta } = settings;
+
+  // D3-06: Cold-start gate — check BEFORE slicing window so we count ALL available history
+  const coldStart = detectColdStart(dayRecords, minDays);
+  if (coldStart.isColdStart) {
+    return {
+      isColdStart: true,
+      validDayCount: coldStart.validDayCount,
+      minDaysRemaining: coldStart.minDaysRemaining,
+    };
+  }
 
   // Slice to rolling window (D3-02): last windowDays records
   // If fewer days exist, use all available (no padding/synthetic data)
@@ -267,12 +379,27 @@ export function forecast(dayRecords, settings) {
     ? dayRecords.slice(dayRecords.length - windowDays)
     : dayRecords;
 
-  // Helper: compute { central, min, max } as HH:MM strings for one event type
+  // Helper: compute prediction for one event type, with probability-band fallback (D3-04)
   function forecastEvent(getTimeFn) {
     const result = calculatePercentiles(window, getTimeFn);
     if (result === null) {
       return { central: null, min: null, max: null };
     }
+
+    // Extract the sorted numeric times from the window for this event type
+    const validTimes = window
+      .filter(d => getTimeFn(d) != null)
+      .map(d => timeToMinutes(getTimeFn(d)))
+      .sort((a, b) => a - b);
+
+    // D3-04: Check if high-uncertainty fallback is needed
+    const band = generateProbabilityBand(validTimes, result.min, result.max, maxDelta);
+    if (band !== null) {
+      // High uncertainty: return probability table instead of point + band
+      return { probabilityBand: band };
+    }
+
+    // Normal case: point prediction with confidence band
     return {
       central: minutesToTime(result.central),
       min: minutesToTime(result.min),
@@ -281,6 +408,7 @@ export function forecast(dayRecords, settings) {
   }
 
   return {
+    isColdStart: false,
     wake:     forecastEvent(d => d.wake),
     bedtime:  forecastEvent(d => d.bedtime),
     napStart: forecastEvent(d => d.napStart),
