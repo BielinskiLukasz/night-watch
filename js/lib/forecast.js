@@ -329,6 +329,30 @@ export function detectColdStart(dayRecords, minDays) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Extract an 'HH:MM' string from a day-record slot value.
+ *
+ * Day records from daysBySubjectiveNight() store event slots as either:
+ *   - null (event type not recorded that day)
+ *   - an event object { id, type, at: 'YYYY-MM-DDTHH:MM' }
+ *
+ * Unit tests use synthetic day records where slots are either null or bare
+ * 'HH:MM' strings (for convenience). This helper handles both forms so
+ * forecast() works with real stores AND unit-test synthetic data.
+ *
+ * @param {null|string|{at:string}} slot  day-record slot value
+ * @returns {string|null} 'HH:MM' or null
+ */
+function extractTime(slot) {
+  if (slot == null) return null;
+  // Event object from daysBySubjectiveNight(): extract HH:MM from at string.
+  // at format: 'YYYY-MM-DDTHH:MM' → slice(11) gives 'HH:MM'
+  if (typeof slot === 'object' && slot.at) return slot.at.slice(11);
+  // Synthetic unit-test data: bare 'HH:MM' string
+  if (typeof slot === 'string') return slot;
+  return null;
+}
+
+/**
  * Forecast all four sleep event types from a rolling window of day records.
  *
  * Cold-start gate (D3-06): If the number of valid (non-rejected) days is below
@@ -411,10 +435,10 @@ export function forecast(dayRecords, settings) {
 
   return {
     isColdStart: false,
-    wake:     forecastEvent(d => d.wake),
-    bedtime:  forecastEvent(d => d.bedtime),
-    napStart: forecastEvent(d => d.napStart),
-    napEnd:   forecastEvent(d => d.napEnd),
+    wake:     forecastEvent(d => extractTime(d.wake)),
+    bedtime:  forecastEvent(d => extractTime(d.bedtime)),
+    napStart: forecastEvent(d => extractTime(d.napStart)),
+    napEnd:   forecastEvent(d => extractTime(d.napEnd)),
   };
 }
 
