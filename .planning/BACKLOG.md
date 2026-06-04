@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-04
+Last updated: 2026-06-05
 
 ---
 
@@ -209,6 +209,84 @@ These four items improve the accuracy and adaptability of the forecasting engine
 - Likely a post-processing step in the forecaster: if no nap-start event has occurred by a threshold hour (e.g., 15:00), flag a missed nap and adjust downstream predictions.
 - Data shape: no new fields unless adding an explicit "skip nap" flag. The logic is read-only on existing events.
 - Interaction with stages: does the threshold hour or adjustment factor change per stage (e.g., "dropped second nap" stages have no afternoon nap at all)?
+
+---
+
+## Forecast engine polish (deferred from Phase 03, 2026-06-05)
+
+These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execution. The core algorithm and UI are complete and verified; these are UX refinements and test-coverage improvements deferred to future phases.
+
+### B-08 · Cold-start message formatting polish
+
+**Source:** Phase 03-05 user verification checkpoint (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** Phase 8 (PWA & Platform Hardening) — typography polish
+
+**What:** The cold-start message ("Not enough data yet. Log N more days to see predictions.") wraps to multiple lines in some viewport widths. Reformat or apply CSS constraints to keep it single-line or improve visual spacing.
+
+**Why:** The message is functionally correct but could look more polished on mobile. Phase 8 is the platform hardening and theming phase where this kind of typography work naturally lands.
+
+**Implementation notes:**
+
+- CSS: constrain message width, adjust font size for mobile, or reword to be shorter.
+- No data model or algorithm changes.
+
+---
+
+### B-09 · Hero card explicit "Next Predicted Event" label
+
+**Source:** Phase 03-05 user verification checkpoint (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** Phase 7 (UX review & polish) — when all screens are in place
+
+**What:** The hero "next event" card above the four prediction cards currently relies on visual treatment (size, color, position) to communicate its role. Add an explicit label like "Next Predicted Event" or similar.
+
+**Why:** First-time users may not immediately understand that the prominent card is a prediction, not a logged event. Explicit labeling removes ambiguity.
+
+**Implementation notes:**
+
+- Add a label text or small header to `renderNextEventCard()` in today-screen.js.
+- CSS: ensure label is discoverable (not buried in small print) but not visually dominant over the prediction itself.
+
+---
+
+### B-10 · Prediction cards on-demand toggle (optional UX)
+
+**Source:** Phase 03-05 design decision (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 — only if user feedback suggests it's needed
+
+**What:** Currently, prediction cards always show once minDays threshold is met. An alternative UX would hide cards by default and show them on-demand (e.g., tap "Show predictions" button). This item captures that option for future evaluation.
+
+**Why:** Some users might prefer a cleaner default view and tap to reveal predictions. Others prefer predictions always visible. Phase 3 chose "always visible" as simpler and more aligned with the goal statement. This backlog item preserves the alternative for future UX testing.
+
+**Open questions when/if this gets planned:**
+
+- A/B test with real users: do they prefer always-visible or on-demand?
+- If on-demand: button placement (card header, Today screen header, toggle in Settings)?
+
+**Implementation notes:**
+
+- Likely a Settings field `showPredictionsByDefault: boolean` or similar.
+- Conditional rendering in `renderForecastSection()` based on this flag and user tap state.
+
+---
+
+### B-11 · Probability-band fallback E2E test with realistic fixture data
+
+**Source:** Phase 03-05 test coverage gap (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** Phase 5 (Data Import/Export) — this phase will add fixture loading capability
+
+**What:** The Phase 3 E2E test for probability-band fallback (`forecast.spec.js` test 4) uses a small maxDelta value to trigger the fallback with synthetic log data. A more comprehensive test with realistic historical data (7+ days spread across multiple weeks) would better validate the fallback in realistic scenarios.
+
+**Why:** Realistic test data exercises edge cases (e.g., low sample counts, skewed distributions) that synthetic small datasets might miss. Phase 5 will add data import/export capability, making it practical to load a fixture file with representative historical sleep data.
+
+**Implementation notes:**
+
+- Create a fixture JSON file (e.g., `tests/fixtures/forecast-probability-band-data.json`) with 30–60 days of varied sleep data.
+- Add an E2E test that loads this fixture via the Phase 5 import API, then verifies probability-band rendering.
+- No changes to the forecast algorithm itself — this is a test-suite enhancement only.
 
 ---
 
