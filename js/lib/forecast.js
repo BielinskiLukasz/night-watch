@@ -546,7 +546,8 @@ export function selectNextEvent(predictions, dayRecords) {
       // Wall-clock "now" in minutes — safe since we only compare HH:MM
       // This is the only place in forecast.js that reads wall-clock time.
       // Phase 8 can inject a clock seam if stricter testability is needed.
-      const nowDate = new Date();
+      // gsd:allow-ui-clock — non-domain UI prefill: isMissed is display-only metadata (D3-11).
+      const nowDate = new Date(); // gsd:allow-ui-clock
       const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
       const centralMinutes = timeToMinutes(pred.central);
       isMissed = centralMinutes < nowMinutes;

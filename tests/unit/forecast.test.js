@@ -1017,3 +1017,99 @@ describe('selectNextEvent(predictions, dayRecords)', () => {
     assert.strictEqual(result.type, 'napEnd');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 15. selectNextEvent() edge cases
+// ---------------------------------------------------------------------------
+
+describe('selectNextEvent() edge cases', () => {
+  function makeDayWithEvents(events) {
+    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
+  }
+
+  const predictions = {
+    wake:     { central: '07:00', min: '06:30', max: '07:30' },
+    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
+    napStart: { central: '13:00', min: '12:30', max: '13:30' },
+    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
+  };
+
+  it('no events logged (dayRecords=[]) → returns null', () => {
+    const result = selectNextEvent(predictions, []);
+    assert.strictEqual(result, null);
+  });
+
+  it('prediction is null/missing for priority tier → skips to next available tier', () => {
+    // After wake, priority is napStart > bedtime > napEnd > wake
+    // Remove napStart from predictions → should select bedtime
+    const partialPredictions = {
+      wake:    { central: '07:00', min: '06:30', max: '07:30' },
+      bedtime: { central: '21:00', min: '20:30', max: '21:30' },
+      // napStart intentionally missing
+      napEnd:  { central: '14:00', min: '13:30', max: '14:30' },
+    };
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
+    ];
+    const result = selectNextEvent(partialPredictions, dayRecords);
+    assert.ok(result !== null, 'should not return null when a lower-tier prediction is available');
+    assert.strictEqual(result.type, 'bedtime');
+  });
+
+  it('last event type unknown → falls back to default priority (wake first)', () => {
+    // Unknown event type in allEvents → default priority = wake > bedtime > napStart > napEnd
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'unknownCustomType', at: '2026-06-02T12:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction even for unknown event types');
+    assert.strictEqual(result.type, 'wake');
+  });
+
+  it('all tiers missing from predictions → returns null', () => {
+    const emptyPredictions = {};
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
+    ];
+    const result = selectNextEvent(emptyPredictions, dayRecords);
+    assert.strictEqual(result, null);
+  });
+
+  it('result is deterministic: same input → same output (no random tiebreaking)', () => {
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }]),
+    ];
+    const result1 = selectNextEvent(predictions, dayRecords);
+    const result2 = selectNextEvent(predictions, dayRecords);
+    assert.deepStrictEqual(result1, result2, 'same input should always produce the same output');
+  });
+
+  it('isMissed field is present on result', () => {
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'result should not be null');
+    assert.ok('isMissed' in result, 'result should have isMissed field');
+    assert.ok(typeof result.isMissed === 'boolean', 'isMissed should be boolean');
+  });
+
+  it('probabilityBand prediction: result carries probabilityBand instead of central/min/max', () => {
+    // When a prediction uses the probabilityBand shape, selectNextEvent should pass it through
+    const bandPredictions = {
+      wake:     { central: '07:00', min: '06:30', max: '07:30' },
+      bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
+      napStart: { probabilityBand: [{ time: '13:00', prob: 50 }, { time: '13:30', prob: 90 }] },
+      napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
+    };
+    // Last event = wake → priority: napStart > bedtime > napEnd > wake
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
+    ];
+    const result = selectNextEvent(bandPredictions, dayRecords);
+    assert.ok(result !== null, 'should return napStart even though it uses probabilityBand shape');
+    assert.strictEqual(result.type, 'napStart');
+    assert.ok('probabilityBand' in result, 'result should carry probabilityBand from prediction');
+    assert.ok(!('central' in result), 'result should NOT have central when prediction uses probabilityBand');
+  });
+});

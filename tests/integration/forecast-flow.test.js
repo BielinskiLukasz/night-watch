@@ -201,3 +201,109 @@ describe('forecast cold-start flag toggles with minDays', () => {
     assert.ok('wake' in result2, 'wake prediction should be present after cold-start exits');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 5: Subscriber patterns (D3-12, D3-13)
+// ---------------------------------------------------------------------------
+
+describe('integration subscriber patterns', () => {
+  it('settings.subscribe() fires synchronously after update() and forecast changes', () => {
+    // Arrange: 7 wake events with 30-min span; maxDelta=30 → normal shape
+    const { eventLog, settings } = makeSetup();
+
+    addAt(eventLog, 'wake', '2026-05-20T06:30');
+    addAt(eventLog, 'wake', '2026-05-21T06:35');
+    addAt(eventLog, 'wake', '2026-05-22T06:40');
+    addAt(eventLog, 'wake', '2026-05-23T06:45');
+    addAt(eventLog, 'wake', '2026-05-24T06:50');
+    addAt(eventLog, 'wake', '2026-05-25T06:55');
+    addAt(eventLog, 'wake', '2026-05-26T07:00');
+
+    const days = eventLog.daysBySubjectiveNight();
+
+    // Baseline: maxDelta=30, band==maxDelta → normal shape
+    const baseline = forecast(days, { ...settings.get(), minDays: 0, maxDelta: 30 });
+    assert.ok('central' in baseline.wake, 'baseline should have normal shape');
+
+    // Track subscriber call count — verify synchronous invocation
+    let callCount = 0;
+    let lastSnap = null;
+
+    const unsub = settings.subscribe((snap) => {
+      callCount++;
+      lastSnap = snap;
+    });
+
+    // Update settings — subscriber should fire synchronously
+    settings.update({ maxDelta: 15 });
+
+    // Subscriber was called once synchronously
+    assert.strictEqual(callCount, 1, 'subscriber should be called once synchronously');
+    assert.ok(lastSnap !== null, 'subscriber should receive snapshot');
+    assert.strictEqual(lastSnap.maxDelta, 15, 'subscriber snapshot should have updated maxDelta');
+
+    // Forecast with new settings produces probabilityBand
+    const updated = forecast(days, { ...lastSnap, minDays: 0 });
+    assert.ok('probabilityBand' in updated.wake,
+      'wake should use probabilityBand after maxDelta narrowed to 15');
+
+    unsub();
+  });
+
+  it('multiple subscribers all fire on single update() call', () => {
+    const { settings } = makeSetup();
+    const callCounts = [0, 0, 0];
+
+    const unsub1 = settings.subscribe(() => { callCounts[0]++; });
+    const unsub2 = settings.subscribe(() => { callCounts[1]++; });
+    const unsub3 = settings.subscribe(() => { callCounts[2]++; });
+
+    settings.update({ maxDelta: 45 });
+
+    assert.strictEqual(callCounts[0], 1, 'subscriber 1 should be called once');
+    assert.strictEqual(callCounts[1], 1, 'subscriber 2 should be called once');
+    assert.strictEqual(callCounts[2], 1, 'subscriber 3 should be called once');
+
+    unsub1();
+    unsub2();
+    unsub3();
+  });
+
+  it('unsubscribed subscriber no longer fires after subsequent update()', () => {
+    const { settings } = makeSetup();
+    let count = 0;
+
+    const unsub = settings.subscribe(() => { count++; });
+
+    settings.update({ maxDelta: 25 });
+    assert.strictEqual(count, 1, 'should fire once before unsubscribe');
+
+    unsub();
+
+    settings.update({ maxDelta: 20 });
+    assert.strictEqual(count, 1, 'should NOT fire after unsubscribe');
+  });
+
+  it('forecast is deterministic: same days + same settings → same result on two calls', () => {
+    const { eventLog, settings } = makeSetup();
+
+    addAt(eventLog, 'wake',    '2026-05-20T06:30');
+    addAt(eventLog, 'bedtime', '2026-05-20T21:00');
+    addAt(eventLog, 'wake',    '2026-05-21T06:45');
+    addAt(eventLog, 'bedtime', '2026-05-21T21:00');
+    addAt(eventLog, 'wake',    '2026-05-22T07:00');
+    addAt(eventLog, 'bedtime', '2026-05-22T21:00');
+
+    const days = eventLog.daysBySubjectiveNight();
+    const snap = { ...settings.get(), minDays: 0, maxDelta: 120 };
+
+    const result1 = forecast(days, snap);
+    const result2 = forecast(days, snap);
+
+    // Both wake predictions should be identical
+    assert.strictEqual(result1.wake.central, result2.wake.central,
+      'forecast() is deterministic: same input produces same output');
+    assert.strictEqual(result1.wake.min, result2.wake.min);
+    assert.strictEqual(result1.wake.max, result2.wake.max);
+  });
+});
