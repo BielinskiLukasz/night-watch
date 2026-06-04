@@ -41,6 +41,15 @@
     skeleton is shown only momentarily during module loading and as a
     progressive-enhancement fallback when JS is disabled. The data-log
     attributes here match the four valid types in VALID_TYPES (T-01 contract).
+
+    Plan 03-04: forecast card containers are included in the skeleton so that
+    search engines and no-JS readers have the structural anchors. The JS layer
+    populates them on mount via renderForecastSection(). D3-07 layout order:
+      1. Quick-log buttons
+      2. Next-event hero card (id="next-event-card")
+      3. Cold-start message (id="cold-start-message") — shown when <minDays
+      4. Four prediction cards grid (id="forecast-cards")
+      5. Grouping toggle + today's event list
   -->
   <main id="app">
     <div class="quickLog">
@@ -49,6 +58,9 @@
       <button type="button" data-log="napStart">Nap start</button>
       <button type="button" data-log="napEnd">Nap end</button>
     </div>
+    <div id="next-event-card"></div>
+    <div id="cold-start-message"></div>
+    <section id="forecast-cards" class="forecast-grid"></section>
     <section class="dayList" data-role="events"></section>
     <button type="button" id="addEventBtn" class="addEventBtn">+ Add event</button>
   </main>
