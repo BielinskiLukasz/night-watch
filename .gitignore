@@ -13,3 +13,10 @@ nw-research-test/sample.test.js
 
 # Per-developer Claude Code permission overrides — never commit personal allows.
 .claude/settings.local.json
+
+# GSD
+gsd-*
+.gsd-*
+.claude/get-shit-done/
+.claude/commands/gsd/
+.claude/hooks/lib/git-cmd.js
