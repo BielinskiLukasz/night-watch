@@ -785,3 +785,104 @@ describe('detectColdStart(dayRecords, minDays)', () => {
     assert.strictEqual(result.isColdStart, false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 12. probability-band edge cases
+// ---------------------------------------------------------------------------
+
+describe('generateProbabilityBand() edge cases', () => {
+  it('empty times array → returns null (no times, no probabilities)', () => {
+    const result = generateProbabilityBand([], 390, 420, 29);
+    assert.strictEqual(result, null);
+  });
+
+  it('single time (p10 = p90): band width = 0 ≤ maxDelta → return null', () => {
+    // Single point: no spread, never triggers fallback
+    const result = generateProbabilityBand([405], 405, 405, 30);
+    assert.strictEqual(result, null);
+  });
+
+  it('two times exactly maxDelta apart → band width == maxDelta → return null (> not >=)', () => {
+    // P10=390, P90=420, width=30 == maxDelta=30 → null (boundary: strictly greater than)
+    const result = generateProbabilityBand([390, 420], 390, 420, 30);
+    assert.strictEqual(result, null);
+  });
+
+  it('band width = maxDelta + 1 → return probability band with at least one time point', () => {
+    // P10=390, P90=421, width=31 > maxDelta=30 → band triggered
+    const result = generateProbabilityBand([390, 421], 390, 421, 30);
+    assert.ok(Array.isArray(result), 'should return array when band width exceeds maxDelta by 1');
+    assert.ok(result.length >= 1, 'should have at least one time point');
+  });
+
+  it('very wide band (120 min > maxDelta=30) → probability band spans wide range at 5-min granularity', () => {
+    // Simulate a 2-hour span wake window
+    const wideTimes = [];
+    for (let m = 360; m <= 480; m += 5) wideTimes.push(m);  // 06:00..08:00
+    const result = generateProbabilityBand(wideTimes, 360, 480, 30);
+    assert.ok(Array.isArray(result), 'should return array for 120-min band > maxDelta=30');
+    // 120 min / 5 min step = 24 time points
+    assert.ok(result.length >= 20, `expected ≥20 time points, got ${result.length}`);
+    // All entries still have HH:MM format
+    for (const entry of result) {
+      assert.match(entry.time, /^\d{2}:\d{2}$/, `${entry.time} should be HH:MM`);
+      assert.ok(entry.prob >= 0 && entry.prob <= 100, `prob ${entry.prob} out of range`);
+    }
+  });
+
+  it('probability values are monotonically non-decreasing (cumulative distribution property)', () => {
+    // As time increases, cumulative probability must stay the same or increase
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    assert.ok(Array.isArray(result));
+    for (let i = 1; i < result.length; i++) {
+      assert.ok(result[i].prob >= result[i - 1].prob,
+        `prob at ${result[i].time} (${result[i].prob}) should be >= prev (${result[i-1].prob})`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 13. cold-start edge cases
+// ---------------------------------------------------------------------------
+
+describe('detectColdStart() edge cases', () => {
+  it('all 7 days rejected → validDayCount=0, isColdStart=true when minDays=7', () => {
+    const allRejected = [
+      makeDay('06:30', null, null, null, true),
+      makeDay('06:35', null, null, null, true),
+      makeDay('06:40', null, null, null, true),
+      makeDay('06:45', null, null, null, true),
+      makeDay('06:50', null, null, null, true),
+      makeDay('06:55', null, null, null, true),
+      makeDay('07:00', null, null, null, true),
+    ];
+    const result = detectColdStart(allRejected, 7);
+    assert.strictEqual(result.isColdStart, true);
+    assert.strictEqual(result.validDayCount, 0);
+    assert.strictEqual(result.minDaysRemaining, 7);
+  });
+
+  it('7 days logged, minDays=7 → validDayCount=7, isColdStart=false (7 >= 7)', () => {
+    const sevenValid = [
+      makeDay('06:30', null, null, null, false),
+      makeDay('06:35', null, null, null, false),
+      makeDay('06:40', null, null, null, false),
+      makeDay('06:45', null, null, null, false),
+      makeDay('06:50', null, null, null, false),
+      makeDay('06:55', null, null, null, false),
+      makeDay('07:00', null, null, null, false),
+    ];
+    const result = detectColdStart(sevenValid, 7);
+    assert.strictEqual(result.isColdStart, false);
+    assert.strictEqual(result.validDayCount, 7);
+    assert.ok(!('minDaysRemaining' in result), 'minDaysRemaining should not be present when not cold-start');
+  });
+
+  it('8 days logged, minDays=7 → isColdStart=false (exceeds threshold)', () => {
+    const eightValid = Array.from({ length: 8 }, (_, i) => makeDay('06:30', null, null, null, false));
+    const result = detectColdStart(eightValid, 7);
+    assert.strictEqual(result.isColdStart, false);
+    assert.strictEqual(result.validDayCount, 8);
+  });
+});
