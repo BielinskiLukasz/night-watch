@@ -426,6 +426,184 @@ button[data-log]:hover {
   background: #4338ca;
 }
 
+/* ==========================================================================
+ * Plan 03-04 — Forecast cards, probability-band tables, cold-start message
+ * ==========================================================================
+ *
+ * Layout (D3-07): Next-event hero → Cold-start message → 2×2 forecast grid → Day list
+ * Calm, minimal palette matching Phase 1/2: indigo accent (#4f46e5), slate grays,
+ * white card surfaces on #fafafa body. High contrast for readability; muted secondary
+ * text for band lines and labels.
+ *
+ * Security: all dynamic content is injected via textContent (T-07). No innerHTML-
+ * dependent selectors here; these classes are applied by today-screen.js helpers.
+ */
+
+/* ── Next-event hero card (D3-07 / D3-10) ────────────────────────────────── */
+
+.next-event-hero {
+  background: #4f46e5;
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.next-event-hero .event-type {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.next-event-hero .time-central {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.next-event-hero .time-band {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.next-event-hero .missed-label {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+/* Hero card "missed" state: desaturated background */
+.next-event-hero.missed {
+  background: #64748b;
+}
+
+/* ── Cold-start message (D3-09) ──────────────────────────────────────────── */
+
+.cold-start-message {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #475569;
+  margin-bottom: 1rem;
+}
+
+.cold-start-message p {
+  margin: 0.25rem 0;
+}
+
+.cold-start-message p:first-child {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.cold-start-message p:last-child {
+  font-size: 0.9rem;
+}
+
+/* ── Forecast grid (D3-08): 2×2 on desktop, 1×4 stacked on mobile ────────── */
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 480px) {
+  .forecast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Prediction card base (D3-08) ────────────────────────────────────────── */
+
+.prediction-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.prediction-card .event-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0;
+}
+
+.prediction-card .time-central {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.prediction-card .time-band {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* ── Missed prediction variant (D3-11) ───────────────────────────────────── */
+
+.prediction-card.missed {
+  opacity: 0.55;
+  border-color: #cbd5e1;
+}
+
+.prediction-card.missed .time-central {
+  color: #64748b;
+}
+
+.missed-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin: 0;
+  margin-top: 0.15rem;
+}
+
+/* ── Probability-band variant (D3-04) ────────────────────────────────────── */
+
+.prediction-card.probability-band .prob-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.prediction-card.probability-band .prob-list li {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 /* Inline validation surface (mirrors manualEntryErrors).
  * Renders one <p data-field=...> per error via textContent (T-07). */
 .settingsErrors {
