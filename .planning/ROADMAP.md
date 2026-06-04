@@ -105,7 +105,6 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   4. User logs a new event from the quick-log buttons, and all four predictions update immediately without reload
   5. A prominent "next event" card appears above the four predictions, surfacing the single most imminent event
 
-
 **Plans**: 5 plans in 4 waves
 
 **Wave 1** *(pure-logic TDD foundation)*
@@ -206,7 +205,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 |-------|----------------|--------|-----------|
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
 | 2. Configuration & Settings | 7/7 | Complete    | 2026-05-28 |
-| 3. Forecast Engine & Today Screen | 5/5 | Complete | 2026-06-05 |
+| 3. Forecast Engine & Today Screen | 5/5 | Complete    | 2026-06-04 |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
 | 5. Data Import/Export | 0/TBD | Not started | — |
 | 6. Life Stages | 0/TBD | Not started | — |
@@ -219,11 +218,12 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Goal:** Improve bedtime prediction accuracy by using time-of-day context.
 **Requirements:** TBD
-**Plans:** 0 plans
+**Plans:** 5/5 plans complete
 
 When hour is >= 18 and previous event is "wake", predict bedtime as the next event (not nap start). This captures the intuition that late afternoon wakes naturally lead to bedtime.
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.2: Duration-based prediction (BACKLOG)
@@ -235,6 +235,7 @@ Plans:
 Instead of predicting wake time from hour patterns alone, also predict based on typical sleep duration. If child sleeps at 22:00, calculate probable sleep duration and derive wake time from that. Calculate predictions across both duration patterns and hour patterns, then union these predictions for a more robust forecast.
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.3: Intense day checkbox (BACKLOG)
@@ -246,6 +247,7 @@ Plans:
 Add a checkbox during event entry to flag an "intense day" (e.g., travel, high activity, stimulation). Store this boolean in the event history and include it in prediction calculations as contextual metadata.
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.4: Missing nap impact on bedtime (BACKLOG)
@@ -257,4 +259,5 @@ Plans:
 When predicting bedtime after a wake (and previous event was wake), check history to detect how sleep behavior changes when the child misses their typical nap. Use this pattern to inform and adjust the bedtime prediction.
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
