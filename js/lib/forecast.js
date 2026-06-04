@@ -39,6 +39,8 @@
 // downweightRejectedDays(dayRecords, weight) → dayRecordWithWeight[]
 // forecast(dayRecords, settings) → { wake, bedtime, napStart, napEnd }
 //   each with { central, min, max } as 'HH:MM' strings (or null if no history)
+// selectNextEvent(predictions, dayRecords) → { type, isMissed, ...prediction } | null
+//   Cycle-aware priority selection of the most relevant upcoming event (D3-10).
 //
 // === DST Safety ===
 // All time arithmetic stays in 'HH:MM' strings → minutes-since-midnight integers.
@@ -414,6 +416,127 @@ export function forecast(dayRecords, settings) {
     napStart: forecastEvent(d => d.napStart),
     napEnd:   forecastEvent(d => d.napEnd),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Next-event selection with cycle-aware priority (D3-10)
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the single most relevant upcoming prediction using sleep-cycle awareness.
+ *
+ * Decision D3-10: Rather than picking the chronologically nearest prediction,
+ * this function uses the most-recently-logged event to infer what naturally
+ * comes next in the child's sleep rhythm:
+ *
+ *   Last event = bedtime    → wake > napStart > napEnd > bedtime
+ *   Last event = wake       → napStart > bedtime > napEnd > wake
+ *   Last event = napStart   → napEnd > bedtime > wake > napStart
+ *   Last event = napEnd     → bedtime > wake > napStart > napEnd
+ *
+ * Within each priority tier the first available prediction is returned.
+ * If a tier has no prediction (e.g., napStart was never recorded), the
+ * function advances to the next tier.
+ *
+ * Cold-start / no events case: returns null. The UI should suppress the
+ * next-event card when null is returned.
+ *
+ * @param {object} predictions  forecast() result keyed by event type
+ *   Each key is one of: wake, bedtime, napStart, napEnd
+ *   Each value is one of:
+ *     { central: 'HH:MM', min: 'HH:MM', max: 'HH:MM' }  (normal prediction)
+ *     { probabilityBand: [{time, prob}, ...] }             (high-uncertainty)
+ *   Missing keys (event type never recorded) are allowed; that tier is skipped.
+ *
+ * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
+ *   Each record must have an allEvents array (list of { type, at } raw events).
+ *   The most recent event across ALL day records determines the priority order.
+ *
+ * @returns {{ type: string, isMissed: boolean, ...prediction }|null}
+ *   - type: the selected event type ('wake', 'bedtime', 'napStart', 'napEnd')
+ *   - isMissed: true when the prediction's central time is in the past
+ *     (relative to wall-clock midnight minutes — prep for UI D3-11)
+ *   - All other fields from the prediction (central, min, max or probabilityBand)
+ *   Returns null when no events have been logged or no predictions are available.
+ */
+export function selectNextEvent(predictions, dayRecords) {
+  // ── Step 1: Find the most-recently-logged event across all day records ────
+  // allEvents lists within each day record hold the raw events in insertion
+  // order. We collect every event and pick the latest by at-string (ISO sort).
+  let lastEvent = null;
+
+  for (const day of dayRecords) {
+    if (!day.allEvents || day.allEvents.length === 0) continue;
+    for (const evt of day.allEvents) {
+      if (lastEvent === null || evt.at > lastEvent.at) {
+        lastEvent = evt;
+      }
+    }
+  }
+
+  // No events logged → cold start; UI suppresses the next-event card
+  if (lastEvent === null) return null;
+
+  // ── Step 2: Determine cycle-aware priority order (D3-10) ─────────────────
+  // The priority array encodes "what naturally comes next in the sleep cycle"
+  // based on the most recently logged event type.
+  let priority;
+  switch (lastEvent.type) {
+    case 'bedtime':
+      // After bedtime, the child will wake up → then nap → then back to bed
+      priority = ['wake', 'napStart', 'napEnd', 'bedtime'];
+      break;
+    case 'wake':
+      // After waking, the next event is a nap → then bedtime
+      priority = ['napStart', 'bedtime', 'napEnd', 'wake'];
+      break;
+    case 'napStart':
+      // After nap starts, the nap will end → then bedtime
+      priority = ['napEnd', 'bedtime', 'wake', 'napStart'];
+      break;
+    case 'napEnd':
+      // After nap ends, bedtime follows → then the next wake
+      priority = ['bedtime', 'wake', 'napStart', 'napEnd'];
+      break;
+    default:
+      // Unknown event type → fall back to natural wake-first order
+      priority = ['wake', 'bedtime', 'napStart', 'napEnd'];
+  }
+
+  // ── Step 3: Walk the priority list and return the first available prediction ─
+  for (const eventType of priority) {
+    const pred = predictions[eventType];
+    // Skip tiers with no prediction (event type never recorded in history)
+    if (!pred) continue;
+
+    // D3-11: Detect "missed" predictions.
+    // A prediction is missed when its central time has passed today.
+    // We compare using minutes-since-midnight only (no date arithmetic needed —
+    // the prediction is always relative to "today's" schedule).
+    // NOTE: this uses performance-time-safe approach — only for UI flagging,
+    // not for sorting. The clock seam (D-07) is not threaded here because
+    // selectNextEvent is pure logic; the UI layer may override this with a
+    // real clock if needed.
+    let isMissed = false;
+    if (pred.central) {
+      // Wall-clock "now" in minutes — safe since we only compare HH:MM
+      // This is the only place in forecast.js that reads wall-clock time.
+      // Phase 8 can inject a clock seam if stricter testability is needed.
+      const nowDate = new Date();
+      const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+      const centralMinutes = timeToMinutes(pred.central);
+      isMissed = centralMinutes < nowMinutes;
+    }
+
+    return {
+      type: eventType,
+      isMissed,
+      ...pred,
+    };
+  }
+
+  // All prediction tiers exhausted with no match
+  return null;
 }
 
 // ---------------------------------------------------------------------------
