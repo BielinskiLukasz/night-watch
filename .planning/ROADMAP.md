@@ -13,7 +13,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 - [x] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data. Establishes the full testing scaffold (ESM modules, adapter pattern, unit + integration + Playwright E2E, CI) and TDD discipline for all later phases. (completed 2026-05-26)
 - [x] **Phase 2: Configuration & Settings** - Settings UI for subject name, prediction thresholds, outlier rules, window size, stat blend, time format, day cutover; all persisted (completed 2026-05-28)
-- [ ] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card
+- [x] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card (completed 2026-06-05)
 - [ ] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation
 - [ ] **Phase 5: Data Import/Export** - CSV and JSON import (round-trip), JSON export, file-as-truth workflow, localStorage as cache
 - [ ] **Phase 6: Life Stages** - Manual stage boundaries (date range + name), scope forecasts to current stage
@@ -106,24 +106,24 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   5. A prominent "next event" card appears above the four predictions, surfacing the single most imminent event
 
 
-**Plans**: 5 plans across 4 waves
+**Plans**: 5 plans in 4 waves
 
 **Wave 1** *(pure-logic TDD foundation)*
 
-  - [ ] 03-01-PLAN.md — TDD: percentile calculation, central time (median), downweighting logic; forecast() function
-  - [ ] 03-02-PLAN.md — TDD: probability-band generation, cold-start gating
+  - [x] 03-01-PLAN.md — TDD: percentile calculation, central time (median), downweighting logic; forecast() function
+  - [x] 03-02-PLAN.md — TDD: probability-band generation, cold-start gating
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-  - [ ] 03-03-PLAN.md — TDD + integration: next-event cycle-aware priority selection; reactive forecast re-compute flow
+  - [x] 03-03-PLAN.md — TDD + integration: next-event cycle-aware priority selection; reactive forecast re-compute flow
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [ ] 03-04-PLAN.md — UI rendering: forecast card HTML/CSS, next-event hero card, cold-start message; E2E tests
+  - [x] 03-04-PLAN.md — UI rendering: forecast card HTML/CSS, next-event hero card, cold-start message; E2E tests
 
 **Wave 4** *(blocked on Wave 3 completion — phase gate & verification)*
 
-  - [ ] 03-05-PLAN.md — Phase verification: UAT checklist, security audit (D-06), documentation update, ROADMAP/REQUIREMENTS sign-off
+  - [x] 03-05-PLAN.md — Phase gate, documentation, security audit (D-06 gate)
 
 ### Phase 4: History Screen & Edit/Delete
 
@@ -206,7 +206,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 |-------|----------------|--------|-----------|
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
 | 2. Configuration & Settings | 7/7 | Complete    | 2026-05-28 |
-| 3. Forecast Engine & Today Screen | 0/TBD | Not started | — |
+| 3. Forecast Engine & Today Screen | 5/5 | Complete | 2026-06-05 |
 | 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
 | 5. Data Import/Export | 0/TBD | Not started | — |
 | 6. Life Stages | 0/TBD | Not started | — |
