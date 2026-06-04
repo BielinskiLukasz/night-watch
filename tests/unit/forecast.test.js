@@ -27,6 +27,8 @@ import {
   forecast,
   timeToMinutes,
   minutesToTime,
+  generateProbabilityBand,
+  detectColdStart,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -596,5 +598,152 @@ describe('eventTimesToMinutes (numeric comparison safety)', () => {
     // Verify that minutesToTime rounds to 5-min steps
     assert.strictEqual(minutesToTime(371), '06:10');  // 371 → round to 370 → '06:10'
     assert.strictEqual(minutesToTime(374), '06:15');  // 374 → round to 375 → '06:15'
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. generateProbabilityBand(times, p10, p90, maxDelta, step)
+// ---------------------------------------------------------------------------
+
+describe('generateProbabilityBand(times, p10, p90, maxDelta, step)', () => {
+  // 7 sorted times in minutes: 06:30..07:00 (390..420, step 5)
+  const sevenTimes = [390, 395, 400, 405, 410, 415, 420];
+
+  it('band width ≤ maxDelta returns null (use normal min/max UI)', () => {
+    // P10=390 (06:30), P90=405 (06:45), width=15 min, maxDelta=30 → null
+    const result = generateProbabilityBand(sevenTimes, 390, 405, 30);
+    assert.strictEqual(result, null);
+  });
+
+  it('band width == maxDelta exactly returns null (boundary: > not >=, D3-04)', () => {
+    // P10=390, P90=420, width=30 min, maxDelta=30 → null (equal is not greater than)
+    const result = generateProbabilityBand(sevenTimes, 390, 420, 30);
+    assert.strictEqual(result, null);
+  });
+
+  it('band width > maxDelta returns probability table array', () => {
+    // P10=390 (06:30), P90=435 (07:15), width=45 min, maxDelta=30 → returns table
+    // Use times that span more than 30 min
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    assert.ok(Array.isArray(result), 'should return an array when band width > maxDelta');
+    assert.ok(result.length > 0, 'array should have at least one time point');
+  });
+
+  it('probability table has { time, prob } shape with HH:MM strings', () => {
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    assert.ok(Array.isArray(result));
+    for (const entry of result) {
+      assert.ok('time' in entry, 'each entry should have time');
+      assert.ok('prob' in entry, 'each entry should have prob');
+      assert.match(entry.time, /^\d{2}:\d{2}$/, 'time should be HH:MM format');
+      assert.ok(typeof entry.prob === 'number', 'prob should be a number');
+      assert.ok(entry.prob >= 0 && entry.prob <= 100, 'prob should be 0..100');
+    }
+  });
+
+  it('probability table is sorted by time (ascending)', () => {
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    const times = result.map(e => timeToMinutes(e.time));
+    for (let i = 1; i < times.length; i++) {
+      assert.ok(times[i] >= times[i - 1], 'entries should be sorted ascending by time');
+    }
+  });
+
+  it('probability at P10 is ~14% (1/7 of sevenTimes)', () => {
+    // P10=390, P90=420, width=30 which == maxDelta=29 to trigger band
+    // Use slightly different maxDelta to force band mode
+    const result = generateProbabilityBand(sevenTimes, 390, 420, 29);
+    assert.ok(Array.isArray(result), 'band width 30 > maxDelta 29 should trigger band');
+    // Find the entry at or near 06:30 (390 min)
+    const atP10 = result.find(e => e.time === '06:30');
+    assert.ok(atP10, 'should have entry at P10 time (06:30)');
+    // 1 out of 7 times ≤ 390 → ~14%
+    assert.ok(atP10.prob >= 10 && atP10.prob <= 20, `prob at P10 should be ~14%, got ${atP10.prob}`);
+  });
+
+  it('probability table covers range from P10 to P90', () => {
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    const first = result[0];
+    const last = result[result.length - 1];
+    const firstMinutes = timeToMinutes(first.time);
+    const lastMinutes = timeToMinutes(last.time);
+    assert.ok(firstMinutes >= 390, 'first time point should be at or after P10');
+    assert.ok(lastMinutes <= 435 + 5, 'last time point should be at or near P90');
+  });
+
+  it('time points are 5-minute-aligned (default step=5)', () => {
+    const wideTimes = [390, 395, 400, 405, 410, 415, 420, 425, 430, 435];
+    const result = generateProbabilityBand(wideTimes, 390, 435, 30);
+    for (const entry of result) {
+      const minutes = timeToMinutes(entry.time);
+      assert.strictEqual(minutes % 5, 0, `${entry.time} (${minutes} min) should be divisible by 5`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. detectColdStart(dayRecords, minDays)
+// ---------------------------------------------------------------------------
+
+describe('detectColdStart(dayRecords, minDays)', () => {
+  it('0 days logged, minDays=7 → isColdStart=true, validDayCount=0, minDaysRemaining=7', () => {
+    const result = detectColdStart([], 7);
+    assert.strictEqual(result.isColdStart, true);
+    assert.strictEqual(result.validDayCount, 0);
+    assert.strictEqual(result.minDaysRemaining, 7);
+  });
+
+  it('5 days logged (none rejected), minDays=7 → isColdStart=true, minDaysRemaining=2', () => {
+    const days = [
+      makeDay('06:30', null, null, null, false),
+      makeDay('06:35', null, null, null, false),
+      makeDay('06:40', null, null, null, false),
+      makeDay('06:45', null, null, null, false),
+      makeDay('06:50', null, null, null, false),
+    ];
+    const result = detectColdStart(days, 7);
+    assert.strictEqual(result.isColdStart, true);
+    assert.strictEqual(result.validDayCount, 5);
+    assert.strictEqual(result.minDaysRemaining, 2);
+  });
+
+  it('7 days logged (1 rejected), minDays=7 → isColdStart=true (6 valid < 7)', () => {
+    const days = [
+      makeDay('06:30', null, null, null, false),
+      makeDay('06:35', null, null, null, false),
+      makeDay('06:40', null, null, null, false),
+      makeDay('06:45', null, null, null, false),
+      makeDay('06:50', null, null, null, false),
+      makeDay('06:55', null, null, null, false),
+      makeDay('07:00', null, null, null, true),  // rejected: does not count as valid
+    ];
+    const result = detectColdStart(days, 7);
+    assert.strictEqual(result.isColdStart, true);
+    assert.strictEqual(result.validDayCount, 6);
+    assert.strictEqual(result.minDaysRemaining, 1);
+  });
+
+  it('7 days logged (none rejected), minDays=7 → isColdStart=false (7 >= 7)', () => {
+    const days = [
+      makeDay('06:30', null, null, null, false),
+      makeDay('06:35', null, null, null, false),
+      makeDay('06:40', null, null, null, false),
+      makeDay('06:45', null, null, null, false),
+      makeDay('06:50', null, null, null, false),
+      makeDay('06:55', null, null, null, false),
+      makeDay('07:00', null, null, null, false),
+    ];
+    const result = detectColdStart(days, 7);
+    assert.strictEqual(result.isColdStart, false);
+  });
+
+  it('minDays=0 → isColdStart=false regardless of day count', () => {
+    // Edge case: minDays=0 should never trigger cold-start (0 >= 0 is always true)
+    const result = detectColdStart([], 0);
+    assert.strictEqual(result.isColdStart, false);
   });
 });
