@@ -31,18 +31,18 @@
 
 ### Prediction
 
-- [ ] **PRED-01**: User sees a forecast for the next wake-up time, shown as a central time plus a min/max band.
-- [ ] **PRED-02**: User sees a forecast for the next bedtime, shown as a central time plus a min/max band.
-- [ ] **PRED-03**: User sees a forecast for the next nap start, shown as a central time plus a min/max band.
-- [ ] **PRED-04**: User sees a forecast for the next nap end, shown as a central time plus a min/max band.
-- [ ] **PRED-05**: When a prediction's ±delta exceeds the configured `max_delta`, the app replaces the point + band view with a probability band over time (e.g. `P(asleep) by 22:30 = 65%`, `by 23:00 = 82%`).
-- [ ] **PRED-06**: Forecasts are hidden until at least `min_days` of valid (non-rejected) history exist; the UI shows an explicit cold-start message instead.
-- [ ] **PRED-07**: Forecasts update automatically and immediately whenever the user logs a new event or toggles a day's `rejected` flag.
+- [x] **PRED-01**: User sees a forecast for the next wake-up time, shown as a central time plus a min/max band. *(Phase 3 Complete — verified via unit tests + integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-02**: User sees a forecast for the next bedtime, shown as a central time plus a min/max band. *(Phase 3 Complete — verified via unit tests + integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-03**: User sees a forecast for the next nap start, shown as a central time plus a min/max band. *(Phase 3 Complete — verified via unit tests + integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-04**: User sees a forecast for the next nap end, shown as a central time plus a min/max band. *(Phase 3 Complete — verified via unit tests + integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-05**: When a prediction's ±delta exceeds the configured `max_delta`, the app replaces the point + band view with a probability band over time (e.g. `P(asleep) by 22:30 = 65%`, `by 23:00 = 82%`). *(Phase 3 Complete — verified via unit tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-06**: Forecasts are hidden until at least `min_days` of valid (non-rejected) history exist; the UI shows an explicit cold-start message instead. *(Phase 3 Complete — verified via unit tests + integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **PRED-07**: Forecasts update automatically and immediately whenever the user logs a new event or toggles a day's `rejected` flag. *(Phase 3 Complete — verified via integration tests + E2E tests. See Phase 3 SUMMARY.md.)*
 
 ### Screens
 
-- [ ] **UI-01**: "Today + Forecast" landing screen shows the next four predicted events with bands plus the four quick-log buttons.
-- [ ] **UI-02**: "Today + Forecast" landing screen surfaces a prominent "next event" card that acts as the in-app notification.
+- [x] **UI-01**: "Today + Forecast" landing screen shows the next four predicted events with bands plus the four quick-log buttons. *(Phase 3 Complete — verified via E2E tests. See Phase 3 SUMMARY.md.)*
+- [x] **UI-02**: "Today + Forecast" landing screen surfaces a prominent "next event" card that acts as the in-app notification. *(Phase 3 Complete — verified via E2E tests. See Phase 3 SUMMARY.md.)*
 - [ ] **UI-03**: "History" screen shows a scrollable table of past days with per-row edit, delete, and "rejected" toggle controls.
 - [ ] **UI-04**: "Charts" screen displays sleep length over time, wake- and sleep-time bands, nap pattern, activity-vs-sleep correlation, and a calendar heatmap of sleep length.
 - [ ] **UI-05**: "Accuracy" screen shows three success-rate metrics side-by-side: percentage of forecasts within `max_delta`, within `max_delta / 2`, and where the actual time fell inside the predicted min/max band.
@@ -130,15 +130,15 @@ Which phases cover which requirements.
 | CFG-07 | Phase 2 | Complete |
 | CFG-08 | Phase 2 | Complete |
 | CFG-09 | Phase 2 | Complete |
-| PRED-01 | Phase 3 | Pending |
-| PRED-02 | Phase 3 | Pending |
-| PRED-03 | Phase 3 | Pending |
-| PRED-04 | Phase 3 | Pending |
-| PRED-05 | Phase 3 | Pending |
-| PRED-06 | Phase 3 | Pending |
-| PRED-07 | Phase 3 | Pending |
-| UI-01 | Phase 3 | Pending |
-| UI-02 | Phase 3 | Pending |
+| PRED-01 | Phase 3 | Complete |
+| PRED-02 | Phase 3 | Complete |
+| PRED-03 | Phase 3 | Complete |
+| PRED-04 | Phase 3 | Complete |
+| PRED-05 | Phase 3 | Complete |
+| PRED-06 | Phase 3 | Complete |
+| PRED-07 | Phase 3 | Complete |
+| UI-01 | Phase 3 | Complete |
+| UI-02 | Phase 3 | Complete |
 | UI-03 | Phase 4 | Pending |
 | UI-04 | Phase 7 | Pending |
 | UI-05 | Phase 7 | Pending |
@@ -170,4 +170,4 @@ Which phases cover which requirements.
 
 ---
 *Requirements defined: 2026-05-26*
-*Last updated: 2026-05-26 after roadmap creation*
+*Last updated: 2026-06-05 after Phase 3 completion (PRED-01..07, UI-01..02 marked Complete)*
