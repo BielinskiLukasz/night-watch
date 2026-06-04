@@ -29,6 +29,7 @@ import {
   minutesToTime,
   generateProbabilityBand,
   detectColdStart,
+  selectNextEvent,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -884,5 +885,135 @@ describe('detectColdStart() edge cases', () => {
     const result = detectColdStart(eightValid, 7);
     assert.strictEqual(result.isColdStart, false);
     assert.strictEqual(result.validDayCount, 8);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. selectNextEvent(predictions, dayRecords) — cycle-aware priority (D3-10)
+// ---------------------------------------------------------------------------
+//
+// Priority ordering (D3-10):
+//   Last event = bedtime    → wake > napStart > napEnd > bedtime
+//   Last event = wake       → napStart > bedtime > napEnd > wake
+//   Last event = napStart   → napEnd > bedtime > wake > napStart
+//   Last event = napEnd     → bedtime > wake > napStart > napEnd
+//
+// Within each priority tier, earliest-by-central-time wins.
+// Falls back to default priority (wake > bedtime > napStart > napEnd) when
+// last event type is unknown or dayRecords has no events.
+
+describe('selectNextEvent(predictions, dayRecords)', () => {
+  // Helper: build a mock day record with allEvents list
+  function makeDayWithEvents(events) {
+    // events is array of { type, at } objects (minimal shape for lastEvent detection)
+    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
+  }
+
+  // Standard predictions shape: { central, min, max } for each event type
+  const predictions = {
+    wake:     { central: '07:00', min: '06:30', max: '07:30' },
+    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
+    napStart: { central: '13:00', min: '12:30', max: '13:30' },
+    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
+  };
+
+  it('last event = bedtime → selects wake (priority 1 per D3-10)', () => {
+    // Priority after bedtime: wake > napStart > napEnd > bedtime
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction');
+    assert.strictEqual(result.type, 'wake');
+  });
+
+  it('last event = wake → selects napStart (priority 1 per D3-10)', () => {
+    // Priority after wake: napStart > bedtime > napEnd > wake
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:30' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction');
+    assert.strictEqual(result.type, 'napStart');
+  });
+
+  it('last event = napStart → selects napEnd (priority 1 per D3-10)', () => {
+    // Priority after napStart: napEnd > bedtime > wake > napStart
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'napStart', at: '2026-06-02T13:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction');
+    assert.strictEqual(result.type, 'napEnd');
+  });
+
+  it('last event = napEnd → selects bedtime (priority 1 per D3-10)', () => {
+    // Priority after napEnd: bedtime > wake > napStart > napEnd
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'napEnd', at: '2026-06-02T14:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction');
+    assert.strictEqual(result.type, 'bedtime');
+  });
+
+  it('last event = wake; only bedtime in predictions (no napStart) → skips to bedtime (next tier)', () => {
+    // Priority after wake: napStart > bedtime > napEnd > wake
+    // napStart is missing → skip to bedtime
+    const partialPredictions = {
+      wake:    { central: '07:00', min: '06:30', max: '07:30' },
+      bedtime: { central: '21:00', min: '20:30', max: '21:30' },
+      // napStart missing
+      // napEnd missing
+    };
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:30' }]),
+    ];
+    const result = selectNextEvent(partialPredictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction even with missing tier');
+    assert.strictEqual(result.type, 'bedtime');
+  });
+
+  it('no events logged (dayRecords empty) → returns null', () => {
+    const result = selectNextEvent(predictions, []);
+    assert.strictEqual(result, null);
+  });
+
+  it('dayRecords present but all allEvents arrays empty → returns null', () => {
+    const dayRecords = [
+      makeDayWithEvents([]),
+      makeDayWithEvents([]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.strictEqual(result, null);
+  });
+
+  it('result has { type, central, min, max } shape', () => {
+    const dayRecords = [
+      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
+    ];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'result should not be null');
+    assert.ok('type' in result, 'result should have type');
+    assert.ok('central' in result, 'result should have central');
+    assert.ok('min' in result, 'result should have min');
+    assert.ok('max' in result, 'result should have max');
+  });
+
+  it('most recent event is determined by allEvents list across multiple days', () => {
+    // Two days — last event in most recent day should determine priority
+    const dayRecords = [
+      makeDayWithEvents([
+        { type: 'bedtime', at: '2026-06-01T21:00' },  // older day
+      ]),
+      makeDayWithEvents([
+        { type: 'wake', at: '2026-06-02T07:00' },      // most recent day's latest event
+        { type: 'napStart', at: '2026-06-02T13:00' },  // MOST RECENT overall
+      ]),
+    ];
+    // Last event = napStart → should select napEnd
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'should return a prediction');
+    assert.strictEqual(result.type, 'napEnd');
   });
 });
