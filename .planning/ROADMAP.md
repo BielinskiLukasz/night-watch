@@ -105,7 +105,25 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   4. User logs a new event from the quick-log buttons, and all four predictions update immediately without reload
   5. A prominent "next event" card appears above the four predictions, surfacing the single most imminent event
 
-**Plans**: TBD
+
+**Plans**: 5 plans across 4 waves
+
+**Wave 1** *(pure-logic TDD foundation)*
+
+  - [ ] 03-01-PLAN.md — TDD: percentile calculation, central time (median), downweighting logic; forecast() function
+  - [ ] 03-02-PLAN.md — TDD: probability-band generation, cold-start gating
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+  - [ ] 03-03-PLAN.md — TDD + integration: next-event cycle-aware priority selection; reactive forecast re-compute flow
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+  - [ ] 03-04-PLAN.md — UI rendering: forecast card HTML/CSS, next-event hero card, cold-start message; E2E tests
+
+**Wave 4** *(blocked on Wave 3 completion — phase gate & verification)*
+
+  - [ ] 03-05-PLAN.md — Phase verification: UAT checklist, security audit (D-06), documentation update, ROADMAP/REQUIREMENTS sign-off
 
 ### Phase 4: History Screen & Edit/Delete
 
