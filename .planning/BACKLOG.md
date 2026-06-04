@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-05-28
+Last updated: 2026-06-04
 
 ---
 
@@ -106,6 +106,109 @@ These REQ-IDs live in `REQUIREMENTS.md` body text but are intentionally absent f
 | `PLAT2-02` | (See REQUIREMENTS.md body) | v2 platform/PWA capability. |
 
 When v2 milestone opens, lift the bodies of these REQ-IDs out of `REQUIREMENTS.md` into the v2 traceability table.
+
+---
+
+## Prediction enhancements (captured 2026-06-04)
+
+These four items improve the accuracy and adaptability of the forecasting engine by incorporating temporal rules, duration patterns, contextual flags, and historical nap-skip behavior. They should be evaluated and possibly grouped into a dedicated prediction-refinement phase post-Phase 3.
+
+### B-04 · Time-based bedtime rule
+
+**Source:** user input (2026-06-04)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 3 (after baseline forecaster ships) — can be a quick refinement plan
+
+**What:** When the current time hour is >= 18 and the previous event is "wake", predict bedtime as the next event (not nap start). This rule reflects the intuition that late-afternoon wakes naturally lead to bedtime, not a nap.
+
+**Why:** Time-of-day context dramatically affects what event comes next. A child who wakes at 17:00 is almost certainly heading to bed, not a nap. Current v1 prediction algorithm may not capture this hard temporal constraint.
+
+**Open questions when this gets planned:**
+
+- Is 18:00 the right threshold, or should it be configurable per subject/stage?
+- Should this rule interact with stage data (Phase 6) — e.g., "dropped second nap" stages have no afternoon naps regardless of hour?
+- Does this rule apply globally or only when history confidence is low?
+
+**Implementation notes:**
+
+- Likely a conditional check in the forecaster before returning predictions, keyed off `hour >= 18 && lastEvent.type === 'wake'`.
+- Data shape: no change — this is a prediction-algorithm refinement.
+
+---
+
+### B-05 · Duration-based prediction
+
+**Source:** user input (2026-06-04)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 3, paired with B-04 as a refinement bundle
+
+**What:** Predict wake times not only from hour-of-day patterns, but also from typical sleep-duration patterns. E.g., if the child typically sleeps 10.5–11.5 hours and goes down at 22:00, predict wake at ~08:30–09:30. Calculate predictions separately for both duration and hour patterns, then union them for a robust forecast.
+
+**Why:** Hour-only prediction can miss the true wake window. Duration patterns reveal how much sleep the child typically takes in a given cycle, which is orthogonal to clock hour. Unioning both patterns reduces false negatives.
+
+**Open questions when this gets planned:**
+
+- How to union two separate predictions (hour-band and duration-band)? Take the intersection (more conservative), union (looser), or weighted blend?
+- How to detect and handle outliers in duration data (e.g., a single 14-hour nap or a 3-hour night)?
+- Should duration be computed per event-type (wake duration vs. nap duration) or globally?
+- Interaction with stages (Phase 6): does typical duration change when the child "dropped second nap"?
+
+**Implementation notes:**
+
+- Compute a median/percentile sleep duration from historical data (filtered by event type and stage if available).
+- Run two separate forecaster paths: hour-based and duration-based. Merge results before returning to UI.
+- Data shape: no change.
+
+---
+
+### B-06 · Intense day checkbox
+
+**Source:** user input (2026-06-04)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-04 & B-05 if kept together
+
+**What:** Add a boolean "intense day" flag in the event-entry form (quick-log or manual entry). Store this flag in the history record and include it as contextual metadata in the prediction algorithm. E.g., if the child had an "intense day", expect later bedtime or longer nap.
+
+**Why:** Sleep events are driven by circumstance and activity, not just clock. Marking days with high activity, travel, or stimulation gives the forecaster human context it otherwise lacks.
+
+**Open questions when this gets planned:**
+
+- UI placement: checkbox in the quick-log row, in the manual-entry pop-up, or a separate "meta" button per day?
+- Per-event or per-day? (Likely per-day — the entire day is intense or not, not individual events.)
+- How does the forecaster weight "intense day"? Shift predicted times? Increase uncertainty bands? Disable predictions entirely?
+- Should there be multiple flags (e.g., "travel", "social event", "sick") or just a binary "intense"?
+
+**Implementation notes:**
+
+- Data shape: add `intenseDay: boolean` to the day record (or store as a metadata object keyed by date if granularity by event is needed later).
+- `createSettingsStore` doesn't change; the flag goes in the event log, not settings.
+- UI: add a checkbox in `manual-entry.js` and/or `quick-log.js`. Probably togglable per day, stored once, not per-event.
+- Forecaster: branch prediction logic if `intenseDay` is true; may be a simple shift/multiplier or a full conditional tree.
+
+---
+
+### B-07 · Missing nap impact on bedtime
+
+**Source:** user input (2026-06-04)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 3, with B-04 & B-05 as a prediction-refinement bundle
+
+**What:** When predicting bedtime after a wake event (i.e., previous event = "wake"), check the historical record to detect how sleep behavior changes when the child skips their typical nap. Use this pattern to adjust the bedtime prediction (earlier bedtime? longer sleep? earlier nap next day?).
+
+**Why:** A child who misses a nap often exhibits compensatory sleep behavior — earlier bedtime, longer night sleep, or earlier/longer nap the next day. If the forecaster can detect a missed nap, it can adjust expectations.
+
+**Open questions when this gets planned:**
+
+- How to detect a "missed nap"? Silent absence (no nap-start event by X o'clock) vs. an explicit "skip nap" flag?
+- What adjustment to apply? Add N minutes to predicted bedtime? Widen the uncertainty band? Explicitly note the miss to the user?
+- Scope: only bedtime, or also next-day nap and wake predictions?
+- How far back to look in history? Last 7 days? Last 30 days?
+
+**Implementation notes:**
+
+- Likely a post-processing step in the forecaster: if no nap-start event has occurred by a threshold hour (e.g., 15:00), flag a missed nap and adjust downstream predictions.
+- Data shape: no new fields unless adding an explicit "skip nap" flag. The logic is read-only on existing events.
+- Interaction with stages: does the threshold hour or adjustment factor change per stage (e.g., "dropped second nap" stages have no afternoon nap at all)?
 
 ---
 
