@@ -30,6 +30,9 @@ const eventLog = createEventLog({ storage, clock, id: newEventId });
 // and exposes the gear → openSettings({settings}) entrypoint.
 mountHeader({ root: document.querySelector('header.appHeader'), settings });
 
-// Today screen accepts a `settings` parameter forward-compatibly; the
-// Plan 02-05 update will start consuming it for cutoverHour / groupingMode.
+// Plan 03-04 wiring: mountTodayScreen now includes the full forecast section
+// (next-event hero card, four prediction cards, cold-start gating, reactive
+// updates). The forecast function and selectNextEvent are imported internally
+// by today-screen.js — D3-13 (derived state), D3-12 (reactive on data change).
+// The composition root only provides eventLog + settings (the two data sources).
 mountTodayScreen({ root: document.getElementById('app'), eventLog, settings });
