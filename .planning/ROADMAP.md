@@ -137,7 +137,23 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   3. User clicks delete on a row and the day is removed from history and predictions update
   4. User toggles a "rejected" checkbox on a row to mark it as an outlier; predictions immediately exclude this day and re-compute
 
-**Plans**: TBD
+**Plans**: 4 plans across 4 waves
+
+**Wave 1** *(pure-logic foundation — rejected-day storage & derivation)*
+
+  - [ ] 04-01-PLAN.md — Extend settings schema with rejectedDays array; compute day.rejected in day-bucket; integration test for forecast downweighting
+
+**Wave 2** *(blocked on Wave 1 completion — UI foundation)*
+
+  - [ ] 04-02-PLAN.md — Header tab navigation (Today | History); History table rendering; responsive CSS; E2E tests for navigation and layout
+
+**Wave 3** *(blocked on Wave 2 completion — interactive affordances)*
+
+  - [ ] 04-03-PLAN.md — [Edit] and [Delete] button handlers; wire to modal and store APIs; forecast reactivity; E2E tests for edit/delete workflows
+
+**Wave 4** *(blocked on Wave 3 completion — phase gate & verification)*
+
+  - [ ] 04-04-PLAN.md — Rejected checkbox UI and toggle handler; final CSS styling; E2E test for rejected toggle; security audit; phase documentation; full test suite verification
 
 ### Phase 5: Data Import/Export
 
@@ -206,7 +222,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
 | 2. Configuration & Settings | 7/7 | Complete    | 2026-05-28 |
 | 3. Forecast Engine & Today Screen | 5/5 | Complete    | 2026-06-04 |
-| 4. History Screen & Edit/Delete | 0/TBD | Not started | — |
+| 4. History Screen & Edit/Delete | 0/4 | Planning complete | — |
 | 5. Data Import/Export | 0/TBD | Not started | — |
 | 6. Life Stages | 0/TBD | Not started | — |
 | 7. Charts, Heatmap & Accuracy | 0/TBD | Not started | — |
