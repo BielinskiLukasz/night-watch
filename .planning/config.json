@@ -13,7 +13,7 @@
     "plan_check": true,
     "verifier": true,
     "auto_advance": false,
-    "nyquist_validation": true,
+    "nyquist_validation": false,
     "ui_phase": true,
     "ui_safety_gate": true,
     "ui_review": true,
@@ -21,20 +21,20 @@
     "node_repair_budget": 2,
     "research_before_questions": false,
     "discuss_mode": "discuss",
-    "max_discuss_passes": 3,
+    "max_discuss_passes": 2,
     "skip_discuss": false,
     "human_verify_mode": "end-of-phase",
     "ai_integration_phase": true,
     "auto_prune_state": false,
     "pattern_mapper": true,
-    "tdd_mode": false,
+    "tdd_mode": true,
     "text_mode": false,
     "use_worktrees": true,
-    "code_review": true,
+    "code_review": false,
     "code_review_depth": "standard",
     "plan_bounce": false,
     "plan_bounce_script": null,
-    "plan_bounce_passes": 2,
+    "plan_bounce_passes": 1,
     "plan_chunked": false,
     "code_review_command": null,
     "cross_ai_execution": false,
@@ -43,7 +43,7 @@
     "security_enforcement": true,
     "security_asvs_level": 1,
     "security_block_on": "high",
-    "post_planning_gaps": true,
+    "post_planning_gaps": false,
     "build_command": null,
     "test_command": null
   },
@@ -59,7 +59,7 @@
     "pr_body_sections": [
       {
         "heading": "User Stories & Acceptance Criteria",
-        "enabled": true,
+        "enabled": false,
         "source": "REQUIREMENTS.md ## User Stories || REQUIREMENTS.md ## Acceptance Criteria",
         "fallback": "- Acceptance criteria are covered by the linked requirements and verification evidence."
       },
@@ -71,7 +71,7 @@
       },
       {
         "heading": "Success Metrics & Release Criteria",
-        "enabled": true,
+        "enabled": false,
         "source": "REQUIREMENTS.md ## Definition of Done || VERIFICATION.md ## Release Criteria",
         "fallback": "- Release when automated verification and required manual checks pass."
       },
@@ -93,7 +93,14 @@
     "default_reviewers": null,
     "models": {}
   },
-  "parallelization": false,
+  "parallelization": {
+    "enabled": false,
+    "plan_level": false,
+    "task_level": false,
+    "skip_checkpoints": false,
+    "max_concurrent_agents": 1,
+    "min_plans_for_parallel": 999
+  },
   "git": {
     "branching_strategy": "none",
     "create_tag": true,
@@ -123,7 +130,7 @@
     "global_learnings": false
   },
   "learnings": {
-    "max_inject": 10
+    "max_inject": 2
   },
   "intel": {
     "enabled": false
