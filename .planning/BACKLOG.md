@@ -290,6 +290,85 @@ These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execut
 
 ---
 
+## Editing and history enhancements (captured 2026-06-05)
+
+These three items add core editing capabilities and multi-nap history support to the logging workflow.
+
+### B-12 · History and support for multiple naps per day
+
+**Source:** user input (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or as a dedicated Phase 5 follow-up
+
+**What:** Extend the history view and data model to display and track multiple naps per day (currently single-nap v1). Update the day/history aggregation logic to show all naps on a single day record without collapsing or deduping them.
+
+**Why:** Real-world sleep patterns often include two or more naps per day. Current v1 architecture is designed to accept overflow naps but collapses them via `extra:true` dedupe logic (Phase 1 LOG-09). Enabling true multi-nap history requires data shape changes and UI updates to display multiple naps cleanly.
+
+**Open questions when this gets planned:**
+
+- Does this align with CFG2-01 (multi-profile v2 scope), or is it a v1 follow-up independent of multi-subject?
+- How should the UI display multiple naps on a single day (separate rows, grouped collapse, timeline view)?
+- Should quick-log and manual-entry flows change to hint that multiple naps are now supported?
+- Interaction with probability-band predictions: does the forecaster predict all naps or just the first?
+
+**Implementation notes:**
+
+- Data shape: lift the `extra:true` dedupe constraint from Phase 1; track naps as an array or continue appending as separate events with day-grouping logic.
+- UI: update day rendering in `history-screen.js` to display multiple nap entries without visual clutter.
+- Forecaster: ensure nap-prediction logic handles multiple naps per day gracefully.
+
+---
+
+### B-13 · Undo edit/delete/add of the last event
+
+**Source:** user input (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — quick refinement phase
+
+**What:** Add an undo button or keystroke to revert the most recent event modification (edit, delete, or add). Triggered via a header button, keyboard shortcut (e.g., Ctrl+Z), or swipe gesture.
+
+**Why:** One-tap undo is a critical UX pattern for logging workflows. Users edit/delete events in the dark on mobile and need to recover quickly from mistakes without re-entering data.
+
+**Open questions when this gets planned:**
+
+- Single-step or full undo stack (history of all changes this session)?
+- Persistence: does undo state survive app close, or is it session-only?
+- UI placement: persistent header button, floating action button, or keyboard-shortcut-only?
+- Keyboard shortcut: Ctrl+Z (standard), or context-aware (swipe left, long-press)?
+
+**Implementation notes:**
+
+- Store the last event action (before mutation) in memory or sessionStorage keyed by timestamp.
+- Restore the previous event state on undo; if delete, re-insert the event; if edit, restore prior field values.
+- UI: add a button or shortcut listener in `app.js` or a new `undo.js` module.
+- No data shape changes — this is a UI/UX feature.
+
+---
+
+### B-14 · Redo undone actions
+
+**Source:** user input (2026-06-05)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** paired with B-13 (undo/redo typically ship together)
+
+**What:** Complement the undo feature (B-13) with a redo button/keystroke to restore the undone change (Ctrl+Y or Cmd+Shift+Z convention).
+
+**Why:** Undo/redo is a pair; users expect both. If they undo a delete by mistake, they need to redo it without re-entering.
+
+**Open questions when this gets planned:**
+
+- Single-step redo or full stack? (Likely same scope as B-13.)
+- Same keyboard shortcut convention as B-13?
+- Should redo be greyed out when the undo stack is empty?
+
+**Implementation notes:**
+
+- Pair with B-13's undo stack: store both the current and the reverted state.
+- Restore the most recent undone change on redo.
+- UI: add redo button or shortcut in the same location as undo (B-13).
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
