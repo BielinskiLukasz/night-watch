@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-05
+Last updated: 2026-06-06
 
 ---
 
@@ -366,6 +366,73 @@ These three items add core editing capabilities and multi-nap history support to
 - Pair with B-13's undo stack: store both the current and the reverted state.
 - Restore the most recent undone change on redo.
 - UI: add redo button or shortcut in the same location as undo (B-13).
+
+---
+
+## Tab navigation and bulk-add UX (captured 2026-06-06)
+
+These two items improve the Today screen and introduce a new Events screen for browsing historical logs with filtering options, plus a batch-add workflow for data import.
+
+### B-15 · Three-tab navigation: Today | Events | History
+
+**Source:** user input (2026-06-06)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or as part of Phase 5 (Data Import/Export) when batch-add workflow is needed
+
+**What:**
+- Restructure the top-level screen tabs from their current layout to: **Today | Events | History**
+- **Today tab:** displays only logs from the current day in a lean, action-focused view. No Calendar picker, no Sleep cycle selector. Shows predictions and the primary action is logging new events.
+- **Events tab:** displays all logs across all days (functionally equivalent to the current "Today" tab's log list, but now dedicated). Retains the Calendar picker and Sleep cycle selector UI for filtering. Calendar and Sleep cycle settings remain configurable via the Settings modal.
+- **History tab:** unchanged (aggregated table view by day).
+
+**Why:** The current Today tab mixes two distinct use cases: "what happened today" (a quick glance, the primary action) and "browse all historical logs" (requires navigation, filtering). Splitting them gives users a clearer mental model and streamlines the everyday workflow. A parent checking on today's sleep (Today tab) should see predictions and a quick "add event" button without scrolling past day selectors.
+
+**Open questions when this gets planned:**
+
+- Should the Today tab show just today's logs, or today's logs + today's predictions on the same screen? (Likely both — predictions are output derived from today's history.)
+- Do the Calendar and Sleep cycle settings persist between Today and Events tabs, or reset per tab?
+- Should Today tab display predictions in the same order/layout as currently (next-event hero card + four forecast cards)?
+
+**Implementation notes:**
+
+- UI: refactor `index.html` tab nav and `js/ui/today-screen.js` to accept a mode flag (`today` vs. `all-days`).
+- Filtering logic: when mode is `today`, filter log entries by current day (computed relative to `cutoverHour`); when mode is `all-days`, show all entries.
+- Calendar and Sleep cycle pickers: move from `today-screen.js` to a new `events-screen.js`, or conditionally render them based on tab context.
+- No data shape changes — this is UI reorganization only.
+
+---
+
+### B-16 · Today: Add event button repositioned; Events: "Save more" batch-add workflow
+
+**Source:** user input (2026-06-06)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** paired with B-15 (both restructure the logging UX) — or folded into Phase 5 (Data Import/Export) when users are bulk-adding historical data
+
+**What:**
+1. **Today tab:** Move the "Add event" button from its current position (typically below predictions or in a footer) to the **top of the screen, above the next-event prediction card**. Rationale: adding a log entry is the primary action; predictions are derived output that the user glances at but doesn't directly interact with.
+2. **Events tab:** Place "Add event" button at the top of the screen (only action button in the header).
+3. **Add-event popup redesign:** Add a third footer button to the existing popup flow:
+   - **Cancel:** discard and close (current behavior)
+   - **Save:** save the current event and close the popup (current behavior)
+   - **Save more:** save the current event, **keep the popup open**, and **disable the "Save more" button for ~1 second** to prevent accidental double-saves. After re-enable:
+     - The form retains previously entered field values (event type, notes, and optionally other metadata) so the user can rapidly add multiple events to the same day without re-selecting.
+     - Time input resets to the current time (or, if B-01 lands first, to the event-type default time) so the user can enter events in chronological order.
+
+**Why:** Batch-adding historical sleep data (migrating from the spreadsheet, filling in a week of prior data) is the primary data-entry pain point in the logging workflow. Currently, each event requires open → select day → enter time → save → close. "Save more" eliminates the close + reopen cycle, allowing the user to enter 10 historical events in ~30 seconds instead of 3 minutes. This is critical for the Spreadsheet → App migration (Phase 5 Data Import context).
+
+**Open questions when this gets planned:**
+
+- Should "Save more" be hidden by default and revealed as an advanced option, or always visible?
+- What form values should be retained across "Save more" cycles? Just day, or also event-type, notes, metadata (if B-06 "intense day" flag lands)?
+- Should time auto-increment after save (e.g., if the user enters a wake at 08:00 and clicks "Save more", does the next entry default to 08:05 for a nap-start)? Or always reset to current time?
+- Interaction with B-01 (per-event-type defaults): should "Save more" retain the custom-entered time, or reset to the default for the next event's type?
+
+**Implementation notes:**
+
+- UI: update `js/ui/manual-entry.js` popup footer to render three buttons instead of two. Bind "Save more" to a separate handler that saves the event, disables the button, waits ~1 second, re-enables, clears the time input, and leaves other fields intact.
+- Time input: reset to `new Date()` (current time) or, if B-01 defaults are available, to the next event-type's default.
+- Debounce logic: use a simple flag + `setTimeout(fn, 1000)` to re-enable the button. Prevent form submission while debounce is active.
+- No data shape changes — this is a UX workflow refinement.
 
 ---
 
