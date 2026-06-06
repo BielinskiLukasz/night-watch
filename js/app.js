@@ -39,6 +39,9 @@ let activeTab = 'today';
 const headerEl = document.querySelector('header.appHeader');
 const todayScreenEl = document.getElementById('today-screen');
 const historyScreenEl = document.getElementById('history-screen');
+// history-table-root is the mount point for the day-column table; the outer
+// historyScreenEl is toggled visible/hidden by applyTabVisibility().
+const historyTableRootEl = document.getElementById('history-table-root');
 
 // Show/hide the two screens based on activeTab.
 // Called once at init and after every tab-change.
@@ -75,10 +78,11 @@ mountHeader({
 mountTodayScreen({ root: todayScreenEl, eventLog, settings });
 
 // Plan 04-02 wiring: History screen — read-only day-column table (Wave 2).
-// Wave 3 will extend this with edit/delete row affordances.
-if (historyScreenEl) {
+// historyTableRootEl is the inner mount point; historyScreenEl is the outer
+// section toggled by applyTabVisibility(). Wave 3 adds edit/delete handlers.
+if (historyTableRootEl) {
   mountHistoryScreen({
-    root: historyScreenEl,
+    root: historyTableRootEl,
     eventLog,
     settings,
   });

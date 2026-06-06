@@ -25,8 +25,20 @@
     SVG icon is inline (no external asset) so the header has no network
     dependency. min-width/height 44px on the trigger satisfies tap target.
   -->
+  <!--
+    App header (Plan 02-04 / D2-10; Plan 04-02 / D4-07).
+    h1.subjectName: populated by js/ui/header.js via .textContent (T-07).
+    nav.tabNav: two-tab header navigation (Today | History) per D4-07.
+    The gear button opens the Settings modal via dialog.showModal().
+    Tab buttons carry data-tab and aria-selected; header.js wires the click
+    handler and updates aria-selected state dynamically.
+  -->
   <header class="appHeader">
     <h1 class="subjectName"></h1>
+    <nav class="tabNav" role="tablist" aria-label="Screen navigation">
+      <button type="button" role="tab" data-tab="today" aria-selected="true">Today</button>
+      <button type="button" role="tab" data-tab="history" aria-selected="false">History</button>
+    </nav>
     <button type="button" class="settingsTrigger" aria-label="Settings">
       <!-- Settings gear: Material Icons (Apache 2.0). Inline path keeps zero-deps constraint. -->
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -36,33 +48,43 @@
   </header>
 
   <!--
-    No-JS / pre-hydration skeleton (Plan 01-03 / D-10).
-    js/ui/today-screen.js calls root.replaceChildren(...) on mount, so this
-    skeleton is shown only momentarily during module loading and as a
-    progressive-enhancement fallback when JS is disabled. The data-log
-    attributes here match the four valid types in VALID_TYPES (T-01 contract).
-
-    Plan 03-04: forecast card containers are included in the skeleton so that
-    search engines and no-JS readers have the structural anchors. The JS layer
-    populates them on mount via renderForecastSection(). D3-07 layout order:
-      1. Quick-log buttons
-      2. Next-event hero card (id="next-event-card")
-      3. Cold-start message (id="cold-start-message") — shown when <minDays
-      4. Four prediction cards grid (id="forecast-cards")
-      5. Grouping toggle + today's event list
+    Main content area with two screens (Plan 04-02 / D4-07).
+    app.js toggles display on today-screen / history-screen based on activeTab.
+    The no-JS skeleton lives inside today-screen so the quick-log buttons
+    are still accessible when JS is disabled. History screen is hidden by
+    default (display:none via style attribute + JS-controlled toggle).
   -->
   <main id="app">
-    <div class="quickLog">
-      <button type="button" data-log="wake">Woke up</button>
-      <button type="button" data-log="bedtime">Going to sleep</button>
-      <button type="button" data-log="napStart">Nap start</button>
-      <button type="button" data-log="napEnd">Nap end</button>
-    </div>
-    <div id="next-event-card"></div>
-    <div id="cold-start-message"></div>
-    <section id="forecast-cards" class="forecast-grid"></section>
-    <section class="dayList" data-role="events"></section>
-    <button type="button" id="addEventBtn" class="addEventBtn">+ Add event</button>
+    <!--
+      Today screen (Plan 01-03 / D-10; Plan 03-04 forecast section).
+      js/ui/today-screen.js calls root.replaceChildren(...) on mount, so the
+      skeleton below is shown only momentarily during module loading and as a
+      progressive-enhancement fallback when JS is disabled.
+      D3-07 layout order: Quick-log → hero card → cold-start → forecast grid →
+                          grouping toggle → day list → add button.
+    -->
+    <section id="today-screen">
+      <div class="quickLog">
+        <button type="button" data-log="wake">Woke up</button>
+        <button type="button" data-log="bedtime">Going to sleep</button>
+        <button type="button" data-log="napStart">Nap start</button>
+        <button type="button" data-log="napEnd">Nap end</button>
+      </div>
+      <div id="next-event-card"></div>
+      <div id="cold-start-message"></div>
+      <section id="forecast-cards" class="forecast-grid"></section>
+      <section class="dayList" data-role="events"></section>
+      <button type="button" id="addEventBtn" class="addEventBtn">+ Add event</button>
+    </section>
+
+    <!--
+      History screen (Plan 04-02 / D4-01, D4-07). Initially hidden; shown
+      when user clicks the History tab. history-screen.js mounts the
+      day-column table inside the root div via replaceChildren().
+    -->
+    <section id="history-screen" style="display: none;">
+      <div id="history-table-root"></div>
+    </section>
   </main>
 
   <!--
