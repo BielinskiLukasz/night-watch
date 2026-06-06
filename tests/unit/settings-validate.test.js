@@ -33,15 +33,15 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 9 field names (D2-21)', () => {
+  it('has entries for all 10 field names (D2-21 + CFG-05 rejectedDays)', () => {
     const expected = [
-      'subjectName', 'cutoverHour', 'groupingMode', 'timeFormat',
+      'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 9);
+    assert.equal(Object.keys(RULES).length, 10);
   });
 });
 
@@ -57,10 +57,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 9 keys', () => {
+  it('normalized contains all 10 keys (9 original + rejectedDays)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 9);
+    assert.equal(keys.length, 10);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
