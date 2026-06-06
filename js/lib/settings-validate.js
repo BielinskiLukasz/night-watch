@@ -21,32 +21,36 @@
 import { DEFAULT_SETTINGS } from './db-shape.js';
 
 // ---------------------------------------------------------------------------
-// RULES — frozen validation metadata for all 9 settings fields
+// RULES — frozen validation metadata for all 10 settings fields
 // ---------------------------------------------------------------------------
 
 /**
- * Validation rules per D2-21.
+ * Validation rules per D2-21 + Phase 4 CFG-05 addition.
  *
  * Each entry maps a field name to its rule descriptor:
- *   type:'string'   → { trim, maxLen }
- *   type:'integer'  → { min, max }
- *   type:'boolean'  → {}
- *   type:'enum'     → { values: Set }
+ *   type:'string'      → { trim, maxLen }
+ *   type:'integer'     → { min, max }
+ *   type:'boolean'     → {}
+ *   type:'enum'        → { values: Set }
+ *   type:'string[]'    → array of strings; values are not validated at the
+ *                        schema layer per D4-14 (no format/uniqueness
+ *                        enforcement on rejectedDays at this level).
  *
  * Object.freeze per CLAUDE.md / mindful-breathing convention.
  *
  * @type {Readonly<Record<string, object>>}
  */
 export const RULES = Object.freeze({
-  subjectName:  { type: 'string',  trim: true, maxLen: 40 },
-  cutoverHour:  { type: 'integer', min: 0,  max: 23 },
-  groupingMode: { type: 'enum',    values: new Set(['calendar', 'sleepCycle']) },
-  timeFormat:   { type: 'enum',    values: new Set(['24h', '12h']) },
+  subjectName:  { type: 'string',   trim: true, maxLen: 40 },
+  cutoverHour:  { type: 'integer',  min: 0,  max: 23 },
+  groupingMode: { type: 'enum',     values: new Set(['calendar', 'sleepCycle']) },
+  rejectedDays: { type: 'string[]' },  // CFG-05: array of YYYY-MM-DD date strings
+  timeFormat:   { type: 'enum',     values: new Set(['24h', '12h']) },
   autoOutlier:  { type: 'boolean' },
-  maxDelta:     { type: 'integer', min: 5,  max: 120 },
-  minDays:      { type: 'integer', min: 1,  max: 90 },
-  windowDays:   { type: 'integer', min: 3,  max: 90 },
-  statBlend:    { type: 'enum',    values: new Set(['median', 'mean', 'blend']) },
+  maxDelta:     { type: 'integer',  min: 5,  max: 120 },
+  minDays:      { type: 'integer',  min: 1,  max: 90 },
+  windowDays:   { type: 'integer',  min: 3,  max: 90 },
+  statBlend:    { type: 'enum',     values: new Set(['median', 'mean', 'blend']) },
 });
 
 // ---------------------------------------------------------------------------
@@ -149,6 +153,16 @@ function checkField(field, raw, rule) {
           ok: false,
           message: `${field} must be one of: ${[...rule.values].join(', ')}.`,
         };
+      }
+      return { ok: true, value: raw };
+    }
+
+    case 'string[]': {
+      // CFG-05 / D4-14: rejectedDays is an array of strings.
+      // Validation is intentionally minimal: we only check that the value is
+      // an Array; individual date-string format is not enforced here.
+      if (!Array.isArray(raw) || raw.some(item => typeof item !== 'string')) {
+        return { ok: false, message: `${field} must be an array of strings.` };
       }
       return { ok: true, value: raw };
     }
