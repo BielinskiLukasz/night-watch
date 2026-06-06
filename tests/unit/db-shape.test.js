@@ -20,7 +20,7 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(Object.isFrozen(DEFAULT_SETTINGS), true);
   });
 
-  it('has all 9 D2-03 keys with correct values', () => {
+  it('has all D2-03 keys with correct values', () => {
     assert.equal(DEFAULT_SETTINGS.subjectName, 'Baby');
     assert.equal(DEFAULT_SETTINGS.cutoverHour, 4);
     assert.equal(DEFAULT_SETTINGS.groupingMode, 'calendar');
@@ -32,8 +32,31 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 9 keys', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 9);
+  it('has exactly 10 keys (9 original + rejectedDays)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 10);
+  });
+
+  // -------------------------------------------------------------------------
+  // rejectedDays — new CFG-05 field added in Phase 4 Plan 01
+  // -------------------------------------------------------------------------
+
+  it('rejectedDays is an empty array', () => {
+    assert.ok(Array.isArray(DEFAULT_SETTINGS.rejectedDays),
+      'rejectedDays must be an Array');
+    assert.equal(DEFAULT_SETTINGS.rejectedDays.length, 0,
+      'rejectedDays default must be empty');
+  });
+
+  it('rejectedDays default value is frozen (cannot be pushed to)', () => {
+    // Object.freeze freezes the outer object; the inner array is a new empty
+    // Array literal in the freeze call — it is not frozen itself by default.
+    // The important invariant is that callers spreading DEFAULT_SETTINGS get
+    // their OWN mutable copy of the array, not a reference to this one.
+    const copy = { ...DEFAULT_SETTINGS };
+    // Mutating the copy's array must not affect DEFAULT_SETTINGS
+    copy.rejectedDays = [...DEFAULT_SETTINGS.rejectedDays, '2026-05-20'];
+    assert.equal(DEFAULT_SETTINGS.rejectedDays.length, 0,
+      'spreading DEFAULT_SETTINGS must not share the rejectedDays reference');
   });
 });
 
@@ -134,6 +157,86 @@ describe('migrateV1ToV2 — v2 blob (idempotent)', () => {
     const v2 = { version: 2, events: [{ id: 'c' }] };
     const result = migrateV1ToV2(v2, DEFAULT_SETTINGS);
     assert.equal(result, v2);  // idempotent — same reference
+  });
+});
+
+// ---------------------------------------------------------------------------
+// migrateV1ToV2 — rejectedDays handling (CFG-05, Phase 4 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — rejectedDays handling', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('fresh install: rejectedDays is present as empty array', () => {
+    const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
+    assert.ok(Array.isArray(result.settings.rejectedDays),
+      'rejectedDays must be an Array on fresh install');
+    assert.equal(result.settings.rejectedDays.length, 0,
+      'rejectedDays must start empty on fresh install');
+  });
+
+  it('v1 blob migration: rejectedDays is present as empty array in migrated settings', () => {
+    infoSpy.mock.resetCalls();
+    const v1 = { version: 1, events: [{ id: 'a', type: 'wake', at: '2026-01-01T07:00' }] };
+    const result = migrateV1ToV2(v1, DEFAULT_SETTINGS);
+    assert.ok(Array.isArray(result.settings.rejectedDays),
+      'rejectedDays must be present after v1→v2 migration');
+    assert.equal(result.settings.rejectedDays.length, 0,
+      'rejectedDays must be empty after v1→v2 migration (no prior data)');
+  });
+
+  it('v1 blob migration: existing events are not lost when rejectedDays is added', () => {
+    infoSpy.mock.resetCalls();
+    const v1 = {
+      version: 1,
+      events: [
+        { id: 'a', type: 'wake', at: '2026-01-01T07:00' },
+        { id: 'b', type: 'bedtime', at: '2026-01-01T22:00' },
+      ],
+    };
+    const result = migrateV1ToV2(v1, DEFAULT_SETTINGS);
+    assert.equal(result.events.length, 2, 'v1 events must be preserved during migration');
+    assert.equal(result.settings.rejectedDays.length, 0, 'rejectedDays starts empty');
+  });
+
+  it('v2 blob without rejectedDays: migrateV1ToV2 adds it without full re-migration', () => {
+    // Simulate a v2 blob saved before Phase 4 (no rejectedDays field)
+    const v2Old = {
+      version: 2,
+      settings: { subjectName: 'Test', cutoverHour: 4, maxDelta: 30 },
+      events: [{ id: 'c', type: 'wake', at: '2026-05-01T07:00' }],
+    };
+    const result = migrateV1ToV2(v2Old, DEFAULT_SETTINGS);
+    // Same object reference (idempotent passthrough with mutation)
+    assert.equal(result, v2Old, 'must return same blob reference for v2');
+    assert.ok(Array.isArray(result.settings.rejectedDays),
+      'rejectedDays must be added to v2 blob missing it');
+    assert.equal(result.settings.rejectedDays.length, 0,
+      'rejectedDays must be empty when added to a v2 blob');
+    // Existing settings fields must be preserved
+    assert.equal(result.settings.subjectName, 'Test', 'existing settings must be preserved');
+    assert.equal(result.settings.cutoverHour, 4, 'cutoverHour must be preserved');
+  });
+
+  it('v2 blob that already has rejectedDays: migrateV1ToV2 does not clobber it', () => {
+    // Simulate a v2 blob that already has rejectedDays populated
+    const v2WithRejections = {
+      version: 2,
+      settings: { subjectName: 'Test', rejectedDays: ['2026-05-20', '2026-05-21'] },
+      events: [],
+    };
+    const result = migrateV1ToV2(v2WithRejections, DEFAULT_SETTINGS);
+    assert.equal(result, v2WithRejections, 'must return same blob reference for v2');
+    assert.deepEqual(result.settings.rejectedDays, ['2026-05-20', '2026-05-21'],
+      'existing rejectedDays must not be overwritten by migration');
   });
 });
 

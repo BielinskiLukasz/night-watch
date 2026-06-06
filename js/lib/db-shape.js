@@ -23,6 +23,7 @@
  *   subjectName: string,
  *   cutoverHour: number,
  *   groupingMode: string,
+ *   rejectedDays: string[],
  *   timeFormat: string,
  *   autoOutlier: boolean,
  *   maxDelta: number,
@@ -35,6 +36,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
   subjectName:  'Baby',      // CFG-01 default; user can override via Settings modal
   cutoverHour:  4,           // CFG-08, matches Phase 1 D-18
   groupingMode: 'calendar',  // preserves Phase 1 D-11 baseline
+  rejectedDays: [],          // CFG-05: Array of date strings (YYYY-MM-DD) marked as
+                             //         rejected outliers; used to exclude days from
+                             //         forecast calculations. Persisted in settings,
+                             //         not on individual events (D4-14).
   timeFormat:   '24h',       // CFG-09 default
   autoOutlier:  false,       // CFG-04, off until Phase 3 engine ships
   maxDelta:     30,          // minutes; CFG-02
@@ -71,7 +76,13 @@ export function migrateV1ToV2(blob, defaultSettings) {
   }
 
   // v2 is already the canonical shape — idempotent passthrough.
+  // However, if rejectedDays is missing (v2 blob predating Phase 4), add it
+  // without any other mutation so callers upgrading from Phase 3 databases
+  // get the new field without triggering a full re-migration.
   if (blob.version === 2) {
+    if (blob.settings && !Array.isArray(blob.settings.rejectedDays)) {
+      blob.settings.rejectedDays = [];
+    }
     return blob;
   }
 
