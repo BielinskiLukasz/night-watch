@@ -108,6 +108,16 @@ completed: 2026-06-06
 
 ## Deviations from Plan
 
+### Post-Checkpoint UX Feedback Adjustment
+
+**[Checkpoint Feedback] Reordered history table columns for time-of-day flow**
+- **Feedback received during:** Visual verification after Task 6 (E2E tests passed checkpoint)
+- **Issue:** Original column order (Date | Wake | Bedtime | Nap Start | Nap End | Rejected | Actions) did not flow intuitively by time of day. Bedtime and nap times were scattered.
+- **Change:** Reordered to Date | Wake | Nap End | Nap Start | Bedtime | Rejected | Actions. Groups naps together in the middle (Nap End → Nap Start reads as "nap window") and moves Bedtime to the end as the day's closing marker.
+- **Files modified:** `js/ui/history-screen.js` (column order in buildTable and buildDayRow), `tests/e2e/history.spec.js` (updated test expectations for column headers)
+- **Commit:** `bfaac6f`
+- **Verification:** All 13 history.spec.js E2E tests pass with new column order; CSS selectors remain unchanged (they target slot names, not positions)
+
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Scoped .rowDel E2E selector to today-screen day list**
