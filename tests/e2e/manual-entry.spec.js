@@ -108,15 +108,17 @@ test('click [×] on a row, accept native confirm → row disappears AND reload c
 
   // Pre-condition: log one event.
   await page.getByRole('button', { name: /woke up/i }).click();
-  await expect(page.locator('.rowDel')).toHaveCount(1);
+  // Scope to [data-role="events"] (today-screen's day list) to avoid matching
+  // dormant .rowDel buttons in the history table (added Plan 04-02 Wave 2).
+  await expect(page.locator('[data-role="events"] .rowDel')).toHaveCount(1);
 
   // Click [×] → window.confirm auto-accepts → deleteEvent removes the row.
-  await page.locator('.rowDel').first().click();
-  await expect(page.locator('.rowDel')).toHaveCount(0);
+  await page.locator('[data-role="events"] .rowDel').first().click();
+  await expect(page.locator('[data-role="events"] .rowDel')).toHaveCount(0);
 
   // Reload and verify the delete persisted (D-05).
   await page.reload();
-  await expect(page.locator('.rowDel')).toHaveCount(0);
+  await expect(page.locator('[data-role="events"] .rowDel')).toHaveCount(0);
 });
 
 test('cancel button in modal → no event added (modal cancel path)', async ({ page }) => {
