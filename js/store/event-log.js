@@ -198,11 +198,17 @@ export function createEventLog({ storage, clock, id }) {
      * uses. Delegates to lib/day-bucket. UI code (Plan 03 today-screen.js)
      * passes limit=7 to honor the D-10/D-15 7-day window.
      *
+     * Plan 04-02: optional settings snapshot added so callers (History screen)
+     * can receive the day.rejected annotation (D4-05 / D4-14) without needing
+     * to import day-bucket directly. Prior callers (today-screen.js) omit it;
+     * day-bucket annotateRejected() defaults to rejected=false when absent.
+     *
      * @param {number} [limit]  optional max records, newest first
+     * @param {object} [settings]  optional settings snapshot (for day.rejected)
      * @returns {Array<object>}  day records as defined in lib/day-bucket.js
      */
-    daysByCalendar(limit) {
-      return _daysByCalendar(db.events, limit);
+    daysByCalendar(limit, settings) {
+      return _daysByCalendar(db.events, limit, settings);
     },
 
     /**
@@ -211,12 +217,17 @@ export function createEventLog({ storage, clock, id }) {
      * to cutoverHour=4 (D-18). Phase 2 (CFG-08) will inject the user-
      * configured cutover here.
      *
+     * Plan 04-02: optional settings snapshot mirrors the daysByCalendar
+     * extension — provides day.rejected annotation to callers that need it.
+     * Existing callers (today-screen.js) continue to omit it safely.
+     *
      * @param {number} [cutoverHour=4]  integer 0..23
      * @param {number} [limit]
+     * @param {object} [settings]  optional settings snapshot (for day.rejected)
      * @returns {Array<object>}
      */
-    daysBySubjectiveNight(cutoverHour = DEFAULT_CUTOVER_HOUR, limit) {
-      return _daysBySubjectiveNight(db.events, cutoverHour, limit);
+    daysBySubjectiveNight(cutoverHour = DEFAULT_CUTOVER_HOUR, limit, settings) {
+      return _daysBySubjectiveNight(db.events, cutoverHour, limit, settings);
     },
 
     /**
