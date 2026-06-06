@@ -234,6 +234,38 @@ function bucketBy(events, keyFn, limit) {
   return records;
 }
 
+// ---------- rejection annotation ----------
+
+/**
+ * Annotate an array of day records with the `.rejected` boolean derived from
+ * the settings.rejectedDays list.
+ *
+ * D4-05, D4-14: The rejected flag is derived at render time from the
+ * settings store — it is NEVER stored on individual events. This keeps the
+ * canonical source singular and avoids sync issues.
+ *
+ * Backward compatibility: if `settings` is not provided (legacy Phase 1/2
+ * callers), all days default to `rejected = false`.
+ *
+ * @param {Array<object>} records   day records produced by bucketBy()
+ * @param {object|undefined} settings  settings snapshot (may be absent)
+ * @returns {Array<object>}  new array with .rejected boolean on each record
+ */
+function annotateRejected(records, settings) {
+  const rejectedDays =
+    settings && Array.isArray(settings.rejectedDays)
+      ? settings.rejectedDays
+      : [];
+  if (rejectedDays.length === 0) {
+    // Fast path: no rejected days configured — avoid per-record includes() call.
+    return records.map(day => ({ ...day, rejected: false }));
+  }
+  return records.map(day => ({
+    ...day,
+    rejected: rejectedDays.includes(day.date),
+  }));
+}
+
 // ---------- public API ----------
 
 /**
@@ -242,10 +274,13 @@ function bucketBy(events, keyFn, limit) {
  *
  * @param {Array<{id:string,type:string,at:string}>} events
  * @param {number} [limit]  optional max records (D-10 default 7 — passed by caller)
- * @returns {Array<object>}  day records, newest first
+ * @param {object} [settings]  optional settings snapshot; provides rejectedDays for
+ *                             D4-05 rejection annotation. Defaults to empty if absent.
+ * @returns {Array<object>}  day records, newest first; each has .rejected boolean
  */
-export function daysByCalendar(events, limit) {
-  return bucketBy(events, calendarKey, limit);
+export function daysByCalendar(events, limit, settings) {
+  const records = bucketBy(events, calendarKey, limit);
+  return annotateRejected(records, settings);
 }
 
 /**
@@ -256,12 +291,16 @@ export function daysByCalendar(events, limit) {
  * @param {Array<{id:string,type:string,at:string}>} events
  * @param {number} [cutoverHour=4]  integer 0..23
  * @param {number} [limit]
+ * @param {object} [settings]  optional settings snapshot; provides rejectedDays for
+ *                             D4-05 rejection annotation. Defaults to empty if absent.
  * @returns {Array<object>}
  */
 export function daysBySubjectiveNight(
   events,
   cutoverHour = BUCKET_CONFIG.defaultCutoverHour,
   limit,
+  settings,
 ) {
-  return bucketBy(events, (at) => subjectiveNightKey(at, cutoverHour), limit);
+  const records = bucketBy(events, (at) => subjectiveNightKey(at, cutoverHour), limit);
+  return annotateRejected(records, settings);
 }

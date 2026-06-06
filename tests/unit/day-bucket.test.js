@@ -214,3 +214,94 @@ describe('daysBySubjectiveNight: cutover semantics (D-08, D-18, Pitfall #3)', ()
     assert.equal(days[0].extraNaps[0].extra, true);
   });
 });
+
+// ---------- day.rejected — Phase 4 Plan 01 (CFG-05, D4-05, D4-14) ----------
+
+describe('daysByCalendar: day.rejected boolean (CFG-05)', () => {
+  test('all days have rejected=false when settings not provided (backward compat)', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const days = daysByCalendar(events);
+    assert.equal(days[0].rejected, false, 'rejected must be false when settings absent');
+    assert.equal(days[1].rejected, false, 'rejected must be false when settings absent');
+  });
+
+  test('all days have rejected=false when settings.rejectedDays is empty', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const settings = { rejectedDays: [] };
+    const days = daysByCalendar(events, undefined, settings);
+    assert.ok(days.every(d => d.rejected === false),
+      'all days rejected=false when rejectedDays is empty');
+  });
+
+  test('day with date in rejectedDays gets rejected=true', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const settings = { rejectedDays: ['2026-05-26'] };
+    const days = daysByCalendar(events, undefined, settings);
+    const day26 = days.find(d => d.date === '2026-05-26');
+    const day25 = days.find(d => d.date === '2026-05-25');
+    assert.equal(day26.rejected, true, '2026-05-26 is in rejectedDays → rejected=true');
+    assert.equal(day25.rejected, false, '2026-05-25 is not in rejectedDays → rejected=false');
+  });
+
+  test('multiple dates in rejectedDays → each gets rejected=true', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-24T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+      ev('e3', 'wake', '2026-05-26T06:35'),
+    ];
+    const settings = { rejectedDays: ['2026-05-24', '2026-05-26'] };
+    const days = daysByCalendar(events, undefined, settings);
+    const byDate = Object.fromEntries(days.map(d => [d.date, d]));
+    assert.equal(byDate['2026-05-24'].rejected, true);
+    assert.equal(byDate['2026-05-25'].rejected, false);
+    assert.equal(byDate['2026-05-26'].rejected, true);
+  });
+
+  test('removing a date from rejectedDays re-computes rejection state on next call (no caching)', () => {
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+
+    const settingsWithRejection = { rejectedDays: ['2026-05-26'] };
+    const daysRejected = daysByCalendar(events, undefined, settingsWithRejection);
+    assert.equal(daysRejected[0].rejected, true, 'first call: rejected=true');
+
+    const settingsEmpty = { rejectedDays: [] };
+    const daysCleared = daysByCalendar(events, undefined, settingsEmpty);
+    assert.equal(daysCleared[0].rejected, false, 'second call with empty list: rejected=false');
+  });
+});
+
+describe('daysBySubjectiveNight: day.rejected boolean (CFG-05)', () => {
+  test('all days have rejected=false when settings not provided', () => {
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const days = daysBySubjectiveNight(events);
+    assert.equal(days[0].rejected, false, 'rejected must be false when settings absent');
+  });
+
+  test('day with date in rejectedDays gets rejected=true', () => {
+    // 2026-05-26T06:35 with cutoverHour=4 → subjective date 2026-05-26 (no rollback)
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const settings = { rejectedDays: ['2026-05-26'] };
+    // daysBySubjectiveNight(events, cutoverHour, limit, settings)
+    const days = daysBySubjectiveNight(events, 4, undefined, settings);
+    assert.equal(days[0].rejected, true, '2026-05-26 in rejectedDays → rejected=true');
+  });
+
+  test('subjective rollback date uses the rolled-back key for rejection check', () => {
+    // 2026-05-26T03:50 with cutoverHour=4 → subjective date 2026-05-25 (rolled back)
+    const events = [ev('e1', 'wake', '2026-05-26T03:50')];
+    const settings = { rejectedDays: ['2026-05-25'] };
+    const days = daysBySubjectiveNight(events, 4, undefined, settings);
+    // The bucketed date is 2026-05-25, so a rejection on 2026-05-25 must fire.
+    assert.equal(days[0].date, '2026-05-25', 'event rolled back to previous day');
+    assert.equal(days[0].rejected, true, 'rejection matches rolled-back date');
+  });
+});
