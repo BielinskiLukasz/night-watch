@@ -427,6 +427,248 @@ button[data-log]:hover {
 }
 
 /* ==========================================================================
+ * Plan 04-02 — Tab navigation, History table, rejected rows, responsive layout
+ * ==========================================================================
+ *
+ * Tab nav (D4-07): two-button Today | History switcher inside the header.
+ * History table (D4-01): day-column grid layout.
+ * Rejected rows (D4-10): ~50% opacity for outlier days.
+ * Responsive: stacked columns on mobile (<640px), full grid on desktop.
+ *
+ * All dynamic content uses textContent (T-04-04); these selectors are not
+ * innerHTML-dependent. Classes match history-screen.js output exactly.
+ */
+
+/* ── Tab navigation (.tabNav, [role="tab"]) ──────────────────────────────── */
+
+.tabNav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tabNav button[role="tab"] {
+  padding: 6px 14px;
+  min-height: 36px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  color: #64748b;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.tabNav button[role="tab"]:hover {
+  color: #1e293b;
+  background: #f1f5f9;
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.tabNav button[role="tab"][aria-selected="true"] {
+  font-weight: 700;
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.tabNav button[role="tab"]:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Header flex layout: subjectName (grow) | tabNav (shrink-0) | gear (shrink-0).
+ * Override appHeader's space-between so tabNav sits between h1 and gear. */
+.appHeader {
+  justify-content: flex-start;
+}
+
+.appHeader .subjectName {
+  flex: 1 1 auto;
+  min-width: 0; /* allow text-overflow ellipsis */
+}
+
+.appHeader .tabNav {
+  flex: 0 0 auto;
+  margin: 0 4px;
+}
+
+.appHeader .settingsTrigger {
+  flex: 0 0 auto;
+}
+
+/* ── History screen root ─────────────────────────────────────────────────── */
+
+#history-screen {
+  max-width: 56rem; /* wider than today-screen to fit 7 columns */
+  margin: 0 auto;
+  overflow-x: auto; /* horizontal scroll on narrow screens */
+}
+
+/* ── History table (.historyTable) ───────────────────────────────────────── */
+
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  /* Monospace numbers in time cells for alignment (D4-03) */
+  font-variant-numeric: tabular-nums;
+}
+
+.historyTable th {
+  text-align: left;
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.historyTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #1a1a1a;
+}
+
+/* Column alignment */
+.historyTable .col-date,
+.historyTable .day-date {
+  white-space: nowrap;
+  font-weight: 500;
+  color: #334155;
+}
+
+.historyTable .col-wake,
+.historyTable .day-wake,
+.historyTable .col-bedtime,
+.historyTable .day-bedtime,
+.historyTable .col-nap-start,
+.historyTable .day-napstart,
+.historyTable .col-nap-end,
+.historyTable .day-napend {
+  text-align: center;
+  white-space: nowrap;
+  color: #334155;
+}
+
+.historyTable .col-rejected,
+.historyTable .day-rejected {
+  text-align: center;
+  width: 3rem;
+  min-width: 3rem;
+}
+
+.historyTable .col-actions,
+.historyTable .day-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 6rem;
+  min-width: 6rem;
+}
+
+/* Em-dash for missing slots */
+.historyTable td:empty::before {
+  content: '—';
+  color: #94a3b8;
+}
+
+/* Rejected indicator in cell */
+.rejected-indicator {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+/* ── Rejected row styling (D4-10) ────────────────────────────────────────── */
+
+.historyTable tr.rejected td {
+  opacity: 0.5;
+}
+
+.historyTable tr.rejected {
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* ── Dormant edit/delete buttons in history table (Wave 2 placeholder) ───── */
+/* Wave 3 removes disabled and wires click handlers. */
+
+.historyTable .rowEdit,
+.historyTable .rowDel {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.historyTable .rowEdit:disabled,
+.historyTable .rowDel:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.historyTable .rowEdit:not(:disabled):hover {
+  background: #f1f5f9;
+}
+
+.historyTable .rowDel {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  margin-left: 4px;
+}
+
+.historyTable .rowDel:not(:disabled):hover {
+  background: #fee2e2;
+}
+
+/* ── Empty state (.historyEmpty) ─────────────────────────────────────────── */
+
+.historyEmpty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* ── Responsive layout ───────────────────────────────────────────────────── */
+
+/* On narrow screens (<640px): allow horizontal scroll on the table
+ * (already handled by overflow-x: auto on #history-screen). Reduce padding
+ * and font size slightly for tighter fit. */
+@media (max-width: 640px) {
+  .historyTable th,
+  .historyTable td {
+    padding: 6px 6px;
+    font-size: 0.82rem;
+  }
+
+  /* Actions column: show only icons/compact text on mobile */
+  .historyTable .col-actions,
+  .historyTable .day-actions {
+    min-width: 4.5rem;
+  }
+
+  .tabNav button[role="tab"] {
+    padding: 5px 10px;
+    font-size: 0.88rem;
+  }
+}
+
+@media (min-width: 800px) {
+  #history-screen {
+    padding: 0 1rem;
+  }
+}
+
+/* ==========================================================================
  * Plan 03-04 — Forecast cards, probability-band tables, cold-start message
  * ==========================================================================
  *
