@@ -73,6 +73,7 @@ export function openSettings({ settings }) {
         subjectName: String(data.get('subjectName') ?? '').trim(),
         cutoverHour: Number(data.get('cutoverHour')),
         groupingMode: String(data.get('groupingMode') ?? ''),
+        rejectedDays: snap.rejectedDays || [],
         timeFormat: String(data.get('timeFormat') ?? ''),
         autoOutlier: data.get('autoOutlier') === 'on',
         maxDelta: Number(data.get('maxDelta')),
