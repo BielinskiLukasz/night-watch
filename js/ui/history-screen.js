@@ -104,8 +104,6 @@ function renderEmptyState(root) {
  * Build the day-column <table class="historyTable"> from an array of day records.
  *
  * Columns (D4-01): Date | Wake | Nap End | Nap Start | Bedtime | Rejected | Actions
- * (Reordered to group naps in the middle: Nap End → Nap Start reads as "nap window",
- *  and Bedtime moved to end as the day's closing marker.)
  *
  * @param {Array<object>} dayRecords  day records from daysByCalendar (newest first)
  * @param {'24h'|'12h'} timeFormat
@@ -120,7 +118,7 @@ function buildTable(dayRecords, timeFormat, eventLog, settings) {
   // Header row
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
-  for (const label of ['Date', 'Wake', 'Nap End', 'Nap Start', 'Bedtime', 'Rejected', 'Actions']) {
+  for (const label of ['Date', 'Wake', 'Nap Start', 'Nap End', 'Bedtime', 'Rejected', 'Actions']) {
     const th = document.createElement('th');
     th.className = `col-${label.toLowerCase().replace(' ', '-')}`;
     // T-04-04: textContent only.
@@ -165,10 +163,8 @@ function buildDayRow(day, timeFormat, eventLog, settings) {
   // Date cell
   appendCell(tr, 'day-date', day.date);
 
-  // Time cells (reordered): wake, napEnd, napStart, bedtime
-  // Groups naps (napEnd → napStart) in the middle as a nap window,
-  // and moves bedtime to end as the closing marker of the day.
-  for (const slot of ['wake', 'napEnd', 'napStart', 'bedtime']) {
+  // Time cells: wake, napStart, napEnd, bedtime
+  for (const slot of ['wake', 'napStart', 'napEnd', 'bedtime']) {
     const cssClass = `day-${slot.toLowerCase()}`;
     const evt = day[slot];
     const text = evt ? formatTime(evt.at, timeFormat) : '—'; // em-dash

@@ -164,13 +164,12 @@ test('History table has correct column headers (D4-01)', async ({ page }) => {
   const table = page.locator('table.historyTable');
   await expect(table).toBeVisible();
 
-  // Check header text — reordered to group naps in the middle (Nap End → Nap Start)
-  // and move Bedtime to the end as the day's closing marker.
+  // Check header text
   const headers = table.locator('thead th');
   await expect(headers.nth(0)).toHaveText('Date');
   await expect(headers.nth(1)).toHaveText('Wake');
-  await expect(headers.nth(2)).toHaveText('Nap End');
-  await expect(headers.nth(3)).toHaveText('Nap Start');
+  await expect(headers.nth(2)).toHaveText('Nap Start');
+  await expect(headers.nth(3)).toHaveText('Nap End');
   await expect(headers.nth(4)).toHaveText('Bedtime');
   await expect(headers.nth(5)).toHaveText('Rejected');
   await expect(headers.nth(6)).toHaveText('Actions');
