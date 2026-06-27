@@ -229,6 +229,117 @@ reflection — Phase 7's accuracy dashboard will expand on this theme.
 - Phase 3 decisions (D3-01..D3-16): `.planning/phases/NW-03-forecast-engine-today-screen/03-CONTEXT.md`
 - Implementation: `js/lib/forecast.js` (pure logic), `js/ui/today-screen.js` (rendering + subscriptions)
 
+## Phase 4: History Screen & Edit/Delete
+
+Phase 4 adds the full History workflow — a day-column table with interactive
+edit, delete, and rejected-flag controls — and completes the two-tab navigation
+structure (Today | History) that Phase 7 will expand.
+
+### Features Implemented
+
+- **History Screen:** Day-column table showing all past sleep events (Date,
+  Wake, Nap Start, Nap End, Bedtime, Rejected checkbox, Actions). One row per
+  calendar day; most-recent day first (D4-02).
+- **Tab Navigation (Today | History):** Two-button header navigation; switching
+  tabs toggles screen visibility. Active tab highlighted with indigo underline
+  and `aria-selected="true"` (D4-07).
+- **Edit Events:** Each time cell contains an `[Edit]` button. Clicking opens
+  the Phase 1 manual-entry modal pre-populated with the existing event's
+  type/date/time. Saving calls `editEvent()` and triggers a synchronous
+  forecast re-compute (D4-04, D4-09).
+- **Delete Days:** Each row has a `[Delete]` button. Confirms with
+  `window.confirm()` before removing all events for that calendar date via
+  `deleteEvent()`. Forecast updates immediately (D4-06).
+- **Reject Outliers:** Each row has an `<input type="checkbox">` in the
+  Rejected column. Toggling immediately calls
+  `settings.update({ rejectedDays: [...] })`. Rejected rows rendered at
+  ~50% opacity; forecast downweights them at 0.5× (D4-05, D4-10, D4-14).
+- **Reactive Updates:** All mutations (edit, delete, reject) trigger immediate
+  forecast re-computation via the D3-12 subscriber pattern. History table
+  re-renders without a page reload.
+
+### Design Decisions
+
+- **Rejected-Day Storage (D4-05):** Rejected days stored as a list of date
+  strings in `settings.rejectedDays` (not per-event). Leverages the existing
+  settings-store subscription pattern. Day-bucket computes `day.rejected`
+  boolean at render time.
+- **Delete Scope (D4-06):** Deleting a day removes all events for that calendar
+  date (wake, bedtime, nap, extra naps). Matches the `daysByCalendar()` grouping
+  logic. Native browser undo (`Ctrl+Z`) can restore deleted events before next
+  write.
+- **Tab Persistence (D4-08):** Tab state is in-memory only; does not persist
+  across reload. Phase 8 (PWA hardening) can add deep-linking.
+- **Edit Validation (D4-13):** Reuses Phase 1's manual-entry contract (5-min
+  rounding, future-date guard). No custom validation in history-screen.js.
+- **Forecast Timing (D4-09):** Forecast re-computes only on Save (not during
+  edit), ensuring a clean and predictable user experience.
+- **XSS Prevention (T-04-04):** All dynamic values (dates, times, event IDs)
+  are written via `textContent` / DOM properties. No `innerHTML =` assignments
+  exist in `js/ui/history-screen.js`.
+
+### Testing Coverage
+
+- **Unit Tests:** `tests/unit/db-shape.test.js` — `rejectedDays` schema;
+  `tests/unit/day-bucket.test.js` — rejection boolean derivation.
+- **Integration Tests:** `tests/integration/rejected-days-forecast-sync.test.js`
+  — subscriber synchrony + forecast shift; `tests/integration/edit-delete-flow.test.js`
+  — mutation + forecast re-compute + P50 shift.
+- **E2E Tests:** `tests/e2e/history.spec.js` — tab navigation, table rendering,
+  edit workflow, delete confirmation, rejected checkbox toggle, forecast reactivity,
+  persistence across tab switch and page reload (23 tests total).
+
+### Known Constraints & Future Work
+
+- **Scroll Position:** Table scrolls to top on every render (no scroll-position
+  restoration). Phase 8+ can cache position.
+- **Bulk Edit:** Phase 4 edits events one-at-a-time. Phase 7+ could add
+  day-wide bulk edit.
+- **Rejection Metadata:** Rejected days show no reason (manual vs. auto). Phase
+  7's accuracy dashboard can add rejection history.
+- **Multi-Nap Display:** Primary nap slot only in table. Extra naps are editable
+  individually but not shown as separate columns.
+
+### Code Structure
+
+| File | Role |
+|------|------|
+| `js/ui/history-screen.js` | History table component: renders day-column table, wires edit/delete/reject affordances |
+| `js/ui/header.js` | Extended with two-tab navigation (Today \| History) |
+| `js/app.js` | Composition root; mounts history screen and applies tab visibility |
+| `js/lib/db-shape.js` | Extended: `rejectedDays: []` in DEFAULT_SETTINGS; migration backfill |
+| `js/lib/day-bucket.js` | Extended: `annotateRejected()` helper; both public functions accept optional settings |
+| `js/lib/settings-validate.js` | Extended: `string[]` RULES type for rejectedDays |
+| `js/store/event-log.js` | Extended: optional settings param on `daysByCalendar` |
+| `tests/e2e/history.spec.js` | New: full History workflow E2E coverage |
+| `tests/integration/edit-delete-flow.test.js` | New: mutation + forecast sync integration tests |
+| `tests/integration/rejected-days-forecast-sync.test.js` | New: subscriber + downweighting integration tests |
+
+### Requirements Traceability
+
+| Requirement | Description | Status |
+|-------------|-------------|--------|
+| UI-03 | History screen with scrollable table, edit, delete, rejected toggle | Complete |
+| CFG-05 | User can manually mark any day as rejected; toggle persists | Complete |
+| PRED-07 | Forecasts update when user toggles rejected flag | Complete (Phase 3 + Phase 4 surfacing) |
+
+### Phase 4 Verification Checklist
+
+- [x] Day-column table renders with correct columns
+- [x] Table displays most recent days first
+- [x] Tab navigation Today \| History works
+- [x] `[Edit]` opens modal with pre-populated event; save updates table and forecast
+- [x] `[Delete]` confirms and removes day from table; forecast updates
+- [x] Rejected checkbox toggles immediately; rejected rows styled at 50% opacity
+- [x] Rejected toggle triggers forecast downweighting (0.5×)
+- [x] Rejected state persists across tab switch and reload
+- [x] Empty state message shows when no events logged
+- [x] E2E tests pass for all workflows
+- [x] Security audit: no XSS, data-flow integrity verified, state consistency verified
+- [x] All Phase 4 requirements (UI-03, CFG-05) covered by tests
+
+---
+
 ## Roadmap
 
 See `.planning/ROADMAP.md` for the eight-phase plan from logging through
