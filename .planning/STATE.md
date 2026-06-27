@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-05T12:29:05.098Z"
-last_activity: 2026-06-04
+status: Phase 4 complete
+stopped_at: Phase 4 Plan 04 complete — all 4 waves done; ready for gsd-verifier
+last_updated: "2026-06-27T19:41:00Z"
+last_activity: 2026-06-27
 progress:
   total_phases: 12
-  completed_phases: 3
-  total_plans: 20
-  completed_plans: 20
-  percent: 25
+  completed_phases: 4
+  total_plans: 24
+  completed_plans: 24
+  percent: 33
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase 03 — forecast-engine-today-screen
+**Current focus:** Phase 04 — history-screen-edit-delete (COMPLETE)
 
 ## Current Position
 
 Phase: 4
-Plan: Not started
-Next: run gsd-verifier on Phase 2; then start Phase 3 (forecast engine)
-Last activity: 2026-06-04
+Plan: 4 (complete — all 4 waves done)
+Next: run gsd-verifier on Phase 4; then start Phase 5 (data import/export)
+Last activity: 2026-06-27
 
-Progress: [████████████████████] Phase 2 100% (6/6 plans); overall: 1 phase complete + Phase 2 fully shipped (verifier pending)
+Progress: [██████████████████████████████] Phase 4 100% (4/4 plans); overall: 4 phases complete
 
 ### Phase 02 execution progress
 
@@ -63,7 +63,26 @@ Progress: [████████████████████] Phase 2
   - SUMMARY: .planning/phases/NW-02-configuration-settings/02-06-SUMMARY.md
   - Test delta: unit 251/251 unchanged; E2E +5 (35 → 40)
 
-Resume command: /gsd-execute-phase 2 (will pick up at Wave 5 by skipping plans with existing SUMMARY.md)
+Resume command: /gsd-execute-phase 4 (all 4 plans complete; run /gsd-verify-work to gate Phase 4 before Phase 5)
+
+### Phase 04 execution progress
+
+- Plan 04-01 (Wave 1): COMPLETE — rejectedDays array in DEFAULT_SETTINGS + day.rejected derivation in day-bucket + integration test
+  - 3 commits: 47bf1d0 (feat) → 17481f8 (feat) → d1e6376 (feat)
+  - SUMMARY: .planning/phases/NW-04-history-screen-edit-delete/04-01-SUMMARY.md
+  - Test delta: +8 unit + 1 integration file (5 tests)
+- Plan 04-02 (Wave 2): COMPLETE — History table UI + tab navigation + CSS + 13 E2E tests
+  - 7 commits: 98f17a9 (header) → 3d555b4 (history-screen + event-log) → 340ac62 (app.js) → fb6784f (index.html) → 70adbec (CSS) → b3cc21d (fix) → 5e2ae9e (test)
+  - SUMMARY: .planning/phases/NW-04-history-screen-edit-delete/04-02-SUMMARY.md
+  - Test delta: E2E +13 (13 new history.spec.js tests)
+- Plan 04-03 (Wave 3): COMPLETE — Edit/Delete affordances wired; 6 E2E + 10 integration tests
+  - 3 commits: 87b995c (feat) → 43334f0 (test) → d80ff89 (test)
+  - SUMMARY: .planning/phases/NW-04-history-screen-edit-delete/04-03-SUMMARY.md
+  - Test delta: E2E +6 (19 total) + integration +10
+- Plan 04-04 (Wave 4): COMPLETE — Rejected checkbox wired; CSS; 4 E2E tests; security audit; README
+  - 4 commits: 7222635 (feat) → 9d626f8 (feat) → 99cc218 (test) → ad20253 (docs)
+  - SUMMARY: .planning/phases/NW-04-history-screen-edit-delete/04-04-SUMMARY.md
+  - Test delta: E2E +4 (23 total); full test suite run deferred (Node.js not available in executor environment)
 
 ### Plan 01-01 final state
 
@@ -187,6 +206,13 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 
 - Phase 1 (Log & Persist): Start with minimal logging UI + localStorage only; defer PWA until Phase 8 to unblock dogfooding
 - Phases 1–4 foundation: All logic before import/export (Phase 5) to ensure data shape is validated in use
+- [Phase 04]: Plan 04-01: Option A for rejection storage: list of date strings in settings.rejectedDays (not event-property-based). Leverages existing settings-store subscription pattern.
+- [Phase 04]: Plan 04-01: day.rejected is derived at render time from settings.rejectedDays.includes(day.date) — never stored on event objects (D4-14). Keeps canonical source singular.
+- [Phase 04]: Plan 04-02: mountHistoryScreen root is div#history-table-root (inner); section#history-screen toggled by applyTabVisibility() — clean separation between content and visibility
+- [Phase 04]: Plan 04-02: Column order Date|Wake|Nap Start|Nap End|Bedtime|Rejected|Actions (reordered from original plan after checkpoint UX feedback for time-of-day flow)
+- [Phase 04]: Plan 04-03: Per-event [Edit] buttons co-located inside time cells; per-row [Delete] in Actions column — consistent with D4-04/D4-06
+- [Phase 04]: Plan 04-04: Rejected checkbox uses .checked + data-date + Set deduplication before settings.update() — defensive against duplicate dates from external sources
+- [Phase 04]: Plan 04-04: Security audit confirms T-04-04 MITIGATED: 0 innerHTML assignments in history-screen.js; 11 textContent usages for all dynamic values
 - Phase 8 PWA hardening: Hold all platform/manifest/service-worker work until end to avoid rework if data model shifts early
 - [Phase ?]: Plan 01-02: round-to-nearest 5-min via Math.round per Assumption A1 (RESEARCH Pitfall #1)
 - [Phase ?]: Plan 01-02: parseLocalISO typeof guard — null/non-string inputs throw the same descriptive Error (T-02)
@@ -217,6 +243,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-05T12:29:05.084Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/NW-04-history-screen-edit-delete/04-CONTEXT.md
+Last session: 2026-06-27T19:41:00Z
+Stopped at: Phase 4 Plan 04 complete — rejected checkbox wired, CSS, E2E tests, security audit, README
+Resume file: .planning/phases/NW-04-history-screen-edit-delete/04-04-SUMMARY.md

@@ -14,7 +14,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 - [x] **Phase 1: Log & Persist** - Log sleep events with quick buttons, manual entry, form-based editing, and localStorage caching; user can reload without losing data. Establishes the full testing scaffold (ESM modules, adapter pattern, unit + integration + Playwright E2E, CI) and TDD discipline for all later phases. (completed 2026-05-26)
 - [x] **Phase 2: Configuration & Settings** - Settings UI for subject name, prediction thresholds, outlier rules, window size, stat blend, time format, day cutover; all persisted (completed 2026-05-28)
 - [x] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card (completed 2026-06-05)
-- [ ] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation
+- [x] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation (completed 2026-06-27)
 - [ ] **Phase 5: Data Import/Export** - CSV and JSON import (round-trip), JSON export, file-as-truth workflow, localStorage as cache
 - [ ] **Phase 6: Life Stages** - Manual stage boundaries (date range + name), scope forecasts to current stage
 - [ ] **Phase 7: Charts, Heatmap & Accuracy** - Sleep-length charts, time bands, nap patterns, activity correlation, calendar heatmap, three-metric accuracy dashboard, full navigation
@@ -141,19 +141,19 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 1** *(pure-logic foundation — rejected-day storage & derivation)*
 
-  - [ ] 04-01-PLAN.md — Extend settings schema with rejectedDays array; compute day.rejected in day-bucket; integration test for forecast downweighting
+  - [x] 04-01-PLAN.md — Extend settings schema with rejectedDays array; compute day.rejected in day-bucket; integration test for forecast downweighting
 
 **Wave 2** *(blocked on Wave 1 completion — UI foundation)*
 
-  - [ ] 04-02-PLAN.md — Header tab navigation (Today | History); History table rendering; responsive CSS; E2E tests for navigation and layout
+  - [x] 04-02-PLAN.md — Header tab navigation (Today | History); History table rendering; responsive CSS; E2E tests for navigation and layout
 
 **Wave 3** *(blocked on Wave 2 completion — interactive affordances)*
 
-  - [ ] 04-03-PLAN.md — [Edit] and [Delete] button handlers; wire to modal and store APIs; forecast reactivity; E2E tests for edit/delete workflows
+  - [x] 04-03-PLAN.md — [Edit] and [Delete] button handlers; wire to modal and store APIs; forecast reactivity; E2E tests for edit/delete workflows
 
 **Wave 4** *(blocked on Wave 3 completion — phase gate & verification)*
 
-  - [ ] 04-04-PLAN.md — Rejected checkbox UI and toggle handler; final CSS styling; E2E test for rejected toggle; security audit; phase documentation; full test suite verification
+  - [x] 04-04-PLAN.md — Rejected checkbox UI and toggle handler; final CSS styling; E2E test for rejected toggle; security audit; phase documentation; full test suite verification
 
 ### Phase 5: Data Import/Export
 
@@ -222,7 +222,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 1. Log & Persist | 8/8 | Complete   | 2026-05-27 |
 | 2. Configuration & Settings | 7/7 | Complete    | 2026-05-28 |
 | 3. Forecast Engine & Today Screen | 5/5 | Complete    | 2026-06-04 |
-| 4. History Screen & Edit/Delete | 0/4 | Planning complete | — |
+| 4. History Screen & Edit/Delete | 4/4 | Complete | 2026-06-27 |
 | 5. Data Import/Export | 0/TBD | Not started | — |
 | 6. Life Stages | 0/TBD | Not started | — |
 | 7. Charts, Heatmap & Accuracy | 0/TBD | Not started | — |
