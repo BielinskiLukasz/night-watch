@@ -472,7 +472,123 @@ test('delete last day — History shows empty-state message after all events rem
 });
 
 // ---------------------------------------------------------------------------
-// 8. Edit/delete reactivity — forecast updates (D4-09) — Plan 04-03 Task 3
+// 8. Rejected checkbox toggle (D4-05, D4-10, CFG-05) — Plan 04-04 Task 3
+// ---------------------------------------------------------------------------
+
+test('toggle rejected checkbox — row gets "rejected" class and checkbox stays checked (D4-05, D4-10)', async ({ page }) => {
+  // Seed multi-day test data (five days, no days initially rejected)
+  await seedAndReload(page);
+
+  // Navigate to History tab
+  await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // Find the first row (most recent day: 2026-05-24)
+  const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
+
+  // Verify row is NOT rejected initially
+  await expect(firstRow).not.toHaveClass(/rejected/);
+
+  // Find the rejected checkbox in the first row
+  const checkbox = firstRow.locator('input.rejected-toggle');
+  await expect(checkbox).toBeVisible();
+  await expect(checkbox).not.toBeChecked();
+
+  // Check the checkbox — this calls settings.update({ rejectedDays: ['2026-05-24'] })
+  // Subscriber fires synchronously (D3-12) → table re-renders.
+  await checkbox.check();
+
+  // Row should now have the "rejected" class (opacity ~0.5 applied via CSS)
+  await expect(firstRow).toHaveClass(/rejected/);
+
+  // Checkbox should remain checked after re-render
+  await expect(checkbox).toBeChecked();
+});
+
+test('toggle rejected — uncheck restores row to non-rejected (D4-05, D4-10)', async ({ page }) => {
+  // Seed data with 2026-05-24 pre-rejected
+  await page.evaluate((db) => {
+    const rejectedDb = {
+      ...db,
+      settings: { ...db.settings, rejectedDays: ['2026-05-24'] },
+    };
+    localStorage.setItem('nightwatch:db', JSON.stringify(rejectedDb));
+  }, TEST_DB);
+  await page.reload();
+
+  // Navigate to History
+  await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
+
+  // Row should be rejected initially (pre-seeded)
+  await expect(firstRow).toHaveClass(/rejected/);
+  const checkbox = firstRow.locator('input.rejected-toggle');
+  await expect(checkbox).toBeChecked();
+
+  // Uncheck — calls settings.update({ rejectedDays: [] })
+  await checkbox.uncheck();
+
+  // Row should no longer have "rejected" class
+  await expect(firstRow).not.toHaveClass(/rejected/);
+  await expect(checkbox).not.toBeChecked();
+});
+
+test('toggle rejected persists across tab switch (D4-05, CFG-05)', async ({ page }) => {
+  // Seed multi-day data
+  await seedAndReload(page);
+
+  // Navigate to History
+  await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // Check the checkbox on the first row
+  const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
+  const checkbox = firstRow.locator('input.rejected-toggle');
+  await checkbox.check();
+  await expect(firstRow).toHaveClass(/rejected/);
+
+  // Switch to Today tab
+  await page.locator('button[data-tab="today"]').click();
+  await expect(page.locator('#today-screen')).toBeVisible();
+
+  // Switch back to History
+  await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // Verify checkbox is still checked and row still rejected (settings persisted)
+  const firstRowAfter = page.locator('table.historyTable tbody tr.day-row').first();
+  await expect(firstRowAfter).toHaveClass(/rejected/);
+  await expect(firstRowAfter.locator('input.rejected-toggle')).toBeChecked();
+});
+
+test('toggle rejected persists across page reload (D4-05, CFG-05)', async ({ page }) => {
+  // Seed multi-day data
+  await seedAndReload(page);
+
+  // Navigate to History and check a day rejected
+  await page.locator('button[data-tab="history"]').click();
+  const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
+  const checkbox = firstRow.locator('input.rejected-toggle');
+  await checkbox.check();
+  await expect(firstRow).toHaveClass(/rejected/);
+
+  // Reload the page (verifies localStorage persistence of settings.rejectedDays)
+  await page.reload();
+
+  // Navigate back to History
+  await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // First row should still be rejected after reload
+  const firstRowAfterReload = page.locator('table.historyTable tbody tr.day-row').first();
+  await expect(firstRowAfterReload).toHaveClass(/rejected/);
+  await expect(firstRowAfterReload.locator('input.rejected-toggle')).toBeChecked();
+});
+
+// ---------------------------------------------------------------------------
+// 9. Edit/delete reactivity — forecast updates (D4-09) — Plan 04-03 Task 3
 // ---------------------------------------------------------------------------
 
 test('edit event — History table re-renders reactively without page reload (D3-12)', async ({ page }) => {
