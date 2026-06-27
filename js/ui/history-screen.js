@@ -2,12 +2,14 @@
 // History screen component — renders a day-column table of all logged events.
 //
 // Plan: 04-02 (Task 2), 04-03 (Tasks 1 & 2 — Wave 3 edit/delete affordances)
+//       04-04 (Task 1 — Wave 4 rejected checkbox wired to settings.update())
 // Decisions: D4-01 (day-column table layout), D4-02 (most-recent first),
 //            D4-03 (times in user's timeFormat), D4-08 (table scrolls to top on revisit),
 //            D4-10 (rejected rows at ~50% opacity), D4-14 (day.rejected from settings),
 //            D4-04 (per-event edit via manual-entry modal), D4-06 (delete per day row),
 //            D4-09 (forecast re-computes on Save — subscriber fires after editEvent),
-//            D4-13 (edit validation reuses Phase 1's manual-entry contract)
+//            D4-13 (edit validation reuses Phase 1's manual-entry contract),
+//            D4-05 (rejected checkbox is interactive; toggle immediate, no confirm)
 // Requirements: UI-03, CFG-05
 //
 // Security invariants (T-04-04):
@@ -214,15 +216,49 @@ function buildDayRow(day, timeFormat, eventLog, settings) {
     tr.appendChild(td);
   }
 
-  // Rejected cell — visual only (checkbox toggle deferred to later phase)
+  // Rejected cell — D4-05: interactive checkbox wired to settings.update().
+  // T-04-04: checkbox uses .checked and .value DOM properties (not innerHTML).
+  // D4-14: no validation; toggle freely.
   const rejectedTd = document.createElement('td');
   rejectedTd.className = 'day-rejected';
-  const rejectedSpan = document.createElement('span');
-  rejectedSpan.className = 'rejected-indicator';
-  // T-04-04: textContent only.
-  rejectedSpan.textContent = day.rejected ? '✓' : '';
-  rejectedSpan.setAttribute('aria-label', day.rejected ? 'Rejected' : '');
-  rejectedTd.appendChild(rejectedSpan);
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'rejected-toggle';
+  checkbox.checked = day.rejected;
+  checkbox.setAttribute('aria-label', `Mark ${day.date} as rejected`);
+  checkbox.setAttribute('data-date', day.date);
+
+  if (settings) {
+    checkbox.addEventListener('change', (e) => {
+      const dayDate = e.target.getAttribute('data-date');
+      const isNowRejected = e.target.checked;
+
+      // Get current rejectedDays from settings (immutable snapshot).
+      const currentRejected = settings.get().rejectedDays || [];
+      let newRejected = [...currentRejected];
+
+      if (isNowRejected) {
+        // Add date if not already present — Set deduplication guards duplicates.
+        if (!newRejected.includes(dayDate)) {
+          newRejected.push(dayDate);
+        }
+      } else {
+        // Remove date from list.
+        newRejected = newRejected.filter((d) => d !== dayDate);
+      }
+
+      // Defensive dedup (D4-14: no validation, but prevent duplicates).
+      const uniqueRejected = [...new Set(newRejected)];
+
+      // Persist to settings. Subscriber fires synchronously (D3-12):
+      //   - mountHistoryScreen re-renders table with updated day.rejected values.
+      //   - Today screen forecast re-computes with downweighting applied (PRED-07).
+      settings.update({ rejectedDays: uniqueRejected });
+    });
+  }
+
+  rejectedTd.appendChild(checkbox);
   tr.appendChild(rejectedTd);
 
   // Actions cell — D4-06: per-row [delete] button.
