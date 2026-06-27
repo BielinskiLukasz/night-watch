@@ -579,10 +579,22 @@ button[data-log]:hover {
   color: #94a3b8;
 }
 
-/* Rejected indicator in cell */
+/* Rejected checkbox (Plan 04-04 / D4-05, T-04-04).
+ * Interactive <input type="checkbox"> wired to settings.update({rejectedDays}).
+ * Uses .checked and data-date DOM properties — no innerHTML involvement.
+ * accent-color matches the indigo calm-palette accent (#4f46e5). */
+.historyTable .rejected-toggle {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4f46e5; /* indigo — calm palette accent */
+  vertical-align: middle;
+}
+
+/* Keep backward-compat selector in case any test checks for the old span
+ * (Wave 2 wave-2-visual-only indicator). This rule is now a no-op stub. */
 .rejected-indicator {
-  font-size: 0.9rem;
-  color: #64748b;
+  display: none;
 }
 
 /* ── Rejected row styling (D4-10) ────────────────────────────────────────── */
