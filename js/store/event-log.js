@@ -246,5 +246,26 @@ export function createEventLog({ storage, clock, id }) {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
+
+    /**
+     * Replace the entire in-memory db with an imported blob (DATA-02 / DATA-05).
+     * Migrates v1→v2, validates version, persists, and fires all subscribers.
+     * Called by the import handler (Plans 05-04/05-05) in the composition root.
+     *
+     * Subscribers registered via subscribe() are NOT destroyed — Pattern A from
+     * RESEARCH.md: mutate the shared db in place rather than re-creating stores,
+     * so app.js subscriber wiring from boot time continues to work.
+     *
+     * @param {object} blob  raw parsed JSON (may be v1 or v2; v3+ throws)
+     * @throws {Error} if blob.version > 2 after migration
+     */
+    replace(blob) {
+      db = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+      if (db.version !== SCHEMA_VERSION) {
+        throw new Error(`Unsupported schema version after migration: ${db.version}`);
+      }
+      storage.save(db);
+      notifySubscribers();
+    },
   };
 }

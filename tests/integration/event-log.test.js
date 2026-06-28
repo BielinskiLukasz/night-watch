@@ -22,8 +22,9 @@ import { BUTTONS, labelFor } from '../../js/ui/today-screen.js';
 // Plan 02-03 raises the event-log SCHEMA_VERSION to 2; createEventLog now
 // migrates v1/null blobs through migrateV1ToV2 on construction, so the
 // persisted snapshot carries the v2 canonical shape { version, settings, events }.
+// Plan 05-01: activityLog: {} added to canonical blob shape (D5-17).
 function v2Snapshot(events) {
-  return { version: 2, settings: { ...DEFAULT_SETTINGS }, events };
+  return { version: 2, settings: { ...DEFAULT_SETTINGS }, events, activityLog: {} };
 }
 
 function makeTestLog({

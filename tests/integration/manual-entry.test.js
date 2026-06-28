@@ -43,6 +43,7 @@ describe('manual-entry: addEventAt (LOG-05)', () => {
       version: 2,
       settings: { ...DEFAULT_SETTINGS },
       events: [{ id: 'e1', type: 'wake', at: '2026-05-25T06:35' }],
+      activityLog: {},
     });
   });
 
