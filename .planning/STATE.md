@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 4 complete
-stopped_at: Phase 5 context gathered
-last_updated: "2026-06-28T12:19:51.113Z"
-last_activity: 2026-06-27
+status: Phase 5 planned
+stopped_at: Phase 5 planning complete — ready to execute
+last_updated: "2026-06-28T14:00:00.000Z"
+last_activity: 2026-06-28
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 24
+  total_plans: 29
   completed_plans: 25
   percent: 50
 ---
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase 04 — history-screen-edit-delete (COMPLETE)
+**Current focus:** Phase 05 — data-import-export (PLANNED — ready to execute)
 
 ## Current Position
 
-Phase: 4
-Plan: 4 (complete — all 4 waves done)
-Next: run gsd-verifier on Phase 4; then start Phase 5 (data import/export)
-Last activity: 2026-06-27
+Phase: 5
+Plan: 0 (planning complete — 5 plans across 3 waves; none yet executed)
+Next: run /gsd-execute-phase 5 (Wave 1: 05-01 + 05-02 in parallel)
+Last activity: 2026-06-28
 
 Progress: [██████████████████████████████] Phase 4 100% (4/4 plans); overall: 4 phases complete
 
