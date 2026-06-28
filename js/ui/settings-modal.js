@@ -204,6 +204,57 @@ export function openSettings({ settings, eventLog, storage, id }) {
 
       importCsvBtn.addEventListener('click', () => csvInput.click());
     }
+
+    // ── JSON import wiring (Plan 05-05) ──────────────────────────────────────
+    const importJsonBtn = document.getElementById('importJsonBtn');
+    const jsonInput = document.getElementById('jsonInput');
+
+    const handleJsonImport = (jsonText) => {
+      let blob;
+      try {
+        blob = JSON.parse(jsonText);
+      } catch {
+        showStatus('Invalid JSON file — could not parse.', true);
+        return;
+      }
+
+      // Version guard: reject files from a future incompatible version
+      if (typeof blob.version === 'number' && blob.version > 2) {
+        showStatus('Incompatible file — exported by a newer version of Nightwatch.', true);
+        return;
+      }
+
+      const eventCount = Array.isArray(blob.events) ? blob.events.length : 0;
+      const dayCount = eventCount > 0
+        ? new Set(blob.events.map(e => e.at && e.at.slice(0, 10)).filter(Boolean)).size
+        : 0;
+
+      if (!window.confirm(`Import ${dayCount} days from JSON? This will replace all current data and settings.`)) return;
+
+      // RESEARCH §Pattern A: save first, then replace both stores
+      storage.save(migrateV1ToV2(blob, DEFAULT_SETTINGS));
+      eventLog.replace(blob);
+      settings.replace(blob);
+
+      showStatus(`Import complete — ${dayCount} days restored.`);
+    };
+
+    const handleJsonFileChange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      jsonInput.value = ''; // Pitfall 6: reset so same file can be re-imported
+      const reader = new FileReader();
+      reader.onerror = () => showStatus('Could not read file.', true);
+      reader.onload = (loadEvt) => handleJsonImport(loadEvt.target.result);
+      reader.readAsText(file, 'UTF-8');
+    };
+
+    if (importJsonBtn && jsonInput) {
+      jsonInput.removeEventListener('change', handleJsonFileChange);
+      jsonInput.addEventListener('change', handleJsonFileChange);
+
+      importJsonBtn.addEventListener('click', () => jsonInput.click());
+    }
   }
 
   dlg.showModal();
