@@ -878,3 +878,34 @@ button[data-log]:hover {
 .settingsErrors p {
   margin: 0.125rem 0;
 }
+
+/* ==========================================================================
+ * Plan 05-03 — History screen toolbar + Export JSON button (D5-02)
+ * ==========================================================================
+ *
+ * .historyToolbar: slim row above the table; Export button aligned left.
+ * .btnExport: matches existing outlined button aesthetic from the settings modal.
+ */
+
+.historyToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.btnExport {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.btnExport:hover {
+  background: #ede9fe;
+}
