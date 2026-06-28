@@ -41,6 +41,28 @@ const COL = Object.freeze({
 });
 
 /**
+ * Normalize a header string for fuzzy matching:
+ * strip everything that is not a letter, digit, or space, then lowercase.
+ * This handles encoding-garbled headers such as "Za?ni?cie" (Zaśnięcie read
+ * as Windows-1250 in a UTF-8 reader) — the ? marks are stripped, leaving
+ * "zasniecie" which matches the ASCII fallback key in COL_FUZZY.
+ * @param {string} h
+ * @returns {string}
+ */
+function normalizeKey(h) {
+  return h.replace(/[^a-z0-9 ]/gi, '').toLowerCase().trim();
+}
+
+/** Fuzzy lookup built once from COL — same values, normalized keys. */
+const COL_FUZZY = Object.freeze(
+  Object.fromEntries(
+    Object.entries(COL)
+      .map(([k, v]) => [normalizeKey(k), v])
+      .filter(([k]) => k.length > 0),
+  ),
+);
+
+/**
  * Detect the CSV delimiter from the header line.
  * Counts semicolons vs commas; semicolons win on a tie.
  * @param {string} headerLine
@@ -55,10 +77,11 @@ function detectDelimiter(headerLine) {
 /**
  * Detect the date format from a sample date cell.
  * @param {string} sampleDate  raw date string from CSV
- * @returns {'dmy-dot' | 'iso' | null}
+ * @returns {'dmy-dot' | 'dmy-dash' | 'iso' | null}
  */
 function detectDateFormat(sampleDate) {
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(sampleDate.trim())) return 'dmy-dot';
+  if (/^\d{2}-\d{2}-\d{4}$/.test(sampleDate.trim())) return 'dmy-dash'; // e.g. 30-03-2026
   if (/^\d{4}-\d{2}-\d{2}$/.test(sampleDate.trim())) return 'iso';
   return null;
 }
@@ -66,13 +89,17 @@ function detectDateFormat(sampleDate) {
 /**
  * Convert a raw date cell to an ISO date string (YYYY-MM-DD).
  * @param {string} raw
- * @param {'dmy-dot' | 'iso'} fmt
+ * @param {'dmy-dot' | 'dmy-dash' | 'iso'} fmt
  * @returns {string}
  */
 function parseDate(raw, fmt) {
   const s = raw.trim();
   if (fmt === 'dmy-dot') {
     const [d, m, y] = s.split('.');
+    return `${y}-${m}-${d}`;
+  }
+  if (fmt === 'dmy-dash') {
+    const [d, m, y] = s.split('-');
     return `${y}-${m}-${d}`;
   }
   return s; // already ISO
@@ -118,16 +145,21 @@ export function parseCSV(text) {
   const headerLine = lines[0];
   const delimiter = detectDelimiter(headerLine);
   const headers = headerLine.split(delimiter).map(h => h.trim());
+  console.log('[NW-CSV] delimiter:', JSON.stringify(delimiter), '| headers:', headers.map(h => JSON.stringify(h)));
 
-  // Build index: column position → field name (only for recognized headers)
+  // Build index: column position → field name (only for recognized headers).
+  // Exact match first; fall back to fuzzy match (strips non-alphanumeric chars)
+  // to handle headers garbled by encoding mismatch (e.g. "Za?ni?cie" → "zasniecie").
   const colIdx = {};
+  const seen = new Set(); // track field names to avoid duplicate-column issues
   for (let i = 0; i < headers.length; i++) {
-    const field = COL[headers[i]];
-    if (field && !(field in colIdx)) {
-      // First match wins (handles duplicate-column edge case)
+    const field = COL[headers[i]] ?? COL_FUZZY[normalizeKey(headers[i])];
+    if (field && !seen.has(field)) {
       colIdx[i] = field;
+      seen.add(field);
     }
   }
+  console.log('[NW-CSV] recognized columns:', colIdx);
 
   let dateFmt = null; // detected lazily from first parseable row
 
