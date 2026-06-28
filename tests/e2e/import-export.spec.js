@@ -183,3 +183,115 @@ test.describe('CSV Import (Plan 05-04)', () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// JSON Import + Round-trip — Plan 05-05
+// ---------------------------------------------------------------------------
+
+test.describe('JSON Import (Plan 05-05)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+
+  test('JSON round-trip — export then reimport restores exact state (DATA-02, DATA-05)', async ({ page }) => {
+    // Seed two events so we have meaningful data to round-trip
+    await page.evaluate((db) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(db));
+    }, TEST_DB);
+    await page.reload();
+
+    // Verify pre-export state: History shows 1 day
+    await page.click('button[data-tab="history"]');
+    await expect(page.locator('.historyTable tbody tr')).toHaveCount(1);
+
+    // Export JSON
+    const tmpPath = join(tmpdir(), `nw-roundtrip-${Date.now()}.json`);
+    try {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.click('#exportJsonBtn'),
+      ]);
+      await download.saveAs(tmpPath);
+
+      const exported = JSON.parse(readFileSync(tmpPath, 'utf-8'));
+      expect(exported.version).toBe(2);
+      expect(exported.events.length).toBeGreaterThanOrEqual(2);
+
+      // Clear localStorage and reload (cold start)
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+
+      // Verify cold-start: no events
+      await page.click('button[data-tab="history"]');
+      await expect(page.locator('.historyTable tbody tr')).toHaveCount(0);
+
+      // Open Settings and import JSON
+      await page.click('button[aria-label="Settings"]');
+      await expect(page.locator('#importJsonBtn')).toBeVisible();
+
+      page.once('dialog', dialog => dialog.accept());
+
+      await page.setInputFiles('#jsonInput', {
+        name: 'nightwatch-test.json',
+        mimeType: 'application/json',
+        buffer: readFileSync(tmpPath),
+      });
+
+      await expect(page.locator('#importStatus')).toContainText('Import complete');
+
+      // Close Settings and verify restored state
+      await page.keyboard.press('Escape');
+      await page.click('button[data-tab="history"]');
+      await expect(page.locator('.historyTable tbody tr')).toHaveCount(1);
+    } finally {
+      if (existsSync(tmpPath)) unlinkSync(tmpPath);
+    }
+  });
+
+  test('JSON import — version > 2 shows error and does not corrupt data', async ({ page }) => {
+    // Seed one event so we can verify data is not replaced
+    await page.evaluate((db) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(db));
+    }, TEST_DB);
+    await page.reload();
+
+    await page.click('button[aria-label="Settings"]');
+
+    const futureBlobBuffer = Buffer.from(JSON.stringify({
+      version: 3,
+      events: [],
+      settings: {},
+      activityLog: {},
+    }));
+
+    await page.setInputFiles('#jsonInput', {
+      name: 'future.json',
+      mimeType: 'application/json',
+      buffer: futureBlobBuffer,
+    });
+
+    // Should show an error
+    await expect(page.locator('#importStatus')).toContainText(/[Ii]ncompatible|newer version/);
+
+    // Data must be intact
+    await page.keyboard.press('Escape');
+    await page.click('button[data-tab="history"]');
+    await expect(page.locator('.historyTable tbody tr')).toHaveCount(1);
+  });
+
+  test('JSON import — malformed JSON shows error', async ({ page }) => {
+    await page.click('button[aria-label="Settings"]');
+
+    await page.setInputFiles('#jsonInput', {
+      name: 'bad.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('not json at all'),
+    });
+
+    await expect(page.locator('#importStatus')).toContainText(/[Ii]nvalid JSON/);
+  });
+
+});
