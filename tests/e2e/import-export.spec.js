@@ -100,3 +100,86 @@ test.describe('Export JSON (Plan 05-03)', () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// CSV Import — Plan 05-04
+// ---------------------------------------------------------------------------
+
+const SIMPLE_CSV = [
+  'Data;Pobudka;Zasniecie',
+  '28.06.2026;07:00;22:00',
+].join('\n');
+
+const SIMPLE_CSV_WITH_REJECTED = [
+  'Data;Pobudka;Zasniecie;Drzemka start;Drzemka stop;Aktywnosc;odrzucone',
+  '28.06.2026;07:00;22:00;;;3.5;',
+  '29.06.2026;07:30;22:30;14:00;15:00;4.0;1',
+].join('\n');
+
+test.describe('CSV Import (Plan 05-04)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+
+  test('Settings modal has Import CSV button (D5-01)', async ({ page }) => {
+    await page.click('button[aria-label="Settings"]');
+    await expect(page.locator('#importCsvBtn')).toBeVisible();
+  });
+
+  test('Import CSV is NOT on History toolbar (D5-03)', async ({ page }) => {
+    await page.click('button[data-tab="history"]');
+    await expect(page.locator('#importCsvBtn')).not.toBeVisible();
+  });
+
+  test('CSV import flow — confirm → History shows imported rows (D5-04)', async ({ page }) => {
+    // Open Settings
+    await page.click('button[aria-label="Settings"]');
+    await expect(page.locator('#importCsvBtn')).toBeVisible();
+
+    // Intercept the confirm dialog (accept it)
+    page.once('dialog', dialog => dialog.accept());
+
+    // Simulate file selection — triggers change event → FileReader → confirm → replace()
+    await page.setInputFiles('#csvInput', {
+      name: 'test.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(SIMPLE_CSV),
+    });
+
+    // Wait for the import status to update
+    await expect(page.locator('#importStatus')).not.toBeEmpty();
+    await expect(page.locator('#importStatus')).toContainText('Import complete');
+
+    // Close Settings (Escape)
+    await page.keyboard.press('Escape');
+
+    // Navigate to History and verify the imported row is there
+    await page.click('button[data-tab="history"]');
+    await expect(page.locator('.historyTable tbody tr')).toHaveCount(1);
+  });
+
+  test('CSV import — same file can be re-imported (input.value reset)', async ({ page }) => {
+    // First import
+    await page.click('button[aria-label="Settings"]');
+    page.once('dialog', dialog => dialog.accept());
+    await page.setInputFiles('#csvInput', {
+      name: 'test.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(SIMPLE_CSV),
+    });
+    await expect(page.locator('#importStatus')).toContainText('Import complete');
+
+    // Second import of the same "file" — should work (input.value was reset)
+    page.once('dialog', dialog => dialog.accept());
+    await page.setInputFiles('#csvInput', {
+      name: 'test.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(SIMPLE_CSV),
+    });
+    await expect(page.locator('#importStatus')).toContainText('Import complete');
+  });
+
+});

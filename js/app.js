@@ -22,6 +22,7 @@ import { mountTodayScreen } from './ui/today-screen.js';
 import { mountHeader, setActiveTab } from './ui/header.js';
 import { mountHistoryScreen } from './ui/history-screen.js';
 import { downloadJSON } from './lib/import-export.js';
+import { openSettings } from './ui/settings-modal.js';
 
 const storage = createStorageLocal('nightwatch:db');
 const clock = createClockSystem();
@@ -62,6 +63,7 @@ function applyTabVisibility() {
 // Plan 02-04 wiring: header reads settings.subjectName for h1 + document.title
 // and exposes the gear → openSettings({settings}) entrypoint.
 // Plan 04-02: also receives onTabChange to switch screens (D4-07).
+// Plan 05-04: onSettings callback injects eventLog, storage, id for CSV import.
 mountHeader({
   root: headerEl,
   settings,
@@ -69,6 +71,7 @@ mountHeader({
     activeTab = tabId;
     applyTabVisibility();
   },
+  onSettings: () => openSettings({ settings, eventLog, storage, id: newEventId }),
 });
 
 // Plan 03-04 wiring: mountTodayScreen now includes the full forecast section

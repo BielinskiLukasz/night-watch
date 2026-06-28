@@ -40,13 +40,18 @@ const VALID_TABS = new Set(['today', 'history']);
  * Tab navigation (D4-07): emits onTabChange(tabId) when user clicks a tab.
  * Updates aria-selected on both tab buttons immediately (no server round-trip).
  *
+ * Plan 05-04: accepts optional onSettings callback. When provided, that
+ * callback fires instead of the default openSettings({ settings }) call,
+ * allowing app.js to inject additional deps (eventLog, storage, id).
+ *
  * @param {{
  *   root: HTMLElement,
  *   settings: { get: () => object, subscribe: (fn: (snap: object) => void) => () => void },
  *   onTabChange?: (tabId: 'today'|'history') => void,
+ *   onSettings?: () => void,
  * }} deps
  */
-export function mountHeader({ root, settings, onTabChange }) {
+export function mountHeader({ root, settings, onTabChange, onSettings }) {
   const h1 = root.querySelector('h1.subjectName');
   const trigger = root.querySelector('button.settingsTrigger');
   const tabNav = root.querySelector('nav.tabNav');
@@ -61,7 +66,13 @@ export function mountHeader({ root, settings, onTabChange }) {
   apply(settings.get());
   settings.subscribe(apply);
 
-  trigger.addEventListener('click', () => openSettings({ settings }));
+  trigger.addEventListener('click', () => {
+    if (typeof onSettings === 'function') {
+      onSettings();
+    } else {
+      openSettings({ settings });
+    }
+  });
 
   // Tab navigation (D4-07). If no onTabChange callback provided, tab clicks
   // update aria-selected state but do not switch screens.

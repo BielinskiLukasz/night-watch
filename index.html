@@ -220,6 +220,15 @@
 
       <output id="settingsErrors" class="settingsErrors" aria-live="polite"></output>
 
+      <!-- Import / Export section (Plan 05-04, D5-01, D5-03) -->
+      <fieldset>
+        <legend>Import / Export</legend>
+        <p class="importHelp">Replace all data by importing a CSV or JSON file. Export the current dataset as a dated JSON backup.</p>
+        <button type="button" id="importCsvBtn" class="btnImport">Import CSV</button>
+        <button type="button" id="importJsonBtn" class="btnImport">Import JSON</button>
+        <p id="importStatus" class="importStatus" aria-live="polite"></p>
+      </fieldset>
+
       <menu>
         <button type="button" id="settingsCancel" formnovalidate>Cancel</button>
         <!--
@@ -233,6 +242,11 @@
       </menu>
     </form>
   </dialog>
+
+  <!-- Hidden file inputs for import (Plan 05-04 / D5-01). Triggered programmatically
+       by the Settings modal import buttons; never visible to the user directly. -->
+  <input type="file" id="csvInput" accept=".csv,text/csv" style="display:none">
+  <input type="file" id="jsonInput" accept=".json,application/json" style="display:none">
 
   <script type="module" src="js/app.js"></script>
 </body>

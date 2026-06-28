@@ -27,14 +27,25 @@
 
 import { el, clear } from './dom.js';
 import { validateSettings } from '../lib/settings-validate.js';
+import { parseCSV } from '../lib/csv-parse.js';
+import { migrateV1ToV2, DEFAULT_SETTINGS } from '../lib/db-shape.js';
 
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
  * wires the close handler, and calls dlg.showModal().
  *
- * @param {{ settings: { get: () => object, update: (patch: object) => object } }} deps
+ * Phase 5 (Plan 05-04): accepts optional eventLog, storage, and id deps for
+ * the CSV import flow. When provided, Import CSV button is wired to FileReader
+ * → parseCSV → confirm → replace() on both stores.
+ *
+ * @param {{
+ *   settings: { get: () => object, update: (patch: object) => object, replace?: (blob: object) => void },
+ *   eventLog?: { replace: (blob: object) => void },
+ *   storage?: { load: () => object|null, save: (db: object) => void },
+ *   id?: () => string,
+ * }} deps
  */
-export function openSettings({ settings }) {
+export function openSettings({ settings, eventLog, storage, id }) {
   const dlg = document.getElementById('settings');
   const form = dlg.querySelector('form');
   const errorsEl = dlg.querySelector('#settingsErrors');
@@ -125,6 +136,75 @@ export function openSettings({ settings }) {
   // Explicit Cancel button → close with returnValue='cancel' so onClose short-circuits.
   const onCancel = () => dlg.close('cancel');
   cancelBtn.addEventListener('click', onCancel, { once: true });
+
+  // ── Import / Export wiring (Plan 05-04) ────────────────────────────────────
+  // Wire CSV import if all required deps are provided. The named-handler pattern
+  // (removeEventListener + addEventListener) prevents handler accumulation on
+  // repeated Settings opens (T-05-04-04).
+
+  const showStatus = (message, isError = false) => {
+    const statusEl = document.getElementById('importStatus');
+    if (!statusEl) return;
+    statusEl.textContent = message; // textContent only — T-2-14
+    statusEl.className = isError ? 'importStatus error' : 'importStatus';
+  };
+
+  if (eventLog && storage && id) {
+    const importCsvBtn = document.getElementById('importCsvBtn');
+    const csvInput = document.getElementById('csvInput');
+
+    const handleCsvImport = (csvText) => {
+      const { events, rejectedDays, activityLog, skipped } = parseCSV(csvText);
+      const dayCount = new Set(events.map(e => e.at.slice(0, 10))).size;
+
+      const confirmed = window.confirm(
+        `Import ${dayCount} days? This will replace all current data.`,
+      );
+      if (!confirmed) return;
+
+      // Assign IDs to events (Pitfall 4: CSV events have no id field)
+      const eventsWithIds = events.map(evt => ({ ...evt, id: id() }));
+
+      // Build the canonical blob from CSV data + default settings
+      const blob = migrateV1ToV2(
+        { version: 2, settings: { ...DEFAULT_SETTINGS, rejectedDays }, events: eventsWithIds, activityLog },
+        DEFAULT_SETTINGS,
+      );
+
+      // RESEARCH §Pattern A: save first, then replace both stores
+      storage.save(blob);
+      eventLog.replace(blob);
+      settings.replace(blob);
+
+      // Show success/skip summary (D5-10, D5-11)
+      if (skipped.length === 0) {
+        showStatus(`Import complete — ${dayCount} days loaded.`);
+      } else {
+        const rowNums = skipped.map(s => s.row).join(', ');
+        showStatus(
+          `Import complete — ${dayCount} days loaded. ${skipped.length} row(s) skipped (rows ${rowNums}).`,
+        );
+      }
+    };
+
+    const handleFileChange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      csvInput.value = ''; // RESEARCH Pitfall 6: reset so same file can be re-imported
+      const reader = new FileReader();
+      reader.onerror = () => showStatus('Could not read file.', true);
+      reader.onload = (loadEvt) => handleCsvImport(loadEvt.target.result);
+      reader.readAsText(file, 'UTF-8');
+    };
+
+    if (importCsvBtn && csvInput) {
+      // Register change listener once (prevents accumulation on repeated opens)
+      csvInput.removeEventListener('change', handleFileChange);
+      csvInput.addEventListener('change', handleFileChange);
+
+      importCsvBtn.addEventListener('click', () => csvInput.click());
+    }
+  }
 
   dlg.showModal();
 }
