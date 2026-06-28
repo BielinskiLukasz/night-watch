@@ -225,6 +225,18 @@ describe('parseCSV', () => {
   // Excel seconds suffix (HH:MM:SS → HH:MM only)
   // -------------------------------------------------------------------------
 
+  it('single-digit hour "7:30" is parsed the same as "07:30"', () => {
+    const csv = [
+      'Data;Pobudka;Zasniecie',
+      '28.06.2026;7:30;22:00',
+    ].join('\n');
+    const { events, skipped } = parseCSV(csv);
+    assert.equal(skipped.length, 0, 'no rows skipped');
+    const wake = events.find(e => e.type === 'wake');
+    assert.ok(wake, 'wake event must exist');
+    assert.ok(wake.at.endsWith('T07:30'), `7:30 must parse as 07:30, got: ${wake.at}`);
+  });
+
   it('Excel seconds suffix in time ("07:30:00") → parsed correctly with only HH:MM used', () => {
     const csv = [
       'Data;Pobudka;Zasniecie',

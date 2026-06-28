@@ -114,7 +114,7 @@ function parseDate(raw, fmt) {
  * @throws {Error} on malformed input
  */
 function parseEventAt(dateStr, timeStr) {
-  const hhmm = timeStr.trim().slice(0, 5); // strip seconds if present
+  const hhmm = timeStr.trim().slice(0, 5).padStart(5, '0'); // strip seconds; pad "7:30" → "07:30"
   const raw = `${dateStr}T${hhmm}`;
   return formatLocalISO(roundTo5(parseLocalISO(raw)));
 }
