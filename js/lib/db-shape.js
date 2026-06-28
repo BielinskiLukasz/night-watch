@@ -72,16 +72,20 @@ export const DEFAULT_SETTINGS = Object.freeze({
 export function migrateV1ToV2(blob, defaultSettings) {
   // Fresh install — no existing data.
   if (blob === null || blob === undefined) {
-    return { version: 2, settings: { ...defaultSettings }, events: [] };
+    return { version: 2, settings: { ...defaultSettings }, events: [], activityLog: {} };
   }
 
   // v2 is already the canonical shape — idempotent passthrough.
   // However, if rejectedDays is missing (v2 blob predating Phase 4), add it
   // without any other mutation so callers upgrading from Phase 3 databases
   // get the new field without triggering a full re-migration.
+  // Similarly inject activityLog: {} for blobs predating Phase 5 (D5-17).
   if (blob.version === 2) {
     if (blob.settings && !Array.isArray(blob.settings.rejectedDays)) {
       blob.settings.rejectedDays = [];
+    }
+    if (!blob.activityLog || typeof blob.activityLog !== 'object' || Array.isArray(blob.activityLog)) {
+      blob.activityLog = {};
     }
     return blob;
   }
@@ -94,6 +98,7 @@ export function migrateV1ToV2(blob, defaultSettings) {
       version: 2,
       settings: { ...defaultSettings },
       events: Array.isArray(blob.events) ? blob.events : [],
+      activityLog: {},
     };
   }
 

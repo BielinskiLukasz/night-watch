@@ -241,6 +241,68 @@ describe('migrateV1ToV2 — rejectedDays handling', () => {
 });
 
 // ---------------------------------------------------------------------------
+// migrateV1ToV2 — activityLog injection (D5-17, Phase 5 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — activityLog injection', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('fresh install: activityLog is present as empty object', () => {
+    const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
+    assert.ok(
+      result.activityLog !== null && typeof result.activityLog === 'object' && !Array.isArray(result.activityLog),
+      'activityLog must be a plain object on fresh install',
+    );
+    assert.equal(Object.keys(result.activityLog).length, 0, 'activityLog must be empty on fresh install');
+  });
+
+  it('v1 blob migration: activityLog is present as empty object', () => {
+    infoSpy.mock.resetCalls();
+    const result = migrateV1ToV2({ version: 1, events: [] }, DEFAULT_SETTINGS);
+    assert.ok(
+      result.activityLog !== null && typeof result.activityLog === 'object' && !Array.isArray(result.activityLog),
+      'activityLog must be a plain object after v1→v2 migration',
+    );
+    assert.equal(Object.keys(result.activityLog).length, 0, 'activityLog must be empty after v1→v2 migration');
+  });
+
+  it('v2 blob without activityLog: migrateV1ToV2 injects activityLog: {}', () => {
+    const v2 = {
+      version: 2,
+      settings: { subjectName: 'Test', cutoverHour: 4, maxDelta: 30, rejectedDays: [] },
+      events: [],
+    };
+    const result = migrateV1ToV2(v2, DEFAULT_SETTINGS);
+    assert.equal(result, v2, 'must return same blob reference for v2');
+    assert.ok(
+      result.activityLog !== null && typeof result.activityLog === 'object' && !Array.isArray(result.activityLog),
+      'activityLog must be injected into v2 blob missing it',
+    );
+    assert.equal(Object.keys(result.activityLog).length, 0, 'injected activityLog must be empty');
+  });
+
+  it('v2 blob with existing activityLog: migrateV1ToV2 does not clobber it', () => {
+    const v2 = {
+      version: 2,
+      settings: { subjectName: 'Test', cutoverHour: 4, rejectedDays: [] },
+      events: [],
+      activityLog: { '2026-06-28': 3.5 },
+    };
+    const result = migrateV1ToV2(v2, DEFAULT_SETTINGS);
+    assert.equal(result, v2, 'must return same blob reference for v2');
+    assert.equal(result.activityLog['2026-06-28'], 3.5, 'existing activityLog must not be clobbered');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // migrateV1ToV2 — unsupported version (throw)
 // ---------------------------------------------------------------------------
 
