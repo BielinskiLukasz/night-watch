@@ -109,7 +109,10 @@ export function parseCSV(text) {
   const activityLog = {};
   const skipped = [];
 
-  const lines = text.split(/\r?\n/);
+  // Strip UTF-8 BOM (﻿) that Excel prepends to CSV exports.
+  // Without this, the first header becomes "﻿Data" and misses the COL map.
+  const normalized = text.replace(/^﻿/, '');
+  const lines = normalized.split(/\r?\n/);
   if (lines.length === 0) return { events, rejectedDays, activityLog, skipped };
 
   const headerLine = lines[0];

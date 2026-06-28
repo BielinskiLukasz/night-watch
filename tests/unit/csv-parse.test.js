@@ -270,6 +270,23 @@ describe('parseCSV', () => {
   });
 
   // -------------------------------------------------------------------------
+  // UTF-8 BOM handling (Excel CSV exports)
+  // -------------------------------------------------------------------------
+
+  it('UTF-8 BOM at start of file is stripped — headers still resolve correctly', () => {
+    // Excel prepends ﻿ to UTF-8 CSV exports. Without stripping, the first
+    // header becomes "﻿Data" and misses the COL map → 0 events parsed.
+    const bom = '﻿';
+    const csv = bom + [
+      'Data;Pobudka;Zasniecie',
+      '28.06.2026;07:00;22:00',
+    ].join('\n');
+    const { events, skipped } = parseCSV(csv);
+    assert.equal(events.filter(e => e.type === 'wake').length, 1, 'wake event must be parsed despite BOM');
+    assert.equal(skipped.length, 0, 'no rows skipped');
+  });
+
+  // -------------------------------------------------------------------------
   // Multiple rows
   // -------------------------------------------------------------------------
 

@@ -30,6 +30,13 @@ import { validateSettings } from '../lib/settings-validate.js';
 import { parseCSV } from '../lib/csv-parse.js';
 import { migrateV1ToV2, DEFAULT_SETTINGS } from '../lib/db-shape.js';
 
+// Module-level handler references — prevents listener accumulation when Settings
+// is opened multiple times (each open removes the prior handler before adding a new one).
+let _csvClickHandler = null;
+let _csvChangeHandler = null;
+let _jsonClickHandler = null;
+let _jsonChangeHandler = null;
+
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
  * wires the close handler, and calls dlg.showModal().
@@ -155,6 +162,12 @@ export function openSettings({ settings, eventLog, storage, id }) {
 
     const handleCsvImport = (csvText) => {
       const { events, rejectedDays, activityLog, skipped } = parseCSV(csvText);
+
+      if (skipped.length > 0) {
+        console.warn('[Nightwatch] CSV import skipped rows:', skipped);
+      }
+      console.log(`[Nightwatch] CSV parsed: ${events.length} events, ${skipped.length} skipped`);
+
       const dayCount = new Set(events.map(e => e.at.slice(0, 10))).size;
 
       const confirmed = window.confirm(
@@ -187,22 +200,25 @@ export function openSettings({ settings, eventLog, storage, id }) {
       }
     };
 
-    const handleFileChange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      csvInput.value = ''; // RESEARCH Pitfall 6: reset so same file can be re-imported
-      const reader = new FileReader();
-      reader.onerror = () => showStatus('Could not read file.', true);
-      reader.onload = (loadEvt) => handleCsvImport(loadEvt.target.result);
-      reader.readAsText(file, 'UTF-8');
-    };
+    // Remove prior handler before adding new one (module-level ref prevents accumulation)
+    if (csvInput) {
+      if (_csvChangeHandler) csvInput.removeEventListener('change', _csvChangeHandler);
+      _csvChangeHandler = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        csvInput.value = ''; // RESEARCH Pitfall 6: reset so same file can be re-imported
+        const reader = new FileReader();
+        reader.onerror = () => showStatus('Could not read file.', true);
+        reader.onload = (loadEvt) => handleCsvImport(loadEvt.target.result);
+        reader.readAsText(file, 'UTF-8');
+      };
+      csvInput.addEventListener('change', _csvChangeHandler);
+    }
 
     if (importCsvBtn && csvInput) {
-      // Register change listener once (prevents accumulation on repeated opens)
-      csvInput.removeEventListener('change', handleFileChange);
-      csvInput.addEventListener('change', handleFileChange);
-
-      importCsvBtn.addEventListener('click', () => csvInput.click());
+      if (_csvClickHandler) importCsvBtn.removeEventListener('click', _csvClickHandler);
+      _csvClickHandler = () => csvInput.click();
+      importCsvBtn.addEventListener('click', _csvClickHandler);
     }
 
     // ── JSON import wiring (Plan 05-05) ──────────────────────────────────────
@@ -239,21 +255,24 @@ export function openSettings({ settings, eventLog, storage, id }) {
       showStatus(`Import complete — ${dayCount} days restored.`);
     };
 
-    const handleJsonFileChange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      jsonInput.value = ''; // Pitfall 6: reset so same file can be re-imported
-      const reader = new FileReader();
-      reader.onerror = () => showStatus('Could not read file.', true);
-      reader.onload = (loadEvt) => handleJsonImport(loadEvt.target.result);
-      reader.readAsText(file, 'UTF-8');
-    };
+    if (jsonInput) {
+      if (_jsonChangeHandler) jsonInput.removeEventListener('change', _jsonChangeHandler);
+      _jsonChangeHandler = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        jsonInput.value = ''; // Pitfall 6: reset so same file can be re-imported
+        const reader = new FileReader();
+        reader.onerror = () => showStatus('Could not read file.', true);
+        reader.onload = (loadEvt) => handleJsonImport(loadEvt.target.result);
+        reader.readAsText(file, 'UTF-8');
+      };
+      jsonInput.addEventListener('change', _jsonChangeHandler);
+    }
 
     if (importJsonBtn && jsonInput) {
-      jsonInput.removeEventListener('change', handleJsonFileChange);
-      jsonInput.addEventListener('change', handleJsonFileChange);
-
-      importJsonBtn.addEventListener('click', () => jsonInput.click());
+      if (_jsonClickHandler) importJsonBtn.removeEventListener('click', _jsonClickHandler);
+      _jsonClickHandler = () => jsonInput.click();
+      importJsonBtn.addEventListener('click', _jsonClickHandler);
     }
   }
 
