@@ -270,6 +270,49 @@ describe('parseCSV', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Date format DD-MM-YYYY (dashes, day-first) — Excel Polish CSV variant
+  // -------------------------------------------------------------------------
+
+  it('DD-MM-YYYY dash format is parsed correctly (30-03-2026 → 2026-03-30)', () => {
+    const csv = [
+      'Data,Pobudka,Zasniecie',
+      '30-03-2026,07:00,22:00',
+    ].join('\n');
+    const { events, skipped } = parseCSV(csv);
+    assert.equal(skipped.length, 0, 'no rows skipped');
+    const wake = events.find(e => e.type === 'wake');
+    assert.ok(wake, 'wake event must exist');
+    assert.ok(wake.at.startsWith('2026-03-30'), `date must be 2026-03-30, got ${wake.at}`);
+  });
+
+  // -------------------------------------------------------------------------
+  // Fuzzy header matching — encoding-garbled headers (Windows-1250 → UTF-8)
+  // -------------------------------------------------------------------------
+
+  it('encoding-garbled "Za?ni?cie" is recognized as bedtime via fuzzy match', () => {
+    // Simulates Zaśnięcie read as Windows-1250 in a UTF-8 FileReader:
+    // ś and ę each become a literal ? character.
+    const csv = [
+      'Data,Pobudka,Za?ni?cie',
+      '28.06.2026,07:00,22:00',
+    ].join('\n');
+    const { events, skipped } = parseCSV(csv);
+    assert.equal(skipped.length, 0, 'no rows skipped');
+    assert.ok(events.find(e => e.type === 'bedtime'), 'bedtime event must be parsed from garbled header');
+  });
+
+  it('encoding-garbled "Aktywno??" is recognized as activity via fuzzy match', () => {
+    const csv = [
+      'Data,Pobudka,Aktywno??',
+      '28.06.2026,07:00,3.5',
+    ].join('\n');
+    const { activityLog, skipped } = parseCSV(csv);
+    assert.equal(skipped.length, 0, 'no rows skipped');
+    assert.ok('2026-06-28' in activityLog, 'activity must be recognized from garbled header');
+    assert.equal(activityLog['2026-06-28'], 3.5);
+  });
+
+  // -------------------------------------------------------------------------
   // UTF-8 BOM handling (Excel CSV exports)
   // -------------------------------------------------------------------------
 
