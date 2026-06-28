@@ -114,5 +114,25 @@ export function createSettingsStore({ storage, defaults = DEFAULT_SETTINGS }) {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
     },
+
+    /**
+     * Replace the entire in-memory db with an imported blob (DATA-02 / DATA-05).
+     * Migrates v1→v2, normalizes settings via validateSettings mode:'load',
+     * persists the full blob, and fires all subscribers with the new snapshot.
+     *
+     * Pattern A (RESEARCH.md): mutates shared db in place so subscriber
+     * registrations from app.js boot time remain intact after import.
+     *
+     * @param {object} blob  raw parsed JSON (may be v1 or v2; v3+ throws via migrateV1ToV2)
+     */
+    replace(blob) {
+      db = migrateV1ToV2(blob, defaults);
+      const { normalized } = validateSettings(db.settings ?? {}, { mode: 'load', defaults });
+      db.settings = normalized;
+      storage.save(db);
+      const next = snapshot();
+      const subs = [...subscribers];
+      for (const fn of subs) fn(next);
+    },
   };
 }

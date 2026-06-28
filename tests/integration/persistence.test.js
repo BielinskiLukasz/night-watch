@@ -91,7 +91,8 @@ describe('round-trip lossiness (D-04 + D-05 canonical JSON contract)', () => {
     log.addEventAt('bedtime', '2026-05-25T22:10');
 
     const blob = storage._snapshot();
-    assert.deepEqual(Object.keys(blob).sort(), ['events', 'settings', 'version']);
+    // Phase 5 (Plan 05-01): canonical blob shape now includes activityLog (D5-17)
+    assert.deepEqual(Object.keys(blob).sort(), ['activityLog', 'events', 'settings', 'version']);
     assert.equal(blob.version, 2);
     assert.deepEqual(blob.settings, { ...DEFAULT_SETTINGS });
     assert.ok(Array.isArray(blob.events));
