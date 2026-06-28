@@ -168,7 +168,21 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   3. User imports a CSV, modifies some events, exports to JSON, and confirms the export file reflects all modifications
   4. The app treats the exported JSON as authoritative; if localStorage is cleared, reimporting the JSON file restores full state
 
-**Plans**: TBD
+**Plans**: 5 plans across 3 waves
+
+**Wave 1** *(TDD foundation — parallel)*
+
+  - [ ] 05-01-PLAN.md — TDD: csv-parse.js pure parser (Polish headers, delimiter/date auto-detect, nap optional, activity/rejected columns); db-shape.js activityLog schema injection in all three migration paths
+  - [ ] 05-02-PLAN.md — TDD: store.replace(blob) API on event-log.js and settings.js + integration test (replace → subscribers fire → state correct)
+
+**Wave 2** *(blocked on Wave 1 completion — parallel)*
+
+  - [ ] 05-03-PLAN.md — Export JSON button on History screen toolbar; downloadJSON helper (import-export.js); E2E test for download + file structure
+  - [ ] 05-04-PLAN.md — CSV import in Settings modal (FileReader, confirmation dialog, success/skip feedback, store replace); E2E test for CSV import flow
+
+**Wave 3** *(blocked on Wave 2 completion — has human-verify checkpoint)*
+
+  - [ ] 05-05-PLAN.md — JSON import in Settings modal (FileReader, version guard, confirmation, store replace); round-trip E2E test; full test suite verification; human verification of all four success criteria
 
 ### Phase 6: Life Stages
 
@@ -223,7 +237,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 2. Configuration & Settings | 7/7 | Complete    | 2026-05-28 |
 | 3. Forecast Engine & Today Screen | 5/5 | Complete    | 2026-06-04 |
 | 4. History Screen & Edit/Delete | 4/4 | Complete | 2026-06-27 |
-| 5. Data Import/Export | 0/TBD | Not started | — |
+| 5. Data Import/Export | 0/5 | Not started | — |
 | 6. Life Stages | 0/TBD | Not started | — |
 | 7. Charts, Heatmap & Accuracy | 0/TBD | Not started | — |
 | 8. PWA & Platform Hardening | 0/TBD | Not started | — |
