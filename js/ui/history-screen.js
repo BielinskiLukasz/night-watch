@@ -34,6 +34,11 @@ import { openManualEntry } from './manual-entry.js';
  * Sets up reactive subscriptions so the table re-renders whenever the event
  * log or settings change (D3-12 pattern / RESEARCH §Pattern 1).
  *
+ * Phase 5 (Plan 05-03): accepts optional onExport callback. When provided, a
+ * .historyToolbar with an "Export JSON" button is rendered above the table.
+ * The toolbar is built once at mount time and is NOT cleared on re-renders —
+ * render() targets only the dedicated tableRootEl below the toolbar.
+ *
  * @param {{
  *   root: HTMLElement,
  *   eventLog: {
@@ -44,10 +49,36 @@ import { openManualEntry } from './manual-entry.js';
  *     get: () => object,
  *     subscribe: (fn: (snap: object) => void) => () => void,
  *   },
+ *   onExport?: () => void,
  * }} deps
  * @returns {{ unsubscribe: () => void }}
  */
-export function mountHistoryScreen({ root, eventLog, settings }) {
+export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
+  // Clear root once at mount, then build permanent structure.
+  root.replaceChildren();
+
+  // Toolbar (D5-02): only when caller provides onExport.
+  if (onExport) {
+    const toolbarEl = document.createElement('div');
+    toolbarEl.className = 'historyToolbar';
+
+    const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
+    exportBtn.id = 'exportJsonBtn';
+    exportBtn.className = 'btnExport';
+    exportBtn.setAttribute('aria-label', 'Export sleep data as JSON');
+    exportBtn.textContent = 'Export JSON';
+    exportBtn.addEventListener('click', () => onExport());
+
+    toolbarEl.appendChild(exportBtn);
+    root.appendChild(toolbarEl);
+  }
+
+  // Dedicated table mount point — render() only touches this element.
+  const tableRootEl = document.createElement('div');
+  tableRootEl.className = 'historyTableRoot';
+  root.appendChild(tableRootEl);
+
   const render = () => {
     const snap = settings.get();
     // Fetch all days (no limit) — T-04-06 accept: Phase 4 assumes <365 days.
@@ -55,18 +86,19 @@ export function mountHistoryScreen({ root, eventLog, settings }) {
     // lib internally. We pass the settings snapshot so day.rejected is annotated.
     const dayRecords = eventLog.daysByCalendar(Infinity, snap);
 
-    // Clear and repopulate root (T-04-04: replaceChildren never touches innerHTML).
-    root.replaceChildren();
+    // Clear and repopulate only the table root (T-04-04: replaceChildren never
+    // touches innerHTML). The toolbar above is preserved across re-renders.
+    tableRootEl.replaceChildren();
 
     if (dayRecords.length === 0) {
-      renderEmptyState(root);
+      renderEmptyState(tableRootEl);
       return;
     }
 
     // Days are already newest-first from daysByCalendar (D4-02).
     // Pass eventLog and settings so buildTable can wire edit/delete handlers.
     const table = buildTable(dayRecords, snap.timeFormat, eventLog, settings);
-    root.appendChild(table);
+    tableRootEl.appendChild(table);
 
     // D4-08: scroll to top on every render (covers tab re-visit case).
     root.scrollTop = 0;

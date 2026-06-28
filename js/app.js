@@ -21,6 +21,7 @@ import { createSettingsStore } from './store/settings.js';
 import { mountTodayScreen } from './ui/today-screen.js';
 import { mountHeader, setActiveTab } from './ui/header.js';
 import { mountHistoryScreen } from './ui/history-screen.js';
+import { downloadJSON } from './lib/import-export.js';
 
 const storage = createStorageLocal('nightwatch:db');
 const clock = createClockSystem();
@@ -78,13 +79,15 @@ mountHeader({
 mountTodayScreen({ root: todayScreenEl, eventLog, settings });
 
 // Plan 04-02 wiring: History screen — read-only day-column table (Wave 2).
-// historyTableRootEl is the inner mount point; historyScreenEl is the outer
-// section toggled by applyTabVisibility(). Wave 3 adds edit/delete handlers.
+// Plan 05-03 wiring: onExport callback injects downloadJSON so the Export JSON
+// button on the History toolbar can trigger a download without importing
+// storage/clock into history-screen.js directly (composition-root pattern).
 if (historyTableRootEl) {
   mountHistoryScreen({
     root: historyTableRootEl,
     eventLog,
     settings,
+    onExport: () => downloadJSON(storage, clock),
   });
 }
 
