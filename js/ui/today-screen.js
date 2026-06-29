@@ -42,6 +42,7 @@ import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h } from '../lib/time.js';
 import { forecast, selectNextEvent } from '../lib/forecast.js';
+import { filterDayRecordsByStage } from '../lib/stages.js';
 
 /** Single source of truth for the 4 quick-log button definitions (D-10).
  *  Exported (Plan 01-08 / 01-UAT.md gap 1) so the integration test can pin
@@ -332,6 +333,70 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
   }
 }
 
+// ---------------------------------------------------------------------------
+// Stage selector rendering helper (Plan 06-03 / D6-09)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render (or hide) the stage selector dropdown inside its container element.
+ *
+ * - When stages is empty: hides the container (D6-09 — only shown when stages exist).
+ * - When stages exist: shows a <select> with an "All data" option (D6-12) plus one
+ *   option per stage; selecting one fires settings.update({activeStageId}).
+ * - Uses textContent throughout — never innerHTML (T-07 / XSS invariant).
+ *
+ * @param {HTMLElement|null} container    the #stage-selector-container element
+ * @param {object[]}         stages       settings.stages array
+ * @param {string|null}      activeStageId  settings.activeStageId
+ * @param {object}           settingsStore  settings object with .update()
+ */
+function renderStageSelector(container, stages, activeStageId, settingsStore) {
+  if (!container) return;
+  if (!stages || stages.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = '';
+
+  // Clear and rebuild contents
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  const wrapper = el('div', { className: 'stage-selector-wrapper' });
+
+  const label = el('label', { className: 'stage-selector-label' });
+  label.appendChild(document.createTextNode('Showing data for: '));
+
+  const select = el('select', { className: 'stage-select' });
+  select.setAttribute('aria-label', 'Select data stage');
+
+  // "All data" option (D6-12)
+  const allOpt = el('option', { value: '', textContent: 'All data' });
+  if (!activeStageId) allOpt.selected = true;
+  select.appendChild(allOpt);
+
+  for (const stage of stages) {
+    const opt = el('option', { value: stage.id, textContent: stage.name }); // textContent — never innerHTML
+    if (stage.id === activeStageId) opt.selected = true;
+    select.appendChild(opt);
+  }
+
+  label.appendChild(select);
+  wrapper.appendChild(label);
+  container.appendChild(wrapper);
+
+  const note = el('p', {
+    id: 'stage-fallback-note',
+    className: 'stage-fallback-note',
+  });
+  note.style.display = 'none';
+  container.appendChild(note);
+
+  select.addEventListener('change', () => {
+    const newId = select.value || null;
+    settingsStore.update({ activeStageId: newId });
+  });
+}
+
 /**
  * Mount the Today screen under `root`.
  *
@@ -383,6 +448,11 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     );
   }
 
+  // Plan 06-03 — Stage selector container (D6-09).
+  // Hidden by default; renderStageSelector() shows it only when stages exist.
+  const stageSelectorContainer = el('div', { id: 'stage-selector-container' });
+  stageSelectorContainer.style.display = 'none';
+
   // Plan 03-04 — Forecast section containers (D3-07 layout order):
   //   nextEventCard → coldStartMsg → forecastCards (above grouping toggle + day list)
   const nextEventCard = el('div', { id: 'next-event-card' });
@@ -419,8 +489,9 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     textContent: '+ Add event',
   });
 
-  // D3-07 layout: quickLog → nextEventCard → coldStartMsg → forecastCards → toggle → dayList → addBtn
-  root.replaceChildren(quickLog, nextEventCard, coldStartMsg, forecastCards, toggle, dayList, addEventBtn);
+  // D3-07 layout: quickLog → stageSelector → nextEventCard → coldStartMsg → forecastCards → toggle → dayList → addBtn
+  // Plan 06-03: stageSelectorContainer inserted between quickLog and nextEventCard (D6-09).
+  root.replaceChildren(quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList, addEventBtn);
 
   // Grouping toggle click — commit-on-click via settings.update (D2-16).
   // No-op when clicking the already-active button to avoid spurious
@@ -547,7 +618,39 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     // forecast input regardless of the display groupingMode, because the forecast
     // algorithm is calibrated to the sleep-cycle day boundary (D3-02 / D-08).
     // cutoverHour is injected from settings (D2-17 / CFG-08 seam).
-    const forecastDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    const allForecastDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+
+    // D6-11: stage filter + thin-stage fallback (Plan 06-03).
+    // When the active stage has fewer than minDays valid records, fall back to
+    // all data and surface a note so the user understands why.
+    const stages = snap.stages || [];
+    const activeStageId = snap.activeStageId || null;
+    let forecastDays = allForecastDays;
+    let thinStage = false;
+
+    if (activeStageId) {
+      const filtered = filterDayRecordsByStage(allForecastDays, stages, activeStageId);
+      const validCount = filtered.filter((d) => !d.rejected).length;
+      if (validCount < (snap.minDays || 7)) {
+        thinStage = true;
+        forecastDays = allForecastDays; // fall back to all data (D6-11)
+      } else {
+        forecastDays = filtered;
+      }
+    }
+
+    // Render stage selector and update fallback note visibility.
+    renderStageSelector(stageSelectorContainer, stages, activeStageId, settings);
+    const noteEl = document.getElementById('stage-fallback-note');
+    if (noteEl) {
+      if (thinStage) {
+        noteEl.textContent = 'Not enough data in this stage — showing all data.';
+        noteEl.style.display = '';
+      } else {
+        noteEl.style.display = 'none';
+      }
+    }
+
     const predictions = forecast(forecastDays, snap);
     renderForecastSection(predictions, snap, forecastDays, nextEventCard, coldStartMsg, forecastCards);
   }
