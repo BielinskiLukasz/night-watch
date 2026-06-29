@@ -51,6 +51,8 @@ export const RULES = Object.freeze({
   minDays:      { type: 'integer',  min: 1,  max: 90 },
   windowDays:   { type: 'integer',  min: 3,  max: 90 },
   statBlend:    { type: 'enum',     values: new Set(['median', 'mean', 'blend']) },
+  stages:        { type: 'stage[]' },         // D6-01: array of life-stage objects
+  activeStageId: { type: 'null-or-string' },  // D6-02: selected stage id or null
 });
 
 // ---------------------------------------------------------------------------
@@ -163,6 +165,42 @@ function checkField(field, raw, rule) {
       // an Array; individual date-string format is not enforced here.
       if (!Array.isArray(raw) || raw.some(item => typeof item !== 'string')) {
         return { ok: false, message: `${field} must be an array of strings.` };
+      }
+      return { ok: true, value: raw };
+    }
+
+    case 'stage[]': {
+      // D6-01: each stage must be {id, name, startDate} strings + endDate string|null
+      if (!Array.isArray(raw)) {
+        return { ok: false, message: `${field} must be an array.` };
+      }
+      for (const item of raw) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return { ok: false, message: `Each stage must be an object.` };
+        }
+        if (typeof item.id !== 'string' || !item.id.trim()) {
+          return { ok: false, message: `Each stage must have a non-empty string id.` };
+        }
+        if (typeof item.name !== 'string' || !item.name.trim()) {
+          return { ok: false, message: `Each stage must have a non-empty string name.` };
+        }
+        if (typeof item.startDate !== 'string' || !item.startDate.trim()) {
+          return { ok: false, message: `Each stage must have a non-empty string startDate.` };
+        }
+        if (item.endDate !== null && typeof item.endDate !== 'string') {
+          return { ok: false, message: `Stage endDate must be a string or null.` };
+        }
+      }
+      return { ok: true, value: raw };
+    }
+
+    case 'null-or-string': {
+      // D6-02: activeStageId is null (all data) or a non-empty string id
+      if (raw === null || raw === undefined) {
+        return { ok: true, value: null };
+      }
+      if (typeof raw !== 'string') {
+        return { ok: false, message: `${field} must be null or a string.` };
       }
       return { ok: true, value: raw };
     }

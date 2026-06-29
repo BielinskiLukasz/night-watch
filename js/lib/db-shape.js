@@ -30,6 +30,8 @@
  *   minDays: number,
  *   windowDays: number,
  *   statBlend: string,
+ *   stages: Array<{id: string, name: string, startDate: string, endDate: string|null}>,
+ *   activeStageId: string|null,
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -46,6 +48,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   minDays:      7,           // CFG-03
   windowDays:   7,           // CFG-06
   statBlend:    'median',    // CFG-07
+  stages:        [],          // D6-01: array of {id, name, startDate, endDate} stage objects
+  activeStageId: null,        // D6-02: currently selected stage id, or null = "All data"
 });
 
 /**
@@ -86,6 +90,13 @@ export function migrateV1ToV2(blob, defaultSettings) {
     }
     if (!blob.activityLog || typeof blob.activityLog !== 'object' || Array.isArray(blob.activityLog)) {
       blob.activityLog = {};
+    }
+    // Phase 6 forward-compat: inject stages[] and activeStageId for blobs predating Phase 6
+    if (blob.settings && !Array.isArray(blob.settings.stages)) {
+      blob.settings.stages = [];
+    }
+    if (blob.settings && !('activeStageId' in blob.settings)) {
+      blob.settings.activeStageId = null;
     }
     return blob;
   }
