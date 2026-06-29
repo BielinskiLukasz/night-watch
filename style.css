@@ -1017,10 +1017,10 @@ button[data-log]:hover {
  * Security: stage names and dates are set via textContent (T-07); no innerHTML.
  */
 
-/* Stages CRUD (Plan 06-04 / D6-13) */
+/* Stages CRUD (Plan 06-04 / D6-13) — scoped to the light-themed Settings modal */
 #stagesFieldset .stagesHelp {
   font-size: 0.85rem;
-  color: var(--color-muted, #888);
+  color: #64748b;
   margin: 0 0 0.75rem;
 }
 .stages-table {
@@ -1033,10 +1033,10 @@ button[data-log]:hover {
 .stages-table td {
   padding: 0.35rem 0.5rem;
   text-align: left;
-  border-bottom: 1px solid var(--color-border, #333);
+  border-bottom: 1px solid #e2e8f0;
 }
 .stages-table th {
-  color: var(--color-muted, #888);
+  color: #64748b;
   font-weight: 600;
 }
 .stage-actions {
@@ -1049,17 +1049,17 @@ button[data-log]:hover {
   font-size: 0.8rem;
   cursor: pointer;
   border-radius: 3px;
-  border: 1px solid var(--color-border, #555);
+  border: 1px solid #cbd5e1;
   background: transparent;
-  color: var(--color-text, #e0e0e0);
+  color: #334155;
 }
 .stage-del-btn {
-  color: var(--color-error, #e74c3c);
-  border-color: var(--color-error, #e74c3c);
+  color: #dc2626;
+  border-color: #dc2626;
 }
 .stage-inline-form {
   padding: 0.75rem 0;
-  border-bottom: 1px dashed var(--color-border, #444);
+  border-bottom: 1px dashed #e2e8f0;
 }
 .stage-inline-inputs {
   display: flex;
@@ -1071,15 +1071,15 @@ button[data-log]:hover {
   padding: 0.3rem 0.5rem;
   font-size: 0.875rem;
   border-radius: 4px;
-  border: 1px solid var(--color-border, #555);
-  background: var(--color-bg-input, #1a1a2e);
-  color: var(--color-text, #e0e0e0);
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
 }
 .stage-name-input  { flex: 2; min-width: 140px; }
 .stage-start-input { flex: 1; min-width: 120px; }
 .stage-end-input   { flex: 1; min-width: 120px; }
 .stage-form-error {
-  color: var(--color-error, #e74c3c);
+  color: #dc2626;
   font-size: 0.8rem;
   min-height: 1.2em;
 }
@@ -1095,14 +1095,14 @@ button[data-log]:hover {
   border-radius: 4px;
 }
 .stage-save-btn {
-  background: var(--color-primary, #4f46e5);
+  background: #4f46e5;
   color: #fff;
   border: none;
 }
 .stage-cancel-btn {
   background: transparent;
-  border: 1px solid var(--color-border, #555);
-  color: var(--color-text, #e0e0e0);
+  border: 1px solid #cbd5e1;
+  color: #334155;
 }
 .btnAddStage {
   margin-top: 0.5rem;
@@ -1110,12 +1110,12 @@ button[data-log]:hover {
   font-size: 0.875rem;
   cursor: pointer;
   border-radius: 4px;
-  border: 1px dashed var(--color-border, #555);
+  border: 1px dashed #94a3b8;
   background: transparent;
-  color: var(--color-text, #e0e0e0);
+  color: #475569;
 }
 .stages-empty {
   font-size: 0.875rem;
-  color: var(--color-muted, #888);
+  color: #64748b;
   font-style: italic;
 }
