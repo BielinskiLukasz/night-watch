@@ -9,7 +9,7 @@
 //   - Bad rows skipped with row number + reason in skipped[] (D5-10)
 //   - All event at-strings rounded to 5-minute boundary via parseLocalISO → roundTo5 → formatLocalISO (LOG-07)
 //
-// Returns: { events[], rejectedDays[], activityLog{}, skipped[{row, reason}] }
+// Returns: { events[], rejectedDays[], activityLog{}, stages[], skipped[{row, reason}] }
 
 import { parseLocalISO, roundTo5, formatLocalISO } from './time.js';
 
@@ -38,6 +38,11 @@ const COL = Object.freeze({
   'Nap end':        'napEnd',
   'Activity':       'activity',
   'Rejected':       'rejected',
+  // Stage / etap column (D6-07) — Polish and English variants
+  'etap':           'etap',
+  'Etap':           'etap',
+  'Stage':          'etap',
+  'stage':          'etap',
 });
 
 /**
@@ -127,6 +132,7 @@ function parseEventAt(dateStr, timeStr) {
  *   events: Array<{id: string, type: string, at: string}>,
  *   rejectedDays: string[],
  *   activityLog: Object<string, number>,
+ *   stages: Array<{id: string, name: string, startDate: string, endDate: string|null}>,
  *   skipped: Array<{row: number, reason: string}>
  * }}
  */
@@ -136,11 +142,17 @@ export function parseCSV(text) {
   const activityLog = {};
   const skipped = [];
 
+  // Stage accumulator for etap column (D6-07, D6-08)
+  const stages = [];
+  let currentEtap = null;
+  let currentEtapStart = null;
+  let currentEtapEnd = null;
+
   // Strip UTF-8 BOM (﻿) that Excel prepends to CSV exports.
   // Without this, the first header becomes "﻿Data" and misses the COL map.
   const normalized = text.replace(/^﻿/, '');
   const lines = normalized.split(/\r?\n/);
-  if (lines.length === 0) return { events, rejectedDays, activityLog, skipped };
+  if (lines.length === 0) return { events, rejectedDays, activityLog, stages, skipped };
 
   const headerLine = lines[0];
   const delimiter = detectDelimiter(headerLine);
@@ -248,7 +260,54 @@ export function parseCSV(text) {
         activityLog[dateStr] = val;
       }
     }
+
+    // Process etap column for stage auto-creation (D6-07)
+    // dateStr is guaranteed to be in scope here (row passed all required-field checks above).
+    const etapVal = (row.etap || '').trim();
+    if (etapVal) {
+      if (etapVal !== currentEtap) {
+        // New etap run — close the previous run if any
+        if (currentEtap !== null) {
+          stages.push({
+            id: String(stages.length + 1),
+            name: currentEtap,
+            startDate: currentEtapStart,
+            endDate: currentEtapEnd,
+          });
+        }
+        // Start new run
+        currentEtap = etapVal;
+        currentEtapStart = dateStr;
+        currentEtapEnd = dateStr;
+      } else {
+        // Same run — extend end date
+        currentEtapEnd = dateStr;
+      }
+    } else {
+      // Empty etap — close any open run (non-consecutive runs get separate objects D6-08)
+      if (currentEtap !== null) {
+        stages.push({
+          id: String(stages.length + 1),
+          name: currentEtap,
+          startDate: currentEtapStart,
+          endDate: currentEtapEnd,
+        });
+        currentEtap = null;
+        currentEtapStart = null;
+        currentEtapEnd = null;
+      }
+    }
   }
 
-  return { events, rejectedDays, activityLog, skipped };
+  // Close the final etap run — open-ended (D6-07: last run has endDate: null)
+  if (currentEtap !== null) {
+    stages.push({
+      id: String(stages.length + 1),
+      name: currentEtap,
+      startDate: currentEtapStart,
+      endDate: null,
+    });
+  }
+
+  return { events, rejectedDays, activityLog, stages, skipped };
 }
