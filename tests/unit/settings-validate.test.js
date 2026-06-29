@@ -33,15 +33,16 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 10 field names (D2-21 + CFG-05 rejectedDays)', () => {
+  it('has entries for all 12 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
+      'stages', 'activeStageId',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 10);
+    assert.equal(Object.keys(RULES).length, 12);
   });
 });
 
@@ -57,10 +58,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 10 keys (9 original + rejectedDays)', () => {
+  it('normalized contains all 12 keys (10 original + stages + activeStageId)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 10);
+    assert.equal(keys.length, 12);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -400,6 +401,109 @@ describe('validateSettings mode:\'load\' — lenient resets with warn', () => {
     assert.equal(result.ok, true);
     assert.equal(result.normalized.timeFormat, '12h');  // valid value preserved
     assert.equal(result.normalized.cutoverHour, DEFAULT_SETTINGS.cutoverHour);  // reset
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' — stages validation (D6-01, Phase 6 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
+  // validFields includes the two new Phase 6 fields for complete valid input
+  const validFields = {
+    subjectName: 'Baby', cutoverHour: 4, groupingMode: 'calendar',
+    rejectedDays: [], timeFormat: '24h', autoOutlier: false,
+    maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
+    stages: [], activeStageId: null,
+  };
+
+  it('accepts empty stages array', () => {
+    const result = validateSettings({ ...validFields, stages: [] }, { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts valid stage with all fields including string endDate', () => {
+    const result = validateSettings({
+      ...validFields,
+      stages: [{ id: '1', name: 'Early', startDate: '2025-01-01', endDate: '2025-06-30' }],
+    }, { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts valid stage with null endDate (open-ended stage)', () => {
+    const result = validateSettings({
+      ...validFields,
+      stages: [{ id: '1', name: 'Open', startDate: '2025-01-01', endDate: null }],
+    }, { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('rejects stages that is not an array', () => {
+    const result = validateSettings({ ...validFields, stages: 'not-an-array' }, { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'stages'), 'expected error for stages field');
+  });
+
+  it('rejects stage item missing id', () => {
+    const result = validateSettings({
+      ...validFields,
+      stages: [{ name: 'Missing id', startDate: '2025-01-01', endDate: null }],
+    }, { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'stages'), 'expected error for stages field');
+  });
+
+  it('rejects stage item missing name', () => {
+    const result = validateSettings({
+      ...validFields,
+      stages: [{ id: '1', startDate: '2025-01-01', endDate: null }],
+    }, { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'stages'), 'expected error for stages field');
+  });
+
+  it('rejects stage item missing startDate', () => {
+    const result = validateSettings({
+      ...validFields,
+      stages: [{ id: '1', name: 'S', endDate: null }],
+    }, { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'stages'), 'expected error for stages field');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — activeStageId validation (D6-02, Phase 6 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — activeStageId (D6-02)', () => {
+  const validFields = {
+    subjectName: 'Baby', cutoverHour: 4, groupingMode: 'calendar',
+    rejectedDays: [], timeFormat: '24h', autoOutlier: false,
+    maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
+    stages: [], activeStageId: null,
+  };
+
+  it('accepts null activeStageId', () => {
+    const result = validateSettings({ ...validFields, activeStageId: null }, { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts string activeStageId', () => {
+    const result = validateSettings({ ...validFields, activeStageId: '1234567890' }, { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('rejects numeric activeStageId', () => {
+    const result = validateSettings({ ...validFields, activeStageId: 123 }, { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'activeStageId'), 'expected error for activeStageId field');
+  });
+
+  it('normalizes undefined activeStageId to null in mode:\'load\'', () => {
+    const result = validateSettings({ ...validFields, activeStageId: undefined }, { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.strictEqual(result.normalized.activeStageId, null);
   });
 });
 

@@ -32,8 +32,16 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 10 keys (9 original + rejectedDays)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 10);
+  it('has exactly 12 keys (10 original + stages + activeStageId)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 12);
+  });
+
+  it('has stages: [] default', () => {
+    assert.deepStrictEqual(DEFAULT_SETTINGS.stages, []);
+  });
+
+  it('has activeStageId: null default', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.activeStageId, null);
   });
 
   // -------------------------------------------------------------------------
@@ -299,6 +307,53 @@ describe('migrateV1ToV2 — activityLog injection', () => {
     const result = migrateV1ToV2(v2, DEFAULT_SETTINGS);
     assert.equal(result, v2, 'must return same blob reference for v2');
     assert.equal(result.activityLog['2026-06-28'], 3.5, 'existing activityLog must not be clobbered');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// migrateV1ToV2 — stages / activeStageId injection (D6-01, D6-02, Phase 6 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — stages/activeStageId injection', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('v2 passthrough — injects stages: [] when absent', () => {
+    const blob = { version: 2, settings: { subjectName: 'Baby', rejectedDays: [], activityLog: {} }, events: [], activityLog: {} };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.deepStrictEqual(result.settings.stages, []);
+  });
+
+  it('v2 passthrough — injects activeStageId: null when absent', () => {
+    const blob = { version: 2, settings: { subjectName: 'Baby', rejectedDays: [], activityLog: {} }, events: [], activityLog: {} };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.strictEqual(result.settings.activeStageId, null);
+  });
+
+  it('v2 passthrough — does NOT overwrite existing stages', () => {
+    const existing = [{ id: '1', name: 'Stage 1', startDate: '2025-01-01', endDate: null }];
+    const blob = { version: 2, settings: { subjectName: 'Baby', rejectedDays: [], stages: existing, activeStageId: '1', activityLog: {} }, events: [], activityLog: {} };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.deepStrictEqual(result.settings.stages, existing);
+  });
+
+  it('v1 migration — returns blob with stages: []', () => {
+    infoSpy.mock.resetCalls();
+    const result = migrateV1ToV2({ version: 1, events: [] }, DEFAULT_SETTINGS);
+    assert.deepStrictEqual(result.settings.stages, []);
+  });
+
+  it('fresh install — returns blob with stages: [] and activeStageId: null', () => {
+    const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
+    assert.deepStrictEqual(result.settings.stages, []);
+    assert.strictEqual(result.settings.activeStageId, null);
   });
 });
 
