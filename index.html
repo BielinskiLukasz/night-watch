@@ -231,6 +231,14 @@
         <p id="importStatus" class="importStatus" aria-live="polite"></p>
       </fieldset>
 
+      <!-- Stages section (Plan 06-04 / D6-13). Stage list populated dynamically by settings-modal.js. -->
+      <fieldset id="stagesFieldset">
+        <legend>Stages</legend>
+        <p class="stagesHelp">Define named date ranges to scope forecasts to specific developmental periods.</p>
+        <div id="stagesList" role="list" aria-label="Sleep stages"></div>
+        <button type="button" id="addStageBtn" class="btnAddStage">+ Add stage</button>
+      </fieldset>
+
       <menu>
         <button type="button" id="settingsCancel" formnovalidate>Cancel</button>
         <!--

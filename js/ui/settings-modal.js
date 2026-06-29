@@ -36,6 +36,8 @@ let _csvClickHandler = null;
 let _csvChangeHandler = null;
 let _jsonClickHandler = null;
 let _jsonChangeHandler = null;
+let _stagesCrudHandler = null;
+let _addStageBtnHandler = null;
 
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
@@ -276,5 +278,204 @@ export function openSettings({ settings, eventLog, storage, id }) {
     }
   }
 
+  // ── Stages CRUD (Plan 06-04 / D6-13) ─────────────────────────────
+  mountStagesCrud({ settings });
+
   dlg.showModal();
+}
+
+// ── Stages CRUD private helpers (Plan 06-04 / D6-13) ──────────────────────────
+
+/**
+ * Wire up the Stages CRUD section inside the Settings modal.
+ * Uses module-level handler refs to prevent accumulation on repeated opens.
+ */
+function mountStagesCrud({ settings }) {
+  const listEl = document.getElementById('stagesList');
+  const addBtn = document.getElementById('addStageBtn');
+  if (!listEl || !addBtn) return;
+
+  renderStageList(listEl, settings);
+
+  if (_addStageBtnHandler) addBtn.removeEventListener('click', _addStageBtnHandler);
+  _addStageBtnHandler = () => {
+    if (listEl.querySelector('.stage-inline-form')) return;
+    listEl.appendChild(buildInlineForm(null, listEl, settings));
+    addBtn.disabled = true;
+  };
+  addBtn.addEventListener('click', _addStageBtnHandler);
+
+  if (_stagesCrudHandler) listEl.removeEventListener('click', _stagesCrudHandler);
+  _stagesCrudHandler = (e) => {
+    const editBtn   = e.target.closest('button.stage-edit-btn');
+    const delBtn    = e.target.closest('button.stage-del-btn');
+    const saveBtn   = e.target.closest('button.stage-save-btn');
+    const cancelBtn = e.target.closest('button.stage-cancel-btn');
+
+    if (editBtn) {
+      const stageId = editBtn.dataset.stageId;
+      const stage = (settings.get().stages || []).find(s => s.id === stageId);
+      if (!stage) return;
+      const row = editBtn.closest('.stage-row');
+      if (!row) return;
+      row.replaceWith(buildInlineForm(stage, listEl, settings));
+      addBtn.disabled = true;
+      return;
+    }
+
+    if (delBtn) {
+      const stageId = delBtn.dataset.stageId;
+      const snap = settings.get();
+      const stage = (snap.stages || []).find(s => s.id === stageId);
+      if (!stage) return;
+      if (!window.confirm(`Delete stage "${stage.name}"?`)) return;
+      const newStages = (snap.stages || []).filter(s => s.id !== stageId);
+      const newActiveId = snap.activeStageId === stageId ? null : snap.activeStageId;
+      settings.update({ stages: newStages, activeStageId: newActiveId });
+      renderStageList(listEl, settings);
+      addBtn.disabled = false;
+      return;
+    }
+
+    if (saveBtn) {
+      const form = saveBtn.closest('.stage-inline-form');
+      if (!form) return;
+      const stageId    = form.dataset.stageId || null;
+      const nameInput  = form.querySelector('.stage-name-input');
+      const startInput = form.querySelector('.stage-start-input');
+      const endInput   = form.querySelector('.stage-end-input');
+
+      const name      = nameInput.value.trim();
+      const startDate = startInput.value.trim();
+      const endDate   = endInput.value.trim() || null;
+
+      const errors = [];
+      if (!name)      errors.push('Stage name is required.');
+      if (!startDate) errors.push('Start date is required.');
+      if (endDate && endDate < startDate) errors.push('End date must be on or after start date.');
+
+      const errEl = form.querySelector('.stage-form-error');
+      if (errEl) errEl.textContent = errors.join(' ');
+      if (errors.length > 0) return;
+
+      const snap = settings.get();
+      const existingStages = snap.stages || [];
+
+      // Overlap warning (D6-06)
+      const newEnd = endDate;
+      const overlapping = existingStages.filter(s => {
+        if (s.id === stageId) return false;
+        const sEnd = s.endDate || '9999-12-31';
+        const nEnd = newEnd   || '9999-12-31';
+        return startDate <= sEnd && nEnd >= s.startDate;
+      });
+      if (overlapping.length > 0) {
+        const names = overlapping.map(s => `"${s.name}"`).join(', ');
+        if (!window.confirm(`This date range overlaps with ${names}. Save anyway?`)) return;
+      }
+
+      let newStages;
+      if (stageId) {
+        newStages = existingStages.map(s =>
+          s.id === stageId ? { ...s, name, startDate, endDate } : s
+        );
+      } else {
+        const newId = String(Date.now());
+        newStages = [...existingStages, { id: newId, name, startDate, endDate }];
+      }
+
+      settings.update({ stages: newStages });
+      renderStageList(listEl, settings);
+      addBtn.disabled = false;
+      return;
+    }
+
+    if (cancelBtn) {
+      const form = cancelBtn.closest('.stage-inline-form');
+      if (!form) return;
+      renderStageList(listEl, settings);
+      addBtn.disabled = false;
+    }
+  };
+  listEl.addEventListener('click', _stagesCrudHandler);
+}
+
+/**
+ * Rebuild the stage list element from current settings.
+ * Uses el()/clear() — no innerHTML. (T-07 / Pitfall #5)
+ */
+function renderStageList(listEl, settings) {
+  clear(listEl);
+  const stages = settings.get().stages || [];
+  if (stages.length === 0) {
+    listEl.appendChild(el('p', { className: 'stages-empty', textContent: 'No stages defined yet.' }));
+    return;
+  }
+
+  const table = el('table', { className: 'stages-table' });
+  const thead = el('thead', {});
+  const hrow  = el('tr', {});
+  for (const h of ['Name', 'Start', 'End', 'Actions']) {
+    hrow.appendChild(el('th', { textContent: h }));
+  }
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  const tbody = el('tbody', {});
+  for (const stage of stages) {
+    const row = el('tr', { className: 'stage-row' });
+    row.appendChild(el('td', { textContent: stage.name }));
+    row.appendChild(el('td', { textContent: stage.startDate }));
+    row.appendChild(el('td', { textContent: stage.endDate || 'ongoing' }));
+
+    const actCell = el('td', { className: 'stage-actions' });
+    const editBtn = el('button', { type: 'button', className: 'stage-edit-btn', textContent: 'Edit' });
+    editBtn.dataset.stageId = stage.id;
+    const delBtn  = el('button', { type: 'button', className: 'stage-del-btn',  textContent: 'Delete' });
+    delBtn.dataset.stageId  = stage.id;
+    actCell.appendChild(editBtn);
+    actCell.appendChild(delBtn);
+    row.appendChild(actCell);
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+  listEl.appendChild(table);
+}
+
+/**
+ * Build an inline add/edit form element for a stage.
+ * Inputs intentionally have NO `name` attribute to prevent FormData pickup.
+ */
+function buildInlineForm(stage, listEl, settings) {
+  const formEl = el('div', { className: 'stage-inline-form' });
+  if (stage) formEl.dataset.stageId = stage.id;
+
+  const inputs = el('div', { className: 'stage-inline-inputs' });
+
+  const nameInput  = el('input', { type: 'text', className: 'stage-name-input',  placeholder: 'Stage name', maxlength: '80' });
+  nameInput.setAttribute('aria-label', 'Stage name');
+  if (stage) nameInput.value = stage.name;
+
+  const startInput = el('input', { type: 'date', className: 'stage-start-input' });
+  startInput.setAttribute('aria-label', 'Start date');
+  if (stage) startInput.value = stage.startDate;
+
+  const endInput   = el('input', { type: 'date', className: 'stage-end-input' });
+  endInput.setAttribute('aria-label', 'End date (leave blank for ongoing)');
+  if (stage && stage.endDate) endInput.value = stage.endDate;
+
+  inputs.appendChild(nameInput);
+  inputs.appendChild(startInput);
+  inputs.appendChild(endInput);
+  formEl.appendChild(inputs);
+
+  const errEl = el('p', { className: 'stage-form-error' });
+  formEl.appendChild(errEl);
+
+  const btns = el('div', { className: 'stage-form-btns' });
+  btns.appendChild(el('button', { type: 'button', className: 'stage-save-btn',   textContent: 'Save' }));
+  btns.appendChild(el('button', { type: 'button', className: 'stage-cancel-btn', textContent: 'Cancel' }));
+  formEl.appendChild(btns);
+
+  return formEl;
 }

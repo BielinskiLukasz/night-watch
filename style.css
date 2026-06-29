@@ -1003,3 +1003,119 @@ button[data-log]:hover {
   font-style: italic;
   margin: 0.25rem 0 0;
 }
+
+/* ==========================================================================
+ * Plan 06-04 — Stages CRUD in Settings modal (D6-13)
+ * ==========================================================================
+ *
+ * #stagesFieldset: the stages fieldset inside the Settings modal.
+ * .stages-table: compact table listing all defined stages.
+ * .stage-inline-form: inline add/edit form row.
+ * .btnAddStage: "Add stage" trigger below the list.
+ * .stages-empty: shown when no stages are defined yet.
+ *
+ * Security: stage names and dates are set via textContent (T-07); no innerHTML.
+ */
+
+/* Stages CRUD (Plan 06-04 / D6-13) */
+#stagesFieldset .stagesHelp {
+  font-size: 0.85rem;
+  color: var(--color-muted, #888);
+  margin: 0 0 0.75rem;
+}
+.stages-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+.stages-table th,
+.stages-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border, #333);
+}
+.stages-table th {
+  color: var(--color-muted, #888);
+  font-weight: 600;
+}
+.stage-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.stage-edit-btn,
+.stage-del-btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 1px solid var(--color-border, #555);
+  background: transparent;
+  color: var(--color-text, #e0e0e0);
+}
+.stage-del-btn {
+  color: var(--color-error, #e74c3c);
+  border-color: var(--color-error, #e74c3c);
+}
+.stage-inline-form {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed var(--color-border, #444);
+}
+.stage-inline-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.stage-inline-inputs input {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #555);
+  background: var(--color-bg-input, #1a1a2e);
+  color: var(--color-text, #e0e0e0);
+}
+.stage-name-input  { flex: 2; min-width: 140px; }
+.stage-start-input { flex: 1; min-width: 120px; }
+.stage-end-input   { flex: 1; min-width: 120px; }
+.stage-form-error {
+  color: var(--color-error, #e74c3c);
+  font-size: 0.8rem;
+  min-height: 1.2em;
+}
+.stage-form-btns {
+  display: flex;
+  gap: 0.5rem;
+}
+.stage-save-btn,
+.stage-cancel-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.stage-save-btn {
+  background: var(--color-primary, #4f46e5);
+  color: #fff;
+  border: none;
+}
+.stage-cancel-btn {
+  background: transparent;
+  border: 1px solid var(--color-border, #555);
+  color: var(--color-text, #e0e0e0);
+}
+.btnAddStage {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px dashed var(--color-border, #555);
+  background: transparent;
+  color: var(--color-text, #e0e0e0);
+}
+.stages-empty {
+  font-size: 0.875rem;
+  color: var(--color-muted, #888);
+  font-style: italic;
+}
