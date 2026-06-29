@@ -163,7 +163,7 @@ export function openSettings({ settings, eventLog, storage, id }) {
     const csvInput = document.getElementById('csvInput');
 
     const handleCsvImport = (csvText) => {
-      const { events, rejectedDays, activityLog, skipped } = parseCSV(csvText);
+      const { events, rejectedDays, activityLog, stages, skipped } = parseCSV(csvText);
 
       if (skipped.length > 0) {
         console.warn('[Nightwatch] CSV import skipped rows:', skipped);
@@ -191,13 +191,19 @@ export function openSettings({ settings, eventLog, storage, id }) {
       eventLog.replace(blob);
       settings.replace(blob);
 
+      // Apply auto-detected stages from etap column (D6-07)
+      if (stages && stages.length > 0) {
+        settings.update({ stages });
+      }
+
       // Show success/skip summary (D5-10, D5-11)
+      const stageNote = stages && stages.length > 0 ? ` ${stages.length} stage(s) detected.` : '';
       if (skipped.length === 0) {
-        showStatus(`Import complete — ${dayCount} days loaded.`);
+        showStatus(`Import complete — ${dayCount} days loaded.${stageNote}`);
       } else {
         const rowNums = skipped.map(s => s.row).join(', ');
         showStatus(
-          `Import complete — ${dayCount} days loaded. ${skipped.length} row(s) skipped (rows ${rowNums}).`,
+          `Import complete — ${dayCount} days loaded. ${skipped.length} row(s) skipped (rows ${rowNums}).${stageNote}`,
         );
       }
     };
