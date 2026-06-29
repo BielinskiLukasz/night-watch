@@ -194,6 +194,11 @@ export function openSettings({ settings, eventLog, storage, id }) {
       // Apply auto-detected stages from etap column (D6-07)
       if (stages && stages.length > 0) {
         settings.update({ stages });
+        // Re-render the stages list in the open modal so the user sees the
+        // imported stages immediately (replace() reset stages to []; update()
+        // fires subscribers but no DOM subscriber is wired for import path).
+        const listEl = document.getElementById('stagesList');
+        if (listEl) renderStageList(listEl, settings);
       }
 
       // Show success/skip summary (D5-10, D5-11)
