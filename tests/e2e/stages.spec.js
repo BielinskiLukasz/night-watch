@@ -176,3 +176,240 @@ test('fallback note visible when active stage has too few valid days (D6-11)', a
   await expect(note).toBeVisible();
   await expect(note).toContainText('Not enough data');
 });
+
+// =============================================================================
+// Plan 06-04 — Settings modal Stages CRUD E2E tests
+// =============================================================================
+// These tests cover the CRUD UI added to the Settings modal (D6-13):
+//   - Add a new stage (with endDate; open-ended; validation errors)
+//   - Edit an existing stage
+//   - Delete a stage (D6-15)
+//   - Deleting the active stage resets activeStageId to null (D6-15)
+//   - Overlap warning fires and allows proceeding (D6-06)
+//
+// Storage isolation: localStorage cleared in beforeEach (inherited from above).
+// Settings modal opened via button.settingsTrigger (same pattern as settings-modal.spec.js).
+// =============================================================================
+
+// Helper: open the Settings modal
+async function openSettingsModal(page) {
+  await page.locator('button.settingsTrigger').click();
+  await expect(page.locator('dialog#settings')).toBeVisible();
+}
+
+// ── CRUD Test 1: add a new stage with endDate ─────────────────────────────────
+
+test('Settings CRUD: add a new stage saves to localStorage and shows in list', async ({ page }) => {
+  await openSettingsModal(page);
+
+  // Click Add stage button
+  await page.locator('#addStageBtn').click();
+
+  // Inline form should appear
+  await expect(page.locator('.stage-inline-form')).toBeVisible();
+
+  // Fill the form
+  await page.locator('.stage-name-input').fill('Early Phase');
+  await page.locator('.stage-start-input').fill('2025-01-01');
+  await page.locator('.stage-end-input').fill('2025-06-30');
+
+  // Save
+  await page.locator('.stage-save-btn').click();
+
+  // Inline form should be gone
+  await expect(page.locator('.stage-inline-form')).toHaveCount(0);
+
+  // Row should appear in the stages table
+  await expect(page.locator('.stages-table')).toBeVisible();
+  await expect(page.locator('.stages-table')).toContainText('Early Phase');
+
+  // Verify localStorage
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  expect(stored.settings.stages[0].name).toBe('Early Phase');
+});
+
+// ── CRUD Test 2: add a stage with open-ended (null) endDate ──────────────────
+
+test('Settings CRUD: add stage with blank endDate shows "ongoing" and null in storage', async ({ page }) => {
+  await openSettingsModal(page);
+
+  await page.locator('#addStageBtn').click();
+  await page.locator('.stage-name-input').fill('Open Stage');
+  await page.locator('.stage-start-input').fill('2025-01-01');
+  // Leave endDate blank (open-ended)
+  await page.locator('.stage-save-btn').click();
+
+  // End cell should show 'ongoing'
+  await expect(page.locator('.stages-table')).toContainText('ongoing');
+
+  // Verify localStorage: endDate must be null
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  const savedStage = stored.settings.stages.find(s => s.name === 'Open Stage');
+  expect(savedStage).toBeDefined();
+  expect(savedStage.endDate).toBeNull();
+});
+
+// ── CRUD Test 3: edit a stage ─────────────────────────────────────────────────
+
+test('Settings CRUD: edit a stage renames it in the list and in localStorage', async ({ page }) => {
+  // Seed one stage
+  const db = makeDb({
+    settings: {
+      stages: [{ id: 'stage-1', name: 'Original Name', startDate: '2025-01-01', endDate: null }],
+      activeStageId: null,
+    },
+  });
+  await seedAndReload(page, db);
+  await openSettingsModal(page);
+
+  // Click Edit button for the first stage row
+  await page.locator('.stage-edit-btn').first().click();
+
+  // Inline form should appear pre-filled
+  await expect(page.locator('.stage-inline-form')).toBeVisible();
+  await expect(page.locator('.stage-name-input')).toHaveValue('Original Name');
+
+  // Clear and fill new name
+  await page.locator('.stage-name-input').fill('');
+  await page.locator('.stage-name-input').fill('Renamed Phase');
+
+  await page.locator('.stage-save-btn').click();
+
+  // Inline form should be gone; renamed row should appear
+  await expect(page.locator('.stage-inline-form')).toHaveCount(0);
+  await expect(page.locator('.stages-table')).toContainText('Renamed Phase');
+  await expect(page.locator('.stages-table')).not.toContainText('Original Name');
+
+  // Verify localStorage
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  expect(stored.settings.stages[0].name).toBe('Renamed Phase');
+});
+
+// ── CRUD Test 4: delete a stage ───────────────────────────────────────────────
+
+test('Settings CRUD: delete a stage removes it from the list and from localStorage', async ({ page }) => {
+  // Seed one stage
+  const db = makeDb({
+    settings: {
+      stages: [{ id: 'stage-1', name: 'To Delete', startDate: '2025-01-01', endDate: null }],
+      activeStageId: null,
+    },
+  });
+  await seedAndReload(page, db);
+  await openSettingsModal(page);
+
+  // Accept the confirmation dialog
+  page.once('dialog', d => d.accept());
+  await page.locator('.stage-del-btn').first().click();
+
+  // No stage rows should remain; empty message should appear
+  await expect(page.locator('.stage-row')).toHaveCount(0);
+  await expect(page.locator('.stages-empty')).toBeVisible();
+
+  // Verify localStorage
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  expect(stored.settings.stages.length).toBe(0);
+});
+
+// ── CRUD Test 5: deleting active stage resets activeStageId to null ───────────
+
+test('Settings CRUD: deleting the active stage resets activeStageId to null (D6-15)', async ({ page }) => {
+  // Seed one stage that is active
+  const db = makeDb({
+    settings: {
+      stages: [{ id: 'active-stage', name: 'Active Stage', startDate: '2025-01-01', endDate: null }],
+      activeStageId: 'active-stage',
+    },
+  });
+  await seedAndReload(page, db);
+  await openSettingsModal(page);
+
+  // Accept the confirmation dialog
+  page.once('dialog', d => d.accept());
+  await page.locator('.stage-del-btn').first().click();
+
+  // Verify activeStageId is null in localStorage
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  expect(stored.settings.activeStageId).toBeNull();
+});
+
+// ── CRUD Test 6: validation — empty name shows error ─────────────────────────
+
+test('Settings CRUD: saving with empty name shows validation error', async ({ page }) => {
+  await openSettingsModal(page);
+
+  await page.locator('#addStageBtn').click();
+
+  // Fill startDate but leave name blank
+  await page.locator('.stage-start-input').fill('2025-01-01');
+  await page.locator('.stage-save-btn').click();
+
+  // Error element should be visible and non-empty
+  const errEl = page.locator('.stage-form-error');
+  await expect(errEl).toBeVisible();
+  const errText = await errEl.textContent();
+  expect(errText.trim().length).toBeGreaterThan(0);
+
+  // Inline form should still be present (not saved)
+  await expect(page.locator('.stage-inline-form')).toBeVisible();
+});
+
+// ── CRUD Test 7: overlap warning fires and allows proceeding (D6-06) ──────────
+
+test('Settings CRUD: overlap warning fires but allows saving when confirmed (D6-06)', async ({ page }) => {
+  // Seed one stage 2025-01-01 to 2025-06-30
+  const db = makeDb({
+    settings: {
+      stages: [{ id: 'stage-1', name: 'First Stage', startDate: '2025-01-01', endDate: '2025-06-30' }],
+      activeStageId: null,
+    },
+  });
+  await seedAndReload(page, db);
+  await openSettingsModal(page);
+
+  // Click Add stage
+  await page.locator('#addStageBtn').click();
+
+  // Fill overlapping range 2025-03-01 to 2025-12-31
+  await page.locator('.stage-name-input').fill('Overlapping Stage');
+  await page.locator('.stage-start-input').fill('2025-03-01');
+  await page.locator('.stage-end-input').fill('2025-12-31');
+
+  // Accept the overlap confirmation dialog
+  page.once('dialog', d => d.accept());
+  await page.locator('.stage-save-btn').click();
+
+  // Both stages should now be in localStorage
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('nightwatch:db');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  });
+  expect(stored).not.toBeNull();
+  expect(stored.settings.stages.length).toBe(2);
+});
