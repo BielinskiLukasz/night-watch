@@ -955,3 +955,51 @@ button[data-log]:hover {
 .importStatus.error {
   color: #e05050;
 }
+
+/* ==========================================================================
+ * Plan 06-03 — Stage selector (D6-09)
+ * ==========================================================================
+ *
+ * #stage-selector-container: hidden by default; shown by JS when stages exist.
+ * .stage-selector-wrapper: flex row — label + select inline.
+ * .stage-fallback-note: shown when active stage has too few valid days (D6-11).
+ *
+ * Security: stage names are set via textContent (T-07); no innerHTML involved.
+ */
+
+/* Stage selector (Plan 06-03 / D6-09) */
+#stage-selector-container {
+  padding: 0.5rem 0;
+}
+
+.stage-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stage-selector-label {
+  font-size: 0.875rem;
+  color: var(--color-muted, #888);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stage-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #333);
+  background: var(--color-bg-input, #1a1a2e);
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.stage-fallback-note {
+  font-size: 0.8rem;
+  color: var(--color-muted, #888);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+}
