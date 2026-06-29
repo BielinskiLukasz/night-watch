@@ -185,6 +185,62 @@ test.describe('CSV Import (Plan 05-04)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// CSV Import with etap column — Plan 06-05
+// ---------------------------------------------------------------------------
+
+const ETAP_CSV = [
+  'Date;Wake;Bedtime;etap',
+  '2025-01-01;07:00;22:00;Early',
+  '2025-01-02;07:30;22:30;Early',
+  '2025-02-01;08:00;23:00;Later',
+  '2025-02-02;08:30;23:30;Later',
+].join('\n');
+
+test.describe('CSV Import with etap column (Plan 06-05)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+
+  test('CSV import with etap column creates stages shown in Settings (D6-07, STAGE-01)', async ({ page }) => {
+    // Open Settings
+    await page.click('button[aria-label="Settings"]');
+    await expect(page.locator('#importCsvBtn')).toBeVisible();
+
+    // Accept the confirm dialog
+    page.once('dialog', dialog => dialog.accept());
+
+    // Trigger CSV import
+    await page.setInputFiles('#csvInput', {
+      name: 'etap-test.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(ETAP_CSV),
+    });
+
+    // Wait for import status to reflect stage detection
+    await expect(page.locator('#importStatus')).not.toBeEmpty();
+    await expect(page.locator('#importStatus')).toContainText('Import complete');
+    await expect(page.locator('#importStatus')).toContainText('2 stage(s) detected');
+
+    // Verify stages in localStorage (data layer check)
+    const stages = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('nightwatch:db') || '{}');
+      return db.settings && db.settings.stages ? db.settings.stages : [];
+    });
+    expect(stages).toHaveLength(2);
+    expect(stages[0].name).toBe('Early');
+    expect(stages[1].name).toBe('Later');
+    expect(stages[1].endDate).toBeNull();
+
+    // Verify stages table is rendered in Settings modal (UI layer check)
+    await expect(page.locator('.stages-table tbody tr')).toHaveCount(2);
+  });
+
+});
+
+// ---------------------------------------------------------------------------
 // JSON Import + Round-trip — Plan 05-05
 // ---------------------------------------------------------------------------
 
