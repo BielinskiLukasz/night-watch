@@ -100,8 +100,8 @@ export function openSettings({ settings, eventLog, storage, id }) {
         minDays: Number(data.get('minDays')),
         windowDays: Number(data.get('windowDays')),
         statBlend: String(data.get('statBlend') ?? ''),
-        stages: snap.stages || [],
-        activeStageId: snap.activeStageId ?? null,
+        stages: settings.get().stages || [],
+        activeStageId: settings.get().activeStageId ?? null,
       };
 
       const result = validateSettings(raw, { mode: 'save' });
