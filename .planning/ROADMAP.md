@@ -16,7 +16,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 - [x] **Phase 3: Forecast Engine & Today Screen** - Implement prediction algorithm, show next four events with min/max bands, cold-start gate, reactive updates, and prominent "next event" card (completed 2026-06-05)
 - [x] **Phase 4: History Screen & Edit/Delete** - Scrollable history table with per-row edit, delete, and "rejected" toggle; enable outlier flagging and re-computation (completed 2026-06-27)
 - [x] **Phase 5: Data Import/Export** - CSV and JSON import (round-trip), JSON export, file-as-truth workflow, localStorage as cache (completed 2026-06-29)
-- [ ] **Phase 6: Life Stages** - Manual stage boundaries (date range + name), scope forecasts to current stage
+- [x] **Phase 6: Life Stages** - Manual stage boundaries (date range + name), scope forecasts to current stage (completed 2026-06-29)
 - [ ] **Phase 7: Charts, Heatmap & Accuracy** - Sleep-length charts, time bands, nap patterns, activity correlation, calendar heatmap, three-metric accuracy dashboard, full navigation
 - [ ] **Phase 8: PWA & Platform Hardening** - Multi-file vanilla JS split, PWA manifest + service worker, offline support + file:// loading, GitHub Pages deployment, English UI, calm theme, in-app notifications only
 
@@ -200,17 +200,17 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 1** *(TDD foundation — parallel)*
 
-  - [ ] 06-01-PLAN.md (Wave 1a): TDD — db-shape.js (DEFAULT_SETTINGS + migrateV1ToV2 stages/activeStageId injection) + settings-validate.js (stages + activeStageId validation rules)
-  - [ ] 06-02-PLAN.md (Wave 1b): TDD — js/lib/stages.js (filterDayRecordsByStage pure helper) + csv-parse.js etap column extension returning stages array
+  - [x] 06-01-PLAN.md (Wave 1a): TDD — db-shape.js (DEFAULT_SETTINGS + migrateV1ToV2 stages/activeStageId injection) + settings-validate.js (stages + activeStageId validation rules)
+  - [x] 06-02-PLAN.md (Wave 1b): TDD — js/lib/stages.js (filterDayRecordsByStage pure helper) + csv-parse.js etap column extension returning stages array
 
 **Wave 2** *(blocked on Wave 1 — parallel)*
 
-  - [ ] 06-03-PLAN.md (Wave 2a): Today screen stage selector — renderStageSelector, filterDayRecordsByStage wiring, fallback note, CSS, E2E tests
-  - [ ] 06-04-PLAN.md (Wave 2b): Settings modal Stages fieldset — inline add/edit/delete CRUD, overlap warning, CSS, E2E tests
+  - [x] 06-03-PLAN.md (Wave 2a): Today screen stage selector — renderStageSelector, filterDayRecordsByStage wiring, fallback note, CSS, E2E tests
+  - [x] 06-04-PLAN.md (Wave 2b): Settings modal Stages fieldset — inline add/edit/delete CRUD, overlap warning, CSS, E2E tests
 
 **Wave 3** *(blocked on Wave 2)*
 
-  - [ ] 06-05-PLAN.md (Wave 3): Phase gate — CSV import etap→stages wiring, integration + E2E tests, security audit, full test suite, human verification
+  - [x] 06-05-PLAN.md (Wave 3): Phase gate — CSV import etap→stages wiring, integration + E2E tests, security audit, full test suite, human verification (approved 2026-06-29)
 
 ### Phase 7: Charts, Heatmap & Accuracy
 
@@ -252,7 +252,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 3. Forecast Engine & Today Screen | 5/5 | Complete    | 2026-06-04 |
 | 4. History Screen & Edit/Delete | 4/4 | Complete | 2026-06-27 |
 | 5. Data Import/Export | 5/5 | Complete | 2026-06-29 |
-| 6. Life Stages | 0/5 | Not started | — |
+| 6. Life Stages | 5/5 | Complete | 2026-06-29 |
 | 7. Charts, Heatmap & Accuracy | 0/TBD | Not started | — |
 | 8. PWA & Platform Hardening | 0/TBD | Not started | — |
 
