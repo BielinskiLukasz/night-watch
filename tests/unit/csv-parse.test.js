@@ -282,6 +282,103 @@ describe('parseCSV', () => {
   });
 
   // -------------------------------------------------------------------------
+  // etap column — stage auto-extraction (D6-07, D6-08) [Plan 06-02]
+  // -------------------------------------------------------------------------
+
+  it('CSV with etap column, one run → stages array with one stage, endDate: null (last run open-ended)', () => {
+    const csv = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;Stage1',
+      '2025-01-02;07:30;22:30;Stage1',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    assert.ok(Array.isArray(stages), 'stages must be an Array');
+    assert.equal(stages.length, 1, 'one run → one stage object');
+    const s = stages[0];
+    assert.equal(s.name, 'Stage1');
+    assert.equal(s.startDate, '2025-01-01');
+    assert.equal(s.endDate, null, 'last (and only) run must have endDate: null');
+    assert.ok(typeof s.id === 'string' && s.id.length > 0, 'id must be a non-empty string');
+  });
+
+  it('CSV with etap column, two different consecutive runs → two stage objects, first with endDate set', () => {
+    const csv = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;Stage1',
+      '2025-01-02;07:30;22:30;Stage1',
+      '2025-02-01;08:00;23:00;Stage2',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    assert.equal(stages.length, 2, 'two runs → two stage objects');
+    assert.equal(stages[0].name, 'Stage1');
+    assert.equal(stages[0].startDate, '2025-01-01');
+    assert.equal(stages[0].endDate, '2025-01-02', 'first stage must close on last row of run');
+    assert.equal(stages[1].name, 'Stage2');
+    assert.equal(stages[1].startDate, '2025-02-01');
+    assert.equal(stages[1].endDate, null, 'last run must have endDate: null');
+  });
+
+  it('CSV with three runs (A, B, A pattern) → three separate stage objects (D6-08)', () => {
+    const csv = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;A',
+      '2025-01-02;07:30;22:30;A',
+      '2025-02-01;08:00;23:00;B',
+      '2025-03-01;08:30;23:30;A',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    assert.equal(stages.length, 3, 'A,B,A → three stage objects (non-consecutive runs are separate)');
+    assert.equal(stages[0].name, 'A');
+    assert.equal(stages[0].startDate, '2025-01-01');
+    assert.equal(stages[0].endDate, '2025-01-02');
+    assert.equal(stages[1].name, 'B');
+    assert.equal(stages[1].startDate, '2025-02-01');
+    assert.equal(stages[1].endDate, '2025-02-01');
+    assert.equal(stages[2].name, 'A');
+    assert.equal(stages[2].startDate, '2025-03-01');
+    assert.equal(stages[2].endDate, null, 'last run must have endDate: null');
+  });
+
+  it('CSV with no etap column → stages: [] returned without error', () => {
+    const csv = [
+      'Data;Pobudka;Zasniecie',
+      '28.06.2026;07:00;22:00',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    assert.ok(Array.isArray(stages), 'stages must be an Array');
+    assert.equal(stages.length, 0, 'no etap column → empty stages array');
+  });
+
+  it('CSV with etap column where some rows have empty etap → empty rows end the current run (D6-08)', () => {
+    const csv = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;Stage1',
+      '2025-01-02;07:30;22:30;',
+      '2025-02-01;08:00;23:00;Stage2',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    // Stage1 run ends at 2025-01-01 (row 2 is empty), Stage2 is a second run
+    assert.equal(stages.length, 2, 'empty etap row ends the run; two separate stages expected');
+    assert.equal(stages[0].name, 'Stage1');
+    assert.equal(stages[0].endDate, '2025-01-01', 'Stage1 closes at last non-empty etap row');
+    assert.equal(stages[1].name, 'Stage2');
+    assert.equal(stages[1].endDate, null, 'Stage2 is last run → endDate: null');
+  });
+
+  it('each stage object has a non-empty string id', () => {
+    const csv = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;Alpha',
+      '2025-02-01;08:00;23:00;Beta',
+    ].join('\n');
+    const { stages } = parseCSV(csv);
+    assert.equal(stages.length, 2, 'two stages');
+    for (const s of stages) {
+      assert.ok(typeof s.id === 'string' && s.id.length > 0, `stage id must be non-empty string, got: ${JSON.stringify(s.id)}`);
+    }
+  });
+
+  // -------------------------------------------------------------------------
   // Date format DD-MM-YYYY (dashes, day-first) — Excel Polish CSV variant
   // -------------------------------------------------------------------------
 
