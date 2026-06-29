@@ -6,12 +6,13 @@
 // Enables the import handler in Waves 2–3 to call replace() without losing
 // existing subscriber registrations (Pattern A from RESEARCH.md).
 
-import { describe, it } from 'node:test';
+import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createEventLog } from '../../js/store/event-log.js';
 import { createSettingsStore } from '../../js/store/settings.js';
 import { DEFAULT_SETTINGS } from '../../js/lib/db-shape.js';
+import { parseCSV } from '../../js/lib/csv-parse.js';
 
 // ---------------------------------------------------------------------------
 // Minimal test fixtures
@@ -185,6 +186,54 @@ describe('cross-store replace()', () => {
     const persisted = storage.load();
     assert.ok(persisted, 'storage must have persisted state');
     assert.equal(persisted.version, 2, 'persisted version must be 2');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// CSV import etap column → stages → settings.update() (Phase 6, Plan 05)
+// ---------------------------------------------------------------------------
+
+describe('CSV import etap stages → settings store (D6-07, STAGE-01)', () => {
+
+  test('CSV import with etap column populates settings.stages', () => {
+    // Build a CSV string with etap column (English headers for test clarity)
+    const csvText = [
+      'Date;Wake;Bedtime;etap',
+      '2025-01-01;07:00;22:00;Stage1',
+      '2025-01-02;07:30;22:30;Stage1',
+      '2025-02-01;08:00;23:00;Stage2',
+    ].join('\n');
+
+    // Parse CSV directly — verify stages returned
+    const parsed = parseCSV(csvText);
+    assert.strictEqual(parsed.stages.length, 2, 'must detect 2 distinct etap runs');
+    assert.strictEqual(parsed.stages[0].name, 'Stage1', 'first stage name must be Stage1');
+    assert.strictEqual(parsed.stages[1].name, 'Stage2', 'second stage name must be Stage2');
+    assert.strictEqual(parsed.stages[1].endDate, null, 'last run is open-ended');
+
+    // Simulate the full import flow:
+    // 1. settings.replace(blob) resets stages to [] (from DEFAULT_SETTINGS)
+    // 2. settings.update({ stages: parsed.stages }) overlays the auto-detected stages
+    // Then verify settings.get().stages reflects the imported stages.
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    // Confirm replace() wipes existing stages
+    settingsStore.replace({ ...v2Blob, events: [...v2Blob.events], activityLog: { ...v2Blob.activityLog } });
+    assert.deepEqual(settingsStore.get().stages, [], 'replace() must reset stages to []');
+
+    // Apply auto-detected stages (mirrors handleCsvImport logic in settings-modal.js)
+    if (parsed.stages && parsed.stages.length > 0) {
+      settingsStore.update({ stages: parsed.stages });
+    }
+
+    const result = settingsStore.get().stages;
+    assert.strictEqual(result.length, 2, 'settings must now hold 2 stages');
+    assert.strictEqual(result[0].name, 'Stage1', 'first settings stage must be Stage1');
+    assert.strictEqual(result[0].startDate, '2025-01-01', 'Stage1 start date must be 2025-01-01');
+    assert.strictEqual(result[1].name, 'Stage2', 'second settings stage must be Stage2');
+    assert.strictEqual(result[1].endDate, null, 'Stage2 must be open-ended');
   });
 
 });
