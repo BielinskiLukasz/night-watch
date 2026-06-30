@@ -44,9 +44,9 @@
 - [x] **UI-01**: "Today + Forecast" landing screen shows the next four predicted events with bands plus the four quick-log buttons. *(Phase 3 Complete — verified via E2E tests. See Phase 3 SUMMARY.md.)*
 - [x] **UI-02**: "Today + Forecast" landing screen surfaces a prominent "next event" card that acts as the in-app notification. *(Phase 3 Complete — verified via E2E tests. See Phase 3 SUMMARY.md.)*
 - [ ] **UI-03**: "History" screen shows a scrollable table of past days with per-row edit, delete, and "rejected" toggle controls.
-- [ ] **UI-04**: "Charts" screen displays sleep length over time, wake- and sleep-time bands, nap pattern, activity-vs-sleep correlation, and a calendar heatmap of sleep length.
-- [ ] **UI-05**: "Accuracy" screen shows three success-rate metrics side-by-side: percentage of forecasts within `max_delta`, within `max_delta / 2`, and where the actual time fell inside the predicted min/max band.
-- [ ] **UI-06**: User can navigate between Today, History, Charts, and Accuracy from any screen.
+- [x] **UI-04**: "Charts" screen displays sleep length over time, wake- and sleep-time bands, nap pattern, activity-vs-sleep correlation, and a calendar heatmap of sleep length.
+- [x] **UI-05**: "Accuracy" screen shows three success-rate metrics side-by-side: percentage of forecasts within `max_delta`, within `max_delta / 2`, and where the actual time fell inside the predicted min/max band.
+- [x] **UI-06**: User can navigate between Today, History, Charts, and Accuracy from any screen.
 
 ### Data Lifecycle
 
@@ -140,9 +140,9 @@ Which phases cover which requirements.
 | UI-01 | Phase 3 | Complete |
 | UI-02 | Phase 3 | Complete |
 | UI-03 | Phase 4 | Pending |
-| UI-04 | Phase 7 | Pending |
-| UI-05 | Phase 7 | Pending |
-| UI-06 | Phase 7 | Pending |
+| UI-04 | Phase 7 | Complete |
+| UI-05 | Phase 7 | Complete |
+| UI-06 | Phase 7 | Complete |
 | DATA-01 | Phase 5 | Pending |
 | DATA-02 | Phase 5 | Pending |
 | DATA-03 | Phase 5 | Pending |
