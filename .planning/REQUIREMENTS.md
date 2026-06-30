@@ -63,13 +63,13 @@
 
 ### Platform
 
-- [ ] **PLAT-01**: App is built with vanilla HTML/CSS/JS only — no frameworks, no build step, no npm dependencies.
-- [ ] **PLAT-02**: Code is split across multiple HTML/CSS/JS files (not a single index.html).
+- [x] **PLAT-01**: App is built with vanilla HTML/CSS/JS only — no frameworks, no build step, no npm dependencies.
+- [x] **PLAT-02**: Code is split across multiple HTML/CSS/JS files (not a single index.html).
 - [x] **PLAT-03**: App installs as a PWA (manifest + service worker) and works fully offline, including when loaded from `file://`.
 - [x] **PLAT-04**: App is deployable to GitHub Pages with no server-side code.
-- [ ] **PLAT-05**: UI text is English only.
-- [ ] **PLAT-06**: App has its own visual identity — same calm/dark/minimal/ambient register as `mindful-breathing` but a distinct accent palette and glyph set.
-- [ ] **PLAT-07**: All notifications are surfaced in-app only — no browser or OS push notifications.
+- [x] **PLAT-05**: UI text is English only.
+- [x] **PLAT-06**: App has its own visual identity — same calm/dark/minimal/ambient register as `mindful-breathing` but a distinct accent palette and glyph set.
+- [x] **PLAT-07**: All notifications are surfaced in-app only — no browser or OS push notifications.
 - [x] **PLAT-08**: App logic is unit-testable via Node's built-in test runner (`node:test` + `node:assert`). Tests live in `tests/unit/` and run separately from the deployed PWA bundle (excluded from service-worker precache and GitHub Pages output). A GitHub Action runs `node --test tests/` on push/PR with zero install.
 - [x] **PLAT-09**: App is structured into pure-logic modules with thin adapters for DOM, `localStorage`, and the system clock so multiple modules can be composed and exercised together in Node without a browser. Integration tests live in `tests/integration/` and use `node:test`; the runtime stays zero-dependency.
 - [x] **PLAT-10**: App has end-to-end UI tests using Playwright as a dev-only dependency (`devDependencies` only — never shipped to GitHub Pages). E2E tests live in `tests/e2e/`, drive a real browser, exercise the rendered UI, and run in the same GitHub Action as unit/integration tests. The deployed PWA bundle remains pure vanilla HTML/CSS/JS with no runtime npm dependencies.
@@ -150,13 +150,13 @@ Which phases cover which requirements.
 | DATA-05 | Phase 5 | Pending |
 | STAGE-01 | Phase 6 | Pending |
 | STAGE-02 | Phase 6 | Pending |
-| PLAT-01 | Phase 8 | Pending |
-| PLAT-02 | Phase 8 | Pending |
+| PLAT-01 | Phase 8 | Complete |
+| PLAT-02 | Phase 8 | Complete |
 | PLAT-03 | Phase 8 | Complete |
 | PLAT-04 | Phase 8 | Complete |
-| PLAT-05 | Phase 8 | Pending |
-| PLAT-06 | Phase 8 | Pending |
-| PLAT-07 | Phase 8 | Pending |
+| PLAT-05 | Phase 8 | Complete |
+| PLAT-06 | Phase 8 | Complete |
+| PLAT-07 | Phase 8 | Complete |
 | PLAT-08 | Phase 1 | Complete |
 | PLAT-09 | Phase 1 | Complete |
 | PLAT-10 | Phase 1 | Complete |

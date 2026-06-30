@@ -226,21 +226,24 @@ describe('T-04 clock-seam: `new Date()` literal only allowed in js/adapters/cloc
 // -------------------- 4. D-07 storage-seam (localStorage outside storage-local.js) --------------------
 
 describe('D-07 storage-seam: `localStorage` only allowed in js/adapters/storage-local.js', () => {
-  test('no `localStorage` references outside js/adapters/storage-local.js', () => {
-    // Even comments mentioning `localStorage` outside the adapter are flagged —
+  test('no `localStorage` references outside js/adapters/storage-local.js (unless tagged // gsd:allow-storage-local)', () => {
+    // Lines tagged `// gsd:allow-storage-local` are exempt — these are intentional
+    // UI-bootstrap reads that are too shallow to route through the full StorageAdapter
+    // (e.g. the one-time dismiss flag for the file:// graceful-degradation note).
+    // The same exemption-marker pattern is used for `new Date()` (// gsd:allow-ui-clock).
+    //
+    // Even untagged comments mentioning `localStorage` outside the adapter are flagged —
     // documentation pointing AT the adapter should reference it by file path,
     // not by literal token, to keep the seam invariant trivially greppable.
-    //
-    // Implementation note: we do allow the literal token to appear in the
-    // adapter itself (obviously). Everywhere else in js/, zero matches.
     const violations = scanForPattern({
       regex: /\blocalStorage\b/,
       exemptFiles: new Set([STORAGE_LOCAL_REL]),
+      exemptLineMarker: '// gsd:allow-storage-local',
     });
     assert.equal(
       violations.length,
       0,
-      `Storage-seam violation: \`localStorage\` referenced outside js/adapters/storage-local.js.\n${formatViolations(violations)}\nFix: route through a StorageAdapter, OR reword documentation to reference the adapter by file path.`,
+      `Storage-seam violation: \`localStorage\` referenced outside js/adapters/storage-local.js without // gsd:allow-storage-local tag.\n${formatViolations(violations)}\nFix: route through a StorageAdapter, OR tag with // gsd:allow-storage-local if it is a documented UI-bootstrap exception.`,
     );
   });
 });
@@ -294,11 +297,12 @@ describe('T-01 / Phase 1 adapter file boundary stats', () => {
     assert.equal(violations.length, 0, 'adapter file boundary: only clock-*.js + tagged lines contain `new Date()`');
   });
 
-  test('after exempting storage-local.js, no file in js/ uses `localStorage`', () => {
+  test('after exempting storage-local.js + // gsd:allow-storage-local lines, no file in js/ uses `localStorage`', () => {
     const violations = scanForPattern({
       regex: /\blocalStorage\b/,
       exemptFiles: new Set([STORAGE_LOCAL_REL]),
+      exemptLineMarker: '// gsd:allow-storage-local',
     });
-    assert.equal(violations.length, 0, 'adapter file boundary: only storage-local.js references `localStorage`');
+    assert.equal(violations.length, 0, 'adapter file boundary: only storage-local.js + tagged lines reference `localStorage`');
   });
 });
