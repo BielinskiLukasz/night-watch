@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-30
+Last updated: 2026-06-30 (B-22 added)
 
 ---
 
@@ -533,6 +533,31 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 - In `history-screen.js`: add a boolean `editMode` flag (default `false`). Render the table with `.rowEdit`, `.rowDel`, and `.rejected-toggle` elements hidden (CSS `display: none`) when `editMode = false`. Toggle button flips the flag and triggers a re-render.
 - CSS: add `.historyTable.edit-mode .rowEdit`, `.historyTable.edit-mode .rowDel`, `.historyTable.edit-mode .rejected-toggle` rules to show controls only in edit mode. This avoids per-element show/hide logic.
 - No data or store changes — purely a presentation-layer toggle.
+
+---
+
+### B-22 · Heatmap cell rich tooltip (custom popover)
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 — small standalone UX addition to charts-screen.js
+
+**What:** Replace the native browser `<title>` tooltip on heatmap cells with a styled popover that appears on hover (or tap on mobile). Show: date, sleep duration, wake time, bedtime, and nap duration if available. Position the popover near the cursor/cell and dismiss on mouse-leave or outside tap.
+
+**Why:** The current `<title>` tooltip shows only date + sleep hours and has no visual styling, delay control, or mobile support. A custom popover would surface all four event times at a glance and work consistently across browsers and touch devices.
+
+**Open questions when this gets planned:**
+
+- Show/hide trigger: `mouseenter`/`mouseleave` or `pointermove`?
+- Mobile: tap to show, tap elsewhere to dismiss?
+- Position: fixed near the cell, or always anchored to a corner of the chart section?
+- Content: just the four event times + sleep hours, or also stage name if active?
+
+**Implementation notes:**
+
+- Remove `<title>` elements and add `pointerenter`/`pointerleave` handlers to each cell rect.
+- Render a single shared `<div class="heatmapTooltip">` element positioned with CSS `position: fixed` and updated via `mousemove`. Populate with `textContent` only (T-04-04 pattern).
+- No external dependencies — vanilla DOM only, consistent with project constraints.
 
 ---
 
