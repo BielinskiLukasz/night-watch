@@ -259,12 +259,12 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   4. App is deployed to GitHub Pages and accessible via a public URL
   5. UI text is entirely in English, uses a calm dark/minimal theme distinct from mindful-breathing, and all notifications are in-app only (no browser/OS push)
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 **Wave 1** *(parallel — no dependencies)*
 
   - [x] 08-01-PLAN.md — PWA manifest + service worker + icons + PRECACHE_LIST unit test (PLAT-03)
-  - [ ] 08-02-PLAN.md — GitHub Actions CI + Deploy workflow (PLAT-04)
+  - [x] 08-02-PLAN.md — GitHub Actions CI + Deploy workflow (PLAT-04)
 
 **Wave 2** *(blocked on Wave 1 — parallel)*
 
@@ -286,7 +286,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 5. Data Import/Export | 5/5 | Complete | 2026-06-29 |
 | 6. Life Stages | 5/5 | Complete | 2026-06-29 |
 | 7. Charts, Heatmap & Accuracy | 6/6 | Complete   | 2026-06-30 |
-| 8. PWA & Platform Hardening | 1/5 | In Progress|  |
+| 8. PWA & Platform Hardening | 2/5 | In Progress|  |
 
 ## Backlog
 
