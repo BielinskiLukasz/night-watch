@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 07
-current_phase_name: charts-heatmap-accuracy
+current_phase: 08
+current_phase_name: pwa-platform-hardening
 status: Phase 6 complete
-stopped_at: Phase 8 UI-SPEC approved
-last_updated: "2026-06-30T20:33:35.770Z"
+stopped_at: Completed 08-01 — manifest.json, sw.js, icons, and unit test
+last_updated: "2026-06-30T21:32:21.003Z"
 last_activity: 2026-06-30
-last_activity_desc: Phase NW-07 execution started
+last_activity_desc: Phase NW-08 execution started
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 40
-  completed_plans: 41
+  total_plans: 45
+  completed_plans: 42
   percent: 88
 ---
 
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase NW-07 — charts-heatmap-accuracy
+**Current focus:** Phase NW-08 — pwa-platform-hardening
 
 ## Current Position
 
-Phase: NW-07 (charts-heatmap-accuracy) — EXECUTING
-Plan: 6 of 6
+Phase: NW-08 (pwa-platform-hardening) — EXECUTING
+Plan: 2 of 5
 Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
-Last activity: 2026-06-30 — Phase NW-07 execution started
+Last activity: 2026-06-30 — Phase NW-08 execution started
 
 Progress: [████████████████████████████████████████████████] Phase 6 100% (5/5 plans); overall: 6 phases complete
 
@@ -202,6 +202,7 @@ Non-blocking follow-ups (carry into Phase 2 / 8):
 | Phase 1 P8 | 8min  | 2 tasks | 3 files |
 | Phase NW-07 P02 | 15 | 1 tasks | 1 files |
 | Phase NW-07 P05 | 25 | 2 tasks | 3 files |
+| Phase NW-08 P01 | 267 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -244,6 +245,9 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase ?]: .planning/phases/NW-07-charts-heatmap-accuracy/07-06-SUMMARY.md
 - [Phase ?]: Plan 07-06: Playwright selectors scoped to parent screen ID to avoid strict-mode violations
 - [Phase ?]: Plan 07-06: filterDayRecordsByStage three-arg call enforced; null activeStageId returns allDays unchanged
+- [Phase ?]: sw.js at root gives full scope
+- [Phase ?]: PRECACHE_LIST 31 entries, test adapters excluded, sw.js excluded (browser handles SW byte-comparison)
+- [Phase ?]: PNG icon placeholders committed; crescent-moon design deferred to pre-release
 
 ### Pending Todos
 
@@ -255,6 +259,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T20:33:35.732Z
-Stopped at: Phase 8 UI-SPEC approved
+Last session: 2026-06-30T21:32:20.961Z
+Stopped at: Completed 08-01 — manifest.json, sw.js, icons, and unit test
 Resume file: .planning/phases/NW-08-pwa-platform-hardening/08-UI-SPEC.md
