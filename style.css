@@ -519,15 +519,42 @@ button[data-log]:hover {
   display: block;
 }
 
-/* Calendar heatmap: natural pixel size + horizontal scroll for large datasets.
- * Uses its own class (not .chartSvg) so the 100%-width scaling doesn't apply —
- * scaling would make day-of-week labels microscopic when many weeks are shown. */
+/* Calendar heatmap scroll wrapper.
+ * max-width:100% confines it to the parent so overflow-x:auto scrolls instead
+ * of expanding the page; overscroll-behavior prevents the horizontal scroll from
+ * hijacking the page's vertical scroll on touch devices. */
 .heatmapScroll {
   overflow-x: auto;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
 }
 
 .heatmapSvg {
   display: block;
+}
+
+/* Legend rendered as HTML below the scroll container so it never distorts the
+ * SVG aspect ratio when the padded viewBox is wider than the actual data. */
+.heatmapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.heatmapLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.heatmapLegendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 /* Stage active badge (D7-18) */
