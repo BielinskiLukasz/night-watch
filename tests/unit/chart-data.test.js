@@ -212,28 +212,34 @@ describe('chart-data transforms — UI-04, D7-05..D7-11', () => {
       assert.strictEqual(result[0].wakeMinutes, null, 'missing wake → wakeMinutes should be null');
     });
 
-    it('subjective night with two bedtimes → bedtimesMinutes has both', () => {
-      // Scenario: bedtime at 22:00 on day 1, then another bedtime at 00:10 on
-      // day 2 (which belongs to day 1's subjective night after cutover rollback).
+    it('two bedtimes on same calendar date → both in bedtimesMinutes', () => {
+      // Real scenario: parent logs bedtime at 00:10 (late-night) and bedtime
+      // at 22:00 (next evening) on the same calendar date (June 17).
+      // Calendar-date grouping puts both on the June 17 chart column.
       const days = [{
-        date: '2025-01-01',
+        date: '2025-01-16',  // subjective night date (irrelevant for calendar grouping)
         wake: null,
-        bedtime: makeEvent('2025-01-01T22:00'),
+        bedtime: null,
         napStart: null,
         napEnd: null,
         rejected: false,
         allEvents: [
-          { type: 'bedtime', at: '2025-01-01T22:00' },
-          { type: 'bedtime', at: '2025-01-02T00:10' },
+          { id: 'b1', type: 'bedtime', at: '2025-01-17T00:10' },
+          { id: 'w1', type: 'wake',    at: '2025-01-17T07:35' },
+          { id: 'b2', type: 'bedtime', at: '2025-01-17T22:00' },
         ],
       }];
 
       const result = buildTimeBandSeries(days);
 
-      assert.strictEqual(result[0].bedtimesMinutes.length, 2, 'both bedtimes collected');
-      assert.strictEqual(result[0].bedtimesMinutes[0], 1320, '22:00 = 1320 min');
-      assert.strictEqual(result[0].bedtimesMinutes[1], 10,   '00:10 = 10 min');
-      assert.strictEqual(result[0].bedtimeMinutes, 1320, 'backward-compat scalar = first bedtime');
+      // Calendar-date grouping: all three events are on 2025-01-17 → one entry.
+      assert.strictEqual(result.length, 1, 'one calendar date → one entry');
+      assert.strictEqual(result[0].date, '2025-01-17');
+      assert.strictEqual(result[0].bedtimesMinutes.length, 2, 'both bedtimes included');
+      assert.strictEqual(result[0].bedtimesMinutes[0], 10,   '00:10 = 10 min');
+      assert.strictEqual(result[0].bedtimesMinutes[1], 1320, '22:00 = 1320 min');
+      assert.strictEqual(result[0].wakeMinutes, 455, '07:35 = 455 min');
+      assert.strictEqual(result[0].bedtimeMinutes, 10, 'backward-compat scalar = first bedtime');
     });
   });
 

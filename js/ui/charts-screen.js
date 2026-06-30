@@ -44,9 +44,6 @@ const TIME_BAND_SVG = Object.freeze({ w: 600, h: 200 });
 /** Cell geometry for the GitHub-style calendar heatmap. */
 const HEATMAP_CFG = Object.freeze({ cellSize: 11, cellGap: 2, rowOffset: 18, colOffset: 16 });
 
-/** Extra vertical space (SVG units) reserved below the 7-day grid for the legend. */
-const HEATMAP_LEGEND_H = 18;
-
 /**
  * Minimum weeks shown in the heatmap viewBox even when the dataset is smaller.
  * Keeps the SVG aspect ratio sane so the chart fills the container without
@@ -438,7 +435,7 @@ function renderHeatmap(sectionEl, days) {
   // Pad viewBox to at least HEATMAP_MIN_WEEKS so the aspect ratio stays sane
   // when little data exists (prevents the chart from being excessively tall).
   const svgW = colOffset + Math.max(weeks, HEATMAP_MIN_WEEKS) * step + cellSize;
-  const svgH = rowOffset + 7 * step + HEATMAP_LEGEND_H;
+  const svgH = rowOffset + 7 * step;
 
   const svg = document.createElementNS(SVG_NS, 'svg'); // createElementNS — heatmap SVG root
   svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
@@ -482,25 +479,34 @@ function renderHeatmap(sectionEl, days) {
     }));
   }
 
-  // Legend
-  const legendY = svgH - 2;
-  const legendItems = [
-    { fill: missing, label: 'No data' },
-    { fill: short,   label: '< 8h' },
-    { fill: target,  label: '8–10h' },
-    { fill: long,    label: '> 10h' },
-  ];
-  let lx = colOffset;
-  for (const item of legendItems) {
-    svg.appendChild(svgEl('rect', { x: lx, y: legendY - cellSize, width: cellSize, height: cellSize, fill: item.fill, rx: '2' }));
-    svg.appendChild(svgText({ x: lx + cellSize + 2, y: legendY - 2, 'font-size': '8', fill: '#64748b' }, item.label));
-    lx += cellSize + 2 + 30;
-  }
-
   const scrollContainer = document.createElement('div');
   scrollContainer.className = 'heatmapScroll';
   scrollContainer.appendChild(svg);
   sectionEl.appendChild(scrollContainer);
+
+  // Legend as HTML below the scroll container — avoids distorting the SVG
+  // viewBox when the padded width is wider than the actual data cells.
+  const legendItems = [
+    { fill: missing, label: 'No data' },
+    { fill: short,   label: '< 8h'   },
+    { fill: target,  label: '8–10h'  },
+    { fill: long,    label: '> 10h'  },
+  ];
+  const legendEl = document.createElement('div');
+  legendEl.className = 'heatmapLegend';
+  for (const item of legendItems) {
+    const span = document.createElement('span');
+    span.className = 'heatmapLegendItem';
+    const swatch = document.createElement('span');
+    swatch.className = 'heatmapLegendSwatch';
+    swatch.style.background = item.fill;
+    const label = document.createElement('span');
+    label.textContent = item.label;
+    span.appendChild(swatch);
+    span.appendChild(label);
+    legendEl.appendChild(span);
+  }
+  sectionEl.appendChild(legendEl);
 }
 
 // ---------------------------------------------------------------------------

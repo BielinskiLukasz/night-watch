@@ -172,29 +172,46 @@ export function buildHeatmapData(dayRecords) {
 
 /**
  * Build a time-band series: wake and bedtime as minutes-since-midnight per day.
- * Null for missing events.
  *
- * @param {object[]} dayRecords
- * @returns {Array<{ date: string, wakeMinutes: number|null, bedtimeMinutes: number|null }>}
+ * Groups events by CALENDAR DATE (ev.at.slice(0,10)) rather than subjective
+ * night, so events logged on the same clock date land on the same chart column.
+ * Example: bedtime@00:10 and bedtime@22:00 both recorded on June 17 appear
+ * as two dots on the June 17 column.
+ *
+ * @param {object[]} dayRecords  from daysBySubjectiveNight(); needs allEvents
+ * @returns {Array<{ date: string, wakeMinutes: number|null, bedtimeMinutes: number|null, bedtimesMinutes: number[] }>}
  */
 export function buildTimeBandSeries(dayRecords) {
-  return dayRecords.map(d => {
-    // Collect every bedtime event for this subjective night. When allEvents is
-    // present (real day records from day-bucket), use it to find all bedtimes —
-    // a subjective night can have two (e.g. 22:00 and 00:10 next calendar day).
-    // Fall back to d.bedtime for test fixtures that omit allEvents.
-    const bedtimeEvents = d.allEvents
-      ? d.allEvents.filter(ev => ev.type === 'bedtime')
-      : (d.bedtime ? [d.bedtime] : []);
-    const bedtimesMinutes = bedtimeEvents
+  const byDate = new Map();
+
+  for (const d of dayRecords) {
+    // Prefer allEvents (typed, from real day-bucket records).
+    // Fall back to named slots augmented with type tags (test fixtures).
+    const events = d.allEvents || [
+      ...(d.wake    ? [{ ...d.wake,    type: 'wake'    }] : []),
+      ...(d.bedtime ? [{ ...d.bedtime, type: 'bedtime' }] : []),
+    ];
+
+    for (const ev of events) {
+      const calDate = ev.at ? ev.at.slice(0, 10) : d.date;
+      if (!byDate.has(calDate)) byDate.set(calDate, []);
+      byDate.get(calDate).push(ev);
+    }
+  }
+
+  return [...byDate.keys()].sort().map(date => {
+    const events = byDate.get(date);
+    const bedtimesMinutes = events
+      .filter(ev => ev.type === 'bedtime')
       .map(ev => extractMinutes(ev))
       .filter(m => m !== null);
+    const wakeEvs = events.filter(ev => ev.type === 'wake');
 
     return {
-      date: d.date,
-      wakeMinutes: d.wake ? extractMinutes(d.wake) : null,
-      bedtimeMinutes: bedtimesMinutes[0] ?? null,  // kept for backward compat
-      bedtimesMinutes,                              // full list for multi-dot rendering
+      date,
+      wakeMinutes:    wakeEvs.length > 0 ? extractMinutes(wakeEvs[0]) : null,
+      bedtimeMinutes: bedtimesMinutes[0] ?? null,
+      bedtimesMinutes,
     };
   });
 }
