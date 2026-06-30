@@ -248,6 +248,17 @@ export function createEventLog({ storage, clock, id }) {
     },
 
     /**
+     * Return a defensive copy of the activity log (D5-17).
+     * activityLog is stored in the db blob as { 'YYYY-MM-DD': number }.
+     * Charts screen uses this for the activity-vs-sleep correlation scatter.
+     *
+     * @returns {{ [dateStr: string]: number }}
+     */
+    getActivityLog() {
+      return { ...(db.activityLog || {}) };
+    },
+
+    /**
      * Replace the entire in-memory db with an imported blob (DATA-02 / DATA-05).
      * Migrates v1→v2, validates version, persists, and fires all subscribers.
      * Called by the import handler (Plans 05-04/05-05) in the composition root.
