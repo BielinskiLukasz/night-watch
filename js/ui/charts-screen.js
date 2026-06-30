@@ -439,15 +439,11 @@ function renderHeatmap(sectionEl, days) {
 
   const svg = document.createElementNS(SVG_NS, 'svg'); // createElementNS — heatmap SVG root
   svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
-  // Scale to fill the container (width:100%) so the chart is never tiny.
-  // min-width prevents shrinking below the natural SVG width for large datasets —
-  // the .heatmapScroll wrapper then scrolls horizontally instead.
   svg.setAttribute('width', '100%');
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
-  svg.style.minWidth = svgW + 'px';
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Sleep calendar heatmap');
-  svg.setAttribute('class', 'heatmapSvg');
+  svg.setAttribute('class', 'chartSvg');
 
   // Day-of-week labels on left (static literals — safe)
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -479,12 +475,9 @@ function renderHeatmap(sectionEl, days) {
     }));
   }
 
-  const scrollContainer = document.createElement('div');
-  scrollContainer.className = 'heatmapScroll';
-  scrollContainer.appendChild(svg);
-  sectionEl.appendChild(scrollContainer);
+  sectionEl.appendChild(svg);
 
-  // Legend as HTML below the scroll container — avoids distorting the SVG
+  // Legend as HTML below the SVG — avoids distorting the SVG
   // viewBox when the padded width is wider than the actual data cells.
   const legendItems = [
     { fill: missing, label: 'No data' },

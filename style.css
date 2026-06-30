@@ -519,21 +519,7 @@ button[data-log]:hover {
   display: block;
 }
 
-/* Calendar heatmap scroll wrapper.
- * max-width:100% confines it to the parent so overflow-x:auto scrolls instead
- * of expanding the page; overscroll-behavior prevents the horizontal scroll from
- * hijacking the page's vertical scroll on touch devices. */
-.heatmapScroll {
-  overflow-x: auto;
-  max-width: 100%;
-  overscroll-behavior-x: contain;
-}
-
-.heatmapSvg {
-  display: block;
-}
-
-/* Legend rendered as HTML below the scroll container so it never distorts the
+/* Legend rendered as HTML below the SVG so it never distorts the
  * SVG aspect ratio when the padded viewBox is wider than the actual data. */
 .heatmapLegend {
   display: flex;
