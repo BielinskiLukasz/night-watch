@@ -10,11 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Nightwatch" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23111'/><circle cx='22' cy='10' r='5' fill='%234f46e5'/><circle cx='14' cy='18' r='6' fill='none' stroke='%234f46e5' stroke-width='2'/></svg>" />
-  <!--
-    PWA manifest and service-worker registration are intentionally OMITTED
-    in Phase 1; they land in Phase 8 (PWA hardening) so the data model can
-    flex during Phases 1-4 without service-worker churn.
-  -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,6 +34,27 @@
   </header>
 
   <!--
+    Update banner (Plan 08-03 / D8-05, D8-06).
+    Shown when a new service worker is waiting. Fixed top bar (z-index 200).
+    Text set via textContent in app.js (T-08-03-01: no innerHTML).
+    hidden attribute toggled by showUpdateBanner() in app.js.
+  -->
+  <div id="update-banner" hidden role="status" aria-live="polite">
+    <span class="update-text"></span>
+    <button type="button" class="reload-btn" aria-label="Reload to apply update">Reload</button>
+  </div>
+
+  <!--
+    file:// note (Plan 08-03 / D8-08).
+    Shown once when location.protocol === 'file:'; dismissed to localStorage.
+    Text set via textContent in app.js (T-08-03-01: no innerHTML).
+  -->
+  <div id="file-note" hidden role="note">
+    <span class="file-note-text"></span>
+    <button type="button" class="dismiss-btn" aria-label="Dismiss">×</button>
+  </div>
+
+  <!--
     Main content area with two screens (Plan 04-02 / D4-07).
     app.js toggles display on today-screen / history-screen based on activeTab.
     The no-JS skeleton lives inside today-screen so the quick-log buttons
@@ -52,7 +70,7 @@
       D3-07 layout order: Quick-log → hero card → cold-start → forecast grid →
                           grouping toggle → day list → add button.
     -->
-    <section id="today-screen">
+    <section id="today-screen" class="screen-section">
       <div class="quickLog">
         <button type="button" data-log="wake">Woke up</button>
         <button type="button" data-log="bedtime">Going to sleep</button>
@@ -73,7 +91,7 @@
       when user clicks the History tab. history-screen.js mounts the
       day-column table inside the root div via replaceChildren().
     -->
-    <section id="history-screen" style="display: none;">
+    <section id="history-screen" class="screen-section" style="display: none;">
       <div id="history-table-root"></div>
     </section>
 
@@ -82,14 +100,14 @@
       clicks the Charts tab. charts-screen.js mounts five chart sections via
       replaceChildren(). Full implementation in Plan 07-05.
     -->
-    <section id="charts-screen" style="display:none" aria-label="Charts"></section>
+    <section id="charts-screen" class="screen-section" style="display:none" aria-label="Charts"></section>
 
     <!--
       Accuracy screen (Plan 07-04 / D7-14). Initially hidden; shown when user
       clicks the Accuracy tab. accuracy-screen.js mounts the 4x3 accuracy grid
       via replaceChildren(). Full implementation in Plan 07-06.
     -->
-    <section id="accuracy-screen" style="display:none" aria-label="Accuracy"></section>
+    <section id="accuracy-screen" class="screen-section" style="display:none" aria-label="Accuracy"></section>
   </main>
 
   <!--
