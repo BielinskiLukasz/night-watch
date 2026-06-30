@@ -82,9 +82,9 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
   const render = () => {
     const snap = settings.get();
     // Fetch all days (no limit) — T-04-06 accept: Phase 4 assumes <365 days.
-    // daysByCalendar is the event-log store's method; it calls the day-bucket
-    // lib internally. We pass the settings snapshot so day.rejected is annotated.
-    const dayRecords = eventLog.daysByCalendar(Infinity, snap);
+    // Use daysBySubjectiveNight so events before cutoverHour (e.g. bedtime at 00:10)
+    // appear in the previous day's row, not the calendar date they were logged on.
+    const dayRecords = eventLog.daysBySubjectiveNight(snap.cutoverHour, Infinity, snap);
 
     // Clear and repopulate only the table root (T-04-04: replaceChildren never
     // touches innerHTML). The toolbar above is preserved across re-renders.
@@ -137,7 +137,7 @@ function renderEmptyState(root) {
 /**
  * Build the day-column <table class="historyTable"> from an array of day records.
  *
- * Columns (D4-01): Date | Wake | Nap End | Nap Start | Bedtime | Rejected | Actions
+ * Columns (D4-01): Date | Wake | Nap Start | Nap End | Bedtime | Rejected | Actions
  *
  * @param {Array<object>} dayRecords  day records from daysByCalendar (newest first)
  * @param {'24h'|'12h'} timeFormat
@@ -308,21 +308,18 @@ function buildDayRow(day, timeFormat, eventLog, settings) {
   if (eventLog) {
     delBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      const dayDate = delBtn.getAttribute('data-date');
       // T-04-08: window.confirm() is synchronous; if cancelled, loop does not run.
       const confirmed = window.confirm(
-        `Delete all events for ${dayDate}? This cannot be undone.`,
+        `Delete all events for ${day.date}? This cannot be undone.`,
       );
       if (!confirmed) return;
 
-      // Delete all events for this date.
-      // T-04-07: re-fetch events fresh to handle any stale-reference race.
-      const eventsForDay = eventLog.listEvents().filter(
-        (ev) => ev.at.slice(0, 10) === dayDate,
-      );
-      for (const event of eventsForDay) {
-        // deleteEvent is idempotent: returns false for missing ids (no throw).
-        eventLog.deleteEvent(event.id);
+      // Delete using IDs from day.allEvents — correct for subjective-night grouping
+      // where an event's at-date may differ from day.date (e.g. bedtime at 00:10
+      // on June 17 belongs to the June 16 subjective night).
+      // deleteEvent is idempotent: returns false for missing ids (no throw).
+      for (const evt of day.allEvents) {
+        eventLog.deleteEvent(evt.id);
       }
       // notifySubscribers() fires after each deleteEvent() (D3-12):
       //   - History table re-renders (row disappears or shows empty state).

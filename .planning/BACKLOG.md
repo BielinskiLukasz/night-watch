@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-06
+Last updated: 2026-06-30
 
 ---
 
@@ -433,6 +433,106 @@ These two items improve the Today screen and introduce a new Events screen for b
 - Time input: reset to `new Date()` (current time) or, if B-01 defaults are available, to the next event-type's default.
 - Debounce logic: use a simple flag + `setTimeout(fn, 1000)` to re-enable the button. Prevent form submission while debounce is active.
 - No data shape changes — this is a UX workflow refinement.
+
+---
+
+## Charts & UX refinements (captured 2026-06-30)
+
+These four items were surfaced during Phase 7 UAT and post-launch review.
+
+### B-17 · Nap length chart (like Sleep Length)
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 — can be added as a sixth chart section in charts-screen.js
+
+**What:** Add a nap-duration line chart alongside the existing Sleep Length chart. Show nap duration (napEnd - napStart) per day as a line series, mirroring the Sleep Length chart's layout, Y-axis auto-scaling, stage boundaries, and rejected-day greying.
+
+**Why:** Nap length is as informative as night-sleep length for tracking regressions, improvements, and stage transitions. The current Charts screen only shows night-sleep duration; nap duration is buried in the Nap Pattern card as a single average value without a time-series view.
+
+**Open questions when this gets planned:**
+
+- Should nap length and sleep length share an axis/panel or be separate sections?
+- What to show on days with no nap (null vs. 0 on the line)?
+- Should the Y-axis reflect nap-specific typical ranges (e.g., 30min–3h) or share scale with night sleep?
+
+**Implementation notes:**
+
+- Add `buildNapLengthSeries(days)` in `chart-data.js` — mirrors `buildSleepLengthSeries` but computes `(napEnd.at - napStart.at) / 60` in minutes.
+- Add `renderNapLengthChart(sectionEl, days, snap)` in `charts-screen.js`.
+- Add a sixth permanent `section6` div in `mountChartsScreen`.
+
+---
+
+### B-18 · Invert time axis in Wake & Bedtime Bands chart
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 — one-line change to `yScale` in `renderTimeBandChart`
+
+**What:** Invert the Y-axis of the Wake & Bedtime Bands scatter plot so that earlier times appear at the TOP and later times appear at the BOTTOM. Current convention has 0h (midnight) at the top and 24h at the bottom, which is counter-intuitive for sleep data — "earlier wake = higher on chart" reads more naturally as "higher is better (earlier)".
+
+**Why:** Inverted time axis is the conventional display for chronobiology charts: later events (higher hour) appear lower on the chart, matching the natural mental model where "going up" on the graph means earlier in the day. The current `yScale` in `renderTimeBandChart` already has a comment noting the top-to-bottom order.
+
+**Implementation notes:**
+
+- In `renderTimeBandChart`, change `yScale`:
+  ```js
+  // Current (0h at top, 24h at bottom):
+  const yScale = (minutes) => M.top + (minutes / (24 * 60)) * plotH;
+  // Inverted (0h at bottom, 24h at top):
+  const yScale = (minutes) => M.top + plotH - (minutes / (24 * 60)) * plotH;
+  ```
+- Also invert the Y-axis tick labels accordingly (they currently read 0:00 at top).
+- No data or algorithm changes.
+
+---
+
+### B-19 · Nap Start and Nap End time-band scatter (Chart 2 extension)
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** paired with B-18 — both extend the Wake & Bedtime Bands chart
+
+**What:** Add nap-start and nap-end time dots to the Wake & Bedtime Bands scatter plot (currently only wake and bedtime dots). Show all four event types on the same chart with distinct colors. Extend the legend accordingly.
+
+**Why:** Nap timing patterns are as important as wake/bedtime for understanding the sleep schedule. Adding them to the same chart makes temporal relationships visible (e.g., nap follows wake by roughly X hours, bedtime follows nap end by Y hours).
+
+**Open questions when this gets planned:**
+
+- Four distinct colors required — pick from the existing palette or add new ones.
+- Should nap dots be a different shape (e.g., triangle or diamond) to distinguish from wake/bedtime?
+- Should nap-less days show a gap in the nap series, or be hidden entirely?
+
+**Implementation notes:**
+
+- In `buildTimeBandSeries(days)` (chart-data.js): already returns `napStartMinutes` and `napEndMinutes` fields (if not, add them from `day.napStart?.at` and `day.napEnd?.at`).
+- In `renderTimeBandChart` (charts-screen.js): add circle rendering for `p.napStartMinutes` and `p.napEndMinutes` with distinct fill colors.
+- Update legend to show all four series.
+
+---
+
+### B-20 · History screen: hide edit/delete/reject controls by default; toggle to reveal
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 — history-screen.js UI-only change
+
+**What:** In the History table, hide the `[Edit]` buttons (per cell), `[Delete]` button (per row), and the Rejected checkbox by default. Add a single "Edit history" toggle button (e.g., in the historyToolbar or above the table) that shows/hides all these controls. When controls are hidden, the table shows only the data values without interactive affordances.
+
+**Why:** The history table currently shows edit/delete/reject controls on every row at all times. For a read-only review of history (the most common use case), these controls add visual noise and increase the risk of accidental edits. Hiding them by default and enabling them via an explicit "Edit history" toggle improves data visibility and reduces accidental mutations.
+
+**Open questions when this gets planned:**
+
+- Toggle state: per-session (resets on tab switch) or persistent (saved in settings)?
+- Button placement: inside the existing `.historyToolbar` alongside Export, or a separate row above the table?
+- Should the "Rejected" column be hidden entirely when not editing, or just the checkbox made non-interactive?
+
+**Implementation notes:**
+
+- In `history-screen.js`: add a boolean `editMode` flag (default `false`). Render the table with `.rowEdit`, `.rowDel`, and `.rejected-toggle` elements hidden (CSS `display: none`) when `editMode = false`. Toggle button flips the flag and triggers a re-render.
+- CSS: add `.historyTable.edit-mode .rowEdit`, `.historyTable.edit-mode .rowDel`, `.historyTable.edit-mode .rejected-toggle` rules to show controls only in edit mode. This avoids per-element show/hide logic.
+- No data or store changes — purely a presentation-layer toggle.
 
 ---
 

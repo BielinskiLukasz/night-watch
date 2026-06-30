@@ -42,7 +42,10 @@ const SLEEP_LEN_SVG = Object.freeze({ w: 600, h: 180 });
 const TIME_BAND_SVG = Object.freeze({ w: 600, h: 200 });
 
 /** Cell geometry for the GitHub-style calendar heatmap. */
-const HEATMAP_CFG = Object.freeze({ cellSize: 11, cellGap: 2, rowOffset: 18, colOffset: 4 });
+const HEATMAP_CFG = Object.freeze({ cellSize: 11, cellGap: 2, rowOffset: 18, colOffset: 16 });
+
+/** Extra vertical space (SVG units) reserved below the 7-day grid for the legend. */
+const HEATMAP_LEGEND_H = 18;
 
 /** Stage boundary line color (D7-19). */
 const STAGE_BOUNDARY_STROKE = '#94a3b8';
@@ -426,15 +429,17 @@ function renderHeatmap(sectionEl, days) {
   const maxWeek = cells.reduce((m, c) => Math.max(m, c.weekIndex), 0);
   const weeks = maxWeek + 1;
   const svgW = colOffset + weeks * step + cellSize;
-  const svgH = rowOffset + 7 * step;
+  const svgH = rowOffset + 7 * step + HEATMAP_LEGEND_H;
 
   const svg = document.createElementNS(SVG_NS, 'svg'); // createElementNS — heatmap SVG root
   svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
-  svg.setAttribute('width', '100%');
-  svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+  // Natural pixel dimensions — no width:100% scaling. The .heatmapScroll wrapper
+  // scrolls horizontally so day-of-week labels stay readable at any dataset size.
+  svg.setAttribute('width', String(svgW));
+  svg.setAttribute('height', String(svgH));
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Sleep calendar heatmap');
-  svg.setAttribute('class', 'chartSvg');
+  svg.setAttribute('class', 'heatmapSvg');
 
   // Day-of-week labels on left (static literals — safe)
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -481,7 +486,10 @@ function renderHeatmap(sectionEl, days) {
     lx += cellSize + 2 + 30;
   }
 
-  sectionEl.appendChild(svg);
+  const scrollContainer = document.createElement('div');
+  scrollContainer.className = 'heatmapScroll';
+  scrollContainer.appendChild(svg);
+  sectionEl.appendChild(scrollContainer);
 }
 
 // ---------------------------------------------------------------------------

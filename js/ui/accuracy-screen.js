@@ -36,9 +36,9 @@ import { filterDayRecordsByStage } from '../lib/stages.js';
  */
 const ACCURACY_ROWS = Object.freeze([
   { type: 'wake',     label: 'Wake'      },
-  { type: 'bedtime',  label: 'Bedtime'   },
   { type: 'napStart', label: 'Nap Start' },
   { type: 'napEnd',   label: 'Nap End'   },
+  { type: 'bedtime',  label: 'Bedtime'   },
 ]);
 
 /**
