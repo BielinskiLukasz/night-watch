@@ -468,11 +468,18 @@ function renderHeatmap(sectionEl, days) {
       fill = long;
     }
 
-    svg.appendChild(svgEl('rect', {
+    const rect = svgEl('rect', {
       x: String(x), y: String(y),
       width: String(cellSize), height: String(cellSize),
       fill, rx: '2',
-    }));
+    });
+    // Native browser tooltip via SVG <title> — shows date + sleep hours on hover.
+    const titleEl = document.createElementNS(SVG_NS, 'title');
+    titleEl.textContent = (cell.sleepHours !== null && cell.sleepHours > 0)
+      ? cell.date + ': ' + cell.sleepHours.toFixed(1) + 'h'
+      : cell.date + ': no data';
+    rect.appendChild(titleEl);
+    svg.appendChild(rect);
   }
 
   sectionEl.appendChild(svg);
