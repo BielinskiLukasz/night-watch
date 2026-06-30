@@ -70,7 +70,13 @@ const SCREENS = Object.freeze({
 
 function applyTabVisibility() {
   for (const [tabId, el] of Object.entries(SCREENS)) {
-    if (el) el.style.display = (tabId === activeTab ? '' : 'none');
+    if (el) {
+      if (tabId === activeTab) {
+        showScreen(el);
+      } else {
+        el.hidden = true;
+      }
+    }
   }
   // Bottom nav handles its own aria-selected state internally via the
   // delegated click listener in mountBottomNav.
@@ -132,3 +138,77 @@ if (accuracyScreenEl) {
 // Initial render: apply tab visibility so Today is shown and all others hidden
 // (matching the 'today' default activeTab).
 applyTabVisibility();
+
+// Phase 8 additions: SW registration, update banner, file:// note, tab-switch fade
+// (D8-05, D8-06, D8-08, D8-11)
+
+/**
+ * showScreen(screenEl) — tab-switch fade helper (D8-11)
+ * Adds the is-entering class (opacity: 0) before unhiding, then removes it
+ * after a requestAnimationFrame so the CSS transition fires from 0 → 1.
+ * Per CLAUDE.md convention: requestAnimationFrame for animated UI state changes.
+ */
+function showScreen(screenEl) {
+  screenEl.classList.add('is-entering');
+  screenEl.hidden = false;
+  requestAnimationFrame(() => {
+    screenEl.classList.remove('is-entering');
+  });
+}
+
+/**
+ * showUpdateBanner(reg) — SW update detection surface (D8-05, D8-06)
+ * Shows the fixed #update-banner strip and wires the Reload button to
+ * postMessage SKIP_WAITING → controllerchange → location.reload().
+ * Security: all DOM text via textContent only (T-08-03-01: no dynamic HTML injection).
+ */
+function showUpdateBanner(reg) {
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  banner.hidden = false;
+  document.body.classList.add('has-update-banner');
+  banner.querySelector('.update-text').textContent = 'Update available';
+  banner.querySelector('.reload-btn').addEventListener('click', () => {
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  }, { once: true });
+}
+
+// SW registration guard: two-condition check per RESEARCH.md Anti-Patterns
+// (T-08-03-02: prevents SecurityError on file:// and supports-check for older browsers).
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    if (reg.waiting) showUpdateBanner(reg);
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && reg.waiting) showUpdateBanner(reg);
+      });
+    });
+  });
+  // controllerchange fires after skipWaiting activates the new SW → reload to apply.
+  // T-08-03-03: reg.waiting check in showUpdateBanner prevents reload loop.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    location.reload();
+  });
+}
+
+// file:// graceful degradation note (D8-08)
+// Shown once per browser profile; dismissed state stored in localStorage.
+// Security: text set via textContent only (T-08-03-01).
+const FILE_NOTE_KEY = 'nw_file_note_dismissed';
+if (location.protocol === 'file:') {
+  if (!localStorage.getItem(FILE_NOTE_KEY)) {
+    const note = document.getElementById('file-note');
+    if (note) {
+      note.hidden = false;
+      note.querySelector('.file-note-text').textContent =
+        'Running from local file — install from the web version for offline support.';
+      note.querySelector('.dismiss-btn').addEventListener('click', () => {
+        localStorage.setItem(FILE_NOTE_KEY, '1');
+        note.hidden = true;
+      }, { once: true });
+    }
+  }
+}
