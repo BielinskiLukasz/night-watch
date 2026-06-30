@@ -211,6 +211,30 @@ describe('chart-data transforms — UI-04, D7-05..D7-11', () => {
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].wakeMinutes, null, 'missing wake → wakeMinutes should be null');
     });
+
+    it('subjective night with two bedtimes → bedtimesMinutes has both', () => {
+      // Scenario: bedtime at 22:00 on day 1, then another bedtime at 00:10 on
+      // day 2 (which belongs to day 1's subjective night after cutover rollback).
+      const days = [{
+        date: '2025-01-01',
+        wake: null,
+        bedtime: makeEvent('2025-01-01T22:00'),
+        napStart: null,
+        napEnd: null,
+        rejected: false,
+        allEvents: [
+          { type: 'bedtime', at: '2025-01-01T22:00' },
+          { type: 'bedtime', at: '2025-01-02T00:10' },
+        ],
+      }];
+
+      const result = buildTimeBandSeries(days);
+
+      assert.strictEqual(result[0].bedtimesMinutes.length, 2, 'both bedtimes collected');
+      assert.strictEqual(result[0].bedtimesMinutes[0], 1320, '22:00 = 1320 min');
+      assert.strictEqual(result[0].bedtimesMinutes[1], 10,   '00:10 = 10 min');
+      assert.strictEqual(result[0].bedtimeMinutes, 1320, 'backward-compat scalar = first bedtime');
+    });
   });
 
   // ---------------------------------------------------------------------------

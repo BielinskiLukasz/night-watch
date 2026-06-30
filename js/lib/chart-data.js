@@ -178,11 +178,25 @@ export function buildHeatmapData(dayRecords) {
  * @returns {Array<{ date: string, wakeMinutes: number|null, bedtimeMinutes: number|null }>}
  */
 export function buildTimeBandSeries(dayRecords) {
-  return dayRecords.map(d => ({
-    date: d.date,
-    wakeMinutes: d.wake ? extractMinutes(d.wake) : null,
-    bedtimeMinutes: d.bedtime ? extractMinutes(d.bedtime) : null,
-  }));
+  return dayRecords.map(d => {
+    // Collect every bedtime event for this subjective night. When allEvents is
+    // present (real day records from day-bucket), use it to find all bedtimes —
+    // a subjective night can have two (e.g. 22:00 and 00:10 next calendar day).
+    // Fall back to d.bedtime for test fixtures that omit allEvents.
+    const bedtimeEvents = d.allEvents
+      ? d.allEvents.filter(ev => ev.type === 'bedtime')
+      : (d.bedtime ? [d.bedtime] : []);
+    const bedtimesMinutes = bedtimeEvents
+      .map(ev => extractMinutes(ev))
+      .filter(m => m !== null);
+
+    return {
+      date: d.date,
+      wakeMinutes: d.wake ? extractMinutes(d.wake) : null,
+      bedtimeMinutes: bedtimesMinutes[0] ?? null,  // kept for backward compat
+      bedtimesMinutes,                              // full list for multi-dot rendering
+    };
+  });
 }
 
 /**

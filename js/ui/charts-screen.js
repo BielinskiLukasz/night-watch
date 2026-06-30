@@ -329,7 +329,7 @@ function renderTimeBandChart(sectionEl, days, snap) {
   sectionEl.appendChild(h2);
 
   const timeSeries = buildTimeBandSeries(days);
-  const hasData = timeSeries.some((p) => p.wakeMinutes !== null || p.bedtimeMinutes !== null);
+  const hasData = timeSeries.some((p) => p.wakeMinutes !== null || p.bedtimesMinutes.length > 0);
 
   const W = TIME_BAND_SVG.w;
   const H = TIME_BAND_SVG.h;
@@ -380,9 +380,9 @@ function renderTimeBandChart(sectionEl, days, snap) {
         fill: '#4f46e5', opacity: '0.8',
       }));
     }
-    if (p.bedtimeMinutes !== null) {
+    for (const bedMin of p.bedtimesMinutes) {
       svg.appendChild(svgEl('circle', {
-        cx: x, cy: yScale(p.bedtimeMinutes), r: '3',
+        cx: x, cy: yScale(bedMin), r: '3',
         fill: '#94a3b8', opacity: '0.8',
       }));
     }
