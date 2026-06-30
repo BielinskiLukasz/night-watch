@@ -225,7 +225,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   3. User navigates to the "Accuracy" screen and sees three side-by-side metrics: percentage of forecasts within max_delta, within max_delta/2, and where actual time fell inside the predicted min/max band
   4. User can navigate between Today, History, Charts, and Accuracy screens from any screen via a persistent navigation menu
 
-**Plans**: 4/6 plans executed
+**Plans**: 5/6 plans executed
 
 **Wave 1** *(test stubs — parallel)*
 
@@ -242,7 +242,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 4** *(blocked on Wave 3 — parallel)*
 
-  - [ ] 07-05-PLAN.md — Charts screen: mountChartsScreen with all five SVG visualizations + E2E verification [UI-04]
+  - [x] 07-05-PLAN.md — Charts screen: mountChartsScreen with all five SVG visualizations + E2E verification [UI-04]
   - [ ] 07-06-PLAN.md — Accuracy screen: mountAccuracyScreen 4x3 grid + E2E verification + full Phase 7 gate [UI-05]
 
 ### Phase 8: PWA & Platform Hardening
@@ -271,7 +271,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 4. History Screen & Edit/Delete | 4/4 | Complete | 2026-06-27 |
 | 5. Data Import/Export | 5/5 | Complete | 2026-06-29 |
 | 6. Life Stages | 5/5 | Complete | 2026-06-29 |
-| 7. Charts, Heatmap & Accuracy | 4/6 | In Progress|  |
+| 7. Charts, Heatmap & Accuracy | 5/6 | In Progress|  |
 | 8. PWA & Platform Hardening | 0/TBD | Not started | — |
 
 ## Backlog
