@@ -21,13 +21,18 @@ import { timeToMinutes } from './forecast.js';
 /** Frozen chart/heatmap display config. */
 export const CHART_CONFIG = Object.freeze({
   HEATMAP_COLORS: Object.freeze({
-    missing: '#e2e8f0',
-    short: '#c7d2fe',
-    target: '#4f46e5',
-    long: '#3730a3',
+    missing:   '#e2e8f0', // no data
+    veryShort: '#fecaca', // < 7h
+    short:     '#fde68a', // 7–8h
+    target:    '#4ade80', // 8–10h  (target range)
+    long:      '#22c55e', // 10–12h
+    veryLong:  '#166534', // > 12h
   }),
-  TARGET_SLEEP_MIN: 8,
-  TARGET_SLEEP_MAX: 10,
+  // Bucket boundaries in hours (upper-exclusive except the last)
+  SLEEP_VERY_SHORT: 7,
+  SLEEP_SHORT:      8,
+  SLEEP_LONG:       10,
+  SLEEP_VERY_LONG:  12,
 });
 
 // ---------------------------------------------------------------------------

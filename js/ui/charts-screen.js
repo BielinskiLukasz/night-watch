@@ -451,7 +451,8 @@ function renderHeatmap(sectionEl, days) {
     svg.appendChild(svgText({ x: colOffset - 2, y: rowOffset + i * step + cellSize - 2, 'text-anchor': 'end', 'font-size': '8', fill: '#94a3b8' }, dayLabels[i]));
   }
 
-  const { missing, short, target, long } = CHART_CONFIG.HEATMAP_COLORS;
+  const { missing, veryShort, short, target, long, veryLong } = CHART_CONFIG.HEATMAP_COLORS;
+  const { SLEEP_VERY_SHORT, SLEEP_SHORT, SLEEP_LONG, SLEEP_VERY_LONG } = CHART_CONFIG;
 
   for (const cell of cells) {
     const x = colOffset + cell.weekIndex * step;
@@ -460,12 +461,16 @@ function renderHeatmap(sectionEl, days) {
     let fill;
     if (cell.sleepHours === null || cell.sleepHours === 0) {
       fill = missing;
-    } else if (cell.sleepHours < CHART_CONFIG.TARGET_SLEEP_MIN) {
+    } else if (cell.sleepHours < SLEEP_VERY_SHORT) {
+      fill = veryShort;
+    } else if (cell.sleepHours < SLEEP_SHORT) {
       fill = short;
-    } else if (cell.sleepHours <= CHART_CONFIG.TARGET_SLEEP_MAX) {
+    } else if (cell.sleepHours <= SLEEP_LONG) {
       fill = target;
-    } else {
+    } else if (cell.sleepHours <= SLEEP_VERY_LONG) {
       fill = long;
+    } else {
+      fill = veryLong;
     }
 
     const rect = svgEl('rect', {
@@ -487,10 +492,12 @@ function renderHeatmap(sectionEl, days) {
   // Legend as HTML below the SVG — avoids distorting the SVG
   // viewBox when the padded width is wider than the actual data cells.
   const legendItems = [
-    { fill: missing, label: 'No data' },
-    { fill: short,   label: '< 8h'   },
-    { fill: target,  label: '8–10h'  },
-    { fill: long,    label: '> 10h'  },
+    { fill: missing,   label: 'No data' },
+    { fill: veryShort, label: '< 7h'    },
+    { fill: short,     label: '7–8h'    },
+    { fill: target,    label: '8–10h'   },
+    { fill: long,      label: '10–12h'  },
+    { fill: veryLong,  label: '> 12h'   },
   ];
   const legendEl = document.createElement('div');
   legendEl.className = 'heatmapLegend';
