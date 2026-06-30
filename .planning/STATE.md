@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 07
 current_phase_name: charts-heatmap-accuracy
 status: Phase 6 complete
-stopped_at: Phase 8 context gathered
-last_updated: "2026-06-30T20:22:27.861Z"
+stopped_at: Phase 8 UI-SPEC approved
+last_updated: "2026-06-30T20:33:35.770Z"
 last_activity: 2026-06-30
 last_activity_desc: Phase NW-07 execution started
 progress:
@@ -255,6 +255,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T20:22:27.824Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/NW-08-pwa-platform-hardening/08-CONTEXT.md
+Last session: 2026-06-30T20:33:35.732Z
+Stopped at: Phase 8 UI-SPEC approved
+Resume file: .planning/phases/NW-08-pwa-platform-hardening/08-UI-SPEC.md
