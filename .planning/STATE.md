@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 07
 current_phase_name: charts-heatmap-accuracy
 status: Phase 6 complete
-stopped_at: Phase 7 context gathered
-last_updated: "2026-06-30T09:05:59.711Z"
+stopped_at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
+last_updated: "2026-06-30T09:38:59.652Z"
 last_activity: 2026-06-30
 last_activity_desc: Phase NW-07 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 40
-  completed_plans: 36
+  completed_plans: 37
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: NW-07 (charts-heatmap-accuracy) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
 Last activity: 2026-06-30 — Phase NW-07 execution started
 
@@ -200,6 +200,7 @@ Non-blocking follow-ups (carry into Phase 2 / 8):
 | Phase 1 P6 | 13min | 2 tasks | 5 files |
 | Phase 1 P7 | 18min | 2 tasks | 5 files |
 | Phase 1 P8 | 8min  | 2 tasks | 3 files |
+| Phase NW-07 P02 | 15 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -235,6 +236,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 01]: Plan 01-06: extra:true is a runtime-only annotation on overflow nap entries via shallow copy `{ ...evt, extra: true }` — never mutates the input events array, never leaks into the canonical D-04 wire format on disk
 - [Phase 01]: Plan 01-06: renderer single-iterates day.allEvents; compound className 'event extraNap' (both classes) keeps overflow rows actionable AND faint; renderExtraNapRow helper deleted entirely — single source of truth for "what to render" closes UAT gap 4 BLOCKER
 - [Phase 01]: Plan 01-08: EVENT_LABEL derived from BUTTONS via Object.fromEntries at module load — single source of truth for type→label mapping closes UAT gap 1 (label SSOT). BUTTONS + labelFor exported so the integration test pins parity at the module API layer (vs. duplicating the 4-entry table in test code — explicitly forbidden by gap-1 remediation). D-04 wire format unchanged on disk.
+- [Phase ?]: [Phase 07]: Plan 07-02: accuracy.total increments for every day with actual event and non-cold-start forecast, even when no prediction exists for that event type
 
 ### Pending Todos
 
@@ -246,6 +248,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T09:05:59.698Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/NW-07-charts-heatmap-accuracy/07-CONTEXT.md
+Last session: 2026-06-30T09:38:59.639Z
+Stopped at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
+Resume file: None
