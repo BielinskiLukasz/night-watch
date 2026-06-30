@@ -65,7 +65,7 @@
 
 - [ ] **PLAT-01**: App is built with vanilla HTML/CSS/JS only — no frameworks, no build step, no npm dependencies.
 - [ ] **PLAT-02**: Code is split across multiple HTML/CSS/JS files (not a single index.html).
-- [ ] **PLAT-03**: App installs as a PWA (manifest + service worker) and works fully offline, including when loaded from `file://`.
+- [x] **PLAT-03**: App installs as a PWA (manifest + service worker) and works fully offline, including when loaded from `file://`.
 - [ ] **PLAT-04**: App is deployable to GitHub Pages with no server-side code.
 - [ ] **PLAT-05**: UI text is English only.
 - [ ] **PLAT-06**: App has its own visual identity — same calm/dark/minimal/ambient register as `mindful-breathing` but a distinct accent palette and glyph set.
@@ -152,7 +152,7 @@ Which phases cover which requirements.
 | STAGE-02 | Phase 6 | Pending |
 | PLAT-01 | Phase 8 | Pending |
 | PLAT-02 | Phase 8 | Pending |
-| PLAT-03 | Phase 8 | Pending |
+| PLAT-03 | Phase 8 | Complete |
 | PLAT-04 | Phase 8 | Pending |
 | PLAT-05 | Phase 8 | Pending |
 | PLAT-06 | Phase 8 | Pending |
