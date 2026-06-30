@@ -66,12 +66,12 @@ Four roles derived from audit of existing style.css across all screens:
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Display | 36px (2.25rem) | 700 | 1.1 | Next-event hero time (`.next-event-hero .time-central`) |
+| Display | 36px (2.25rem) | 600 | 1.1 | Next-event hero time (`.next-event-hero .time-central`) — visually dominant by size alone |
 | Heading | 20px (1.25rem) | 600 | 1.2 | App header subject name, modal h2, section headings |
 | Body | 16px (1rem) | 400 | 1.4–1.5 | Form inputs, primary content text, button labels |
 | Label | 14px (0.875rem) | 400 | 1.4 | Secondary descriptors, table headers, chart section h2, update banner text |
 
-Note on weights: the system uses 400 (regular) and 600 (semibold) as the two declared weights. 700 is used exclusively on the hero display time — it counts as a third weight reserved for that single element only.
+Declared weights: exactly 2 — **400** (regular) and **600** (semibold). No third weight is permitted.
 
 **Phase 8 typography refinement scope (D8-13):** Review and tighten sizing, line-height, and spacing across all four screens for visual consistency. The four-role table above is the target state after refinement. No new font sizes or weights may be introduced.
 
@@ -180,7 +180,8 @@ Visual treatment: 16px gap between fieldsets, fieldset border `#e2e8f0`, legend 
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (modals) | "Save" |
+| Primary CTA (Settings modal) | "Save Settings" |
+| Primary CTA (log/edit event modal) | "Save Event" |
 | Update banner text | "Update available" |
 | Update banner button | "Reload" |
 | file:// note | "Running from local file — install from the web version for offline support." |
@@ -232,6 +233,17 @@ All inline SVG icons (bottom-nav, quick-log buttons, Settings trigger) must conf
 | Rendered size | 20×20px on header; 22×22px on bottom nav |
 
 **Exception:** The Settings gear (existing) is a filled path icon from Material Icons. Phase 8 REPLACES it with a stroke-based equivalent to achieve style unity. The new icon must still be inline SVG (no external assets), Apache 2.0 or equivalent license.
+
+**Bottom-nav accessibility contract:** Each bottom-nav tab `<button>` is icon-only and MUST carry an `aria-label` equal to its visible tab name:
+
+| Tab | `aria-label` value |
+|-----|--------------------|
+| Today | `"Today"` |
+| History | `"History"` |
+| Charts | `"Charts"` |
+| Accuracy | `"Accuracy"` |
+
+The Settings trigger button (header, icon-only) MUST carry `aria-label="Settings"`.
 
 > Source: CONTEXT.md D8-10 (thin line-art, rounded caps, coherence with Settings gear); CLAUDE.md (zero deps, inline SVG).
 
