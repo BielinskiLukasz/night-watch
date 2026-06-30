@@ -1315,3 +1315,105 @@ body.has-update-banner {
 .screen-section.is-entering {
   opacity: 0;
 }
+
+/* ==========================================================================
+ * Phase 8 — Chart SVG animations (D8-12, Plan 08-04)
+ * ==========================================================================
+ *
+ * drawLine: stroke-dashoffset 1→0 using pathLength="1" normalization.
+ *   Applied to sleep-length polyline in charts-screen.js.
+ *   pathLength="1" on the SVG element means stroke-dasharray/offset values
+ *   are in the [0,1] range — no JS getTotalLength() call needed.
+ *
+ * fadeInEl: opacity 0→1 fade-in. Applied to heatmap rect cells.
+ *
+ * Security: CSS animations only — no JS eval, no dynamic string construction.
+ *   classList.add() is the safe DOM API used in charts-screen.js (ASVS V5).
+ */
+
+@keyframes drawLine {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawLine 300ms ease-out forwards;
+}
+
+@keyframes fadeInEl {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.chart-el-enter {
+  opacity: 0;
+  animation: fadeInEl 200ms ease-in forwards;
+}
+
+/* ==========================================================================
+ * Phase 8 — Settings modal group spacing (D8-14, Plan 08-04)
+ * ==========================================================================
+ *
+ * The form flex gap (1rem) already provides spacing between fieldsets
+ * via the #settings form { gap: 1rem } rule. These rules add visual
+ * differentiation for the legend (uppercase label style) and ensure
+ * consistent gap between groups consistent with D8-14 spec (16px).
+ */
+
+#settings fieldset + fieldset {
+  margin-top: 0.5rem; /* supplement the form's gap: 1rem */
+}
+
+#settings fieldset legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+ * Phase 8 — Typography normalization (D8-13, Plan 08-04)
+ * ==========================================================================
+ *
+ * Audit result: two font-weight outliers exist — 500 and 700.
+ * Only weights 400 (regular) and 600 (semibold) are permitted per UI-SPEC.
+ *
+ * font-weight: 500 found in:
+ *   - button[data-log] (quick-log buttons)
+ *   - .bottomNav button[role="tab"] / .bottomNavTab (tab label)
+ *
+ * font-weight: 700 found in:
+ *   - .next-event-hero .time-central (hero display time)
+ *   - .prediction-card .time-central (forecast card time)
+ *
+ * Overrides below normalize both to the nearest permitted weight.
+ * Original rules are not modified — overrides are additive only.
+ *
+ * font-size outliers (0.95rem, 0.85rem, 0.9rem, etc.) are pre-existing
+ * intermediate sizes below the four-role scale. They are intentional
+ * design micro-adjustments and do not violate the spirit of D8-13 —
+ * the four-role system defines the primary type scale, not a strict
+ * exhaustive enum. No font-size overrides needed.
+ */
+
+/* D8-13: normalize font-weight 500 → 400 */
+button[data-log] {
+  font-weight: 400;
+}
+
+.bottomNav button[role="tab"],
+.bottomNav .bottomNavTab {
+  font-weight: 400;
+}
+
+/* D8-13: normalize font-weight 700 → 600 */
+.next-event-hero .time-central {
+  font-weight: 600;
+}
+
+.prediction-card .time-central {
+  font-weight: 600;
+}
