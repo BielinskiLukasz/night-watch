@@ -65,7 +65,7 @@ Phase 7 does NOT include:
 
 ### Stage Scoping for Analytics
 
-- **D7-17:** Charts and Accuracy screens **respect the active stage filter**. When `settings.activeStageId` is non-null, both screens call `filterDayRecordsByStage(dayRecords, settings)` before rendering. When "All data" is selected (`activeStageId = null`), full history is used.
+- **D7-17:** Charts and Accuracy screens **respect the active stage filter**. When `settings.activeStageId` is non-null, both screens call `filterDayRecordsByStage(dayRecords, stages, activeStageId)` — three-argument form matching the actual `js/lib/stages.js` source (verified in 07-RESEARCH.md). Call as `filterDayRecordsByStage(allDays, snap.stages || [], snap.activeStageId)`. When "All data" is selected (`activeStageId = null`), full history is used.
 
 - **D7-18:** Stage selector stays on the Today screen only (no new selector on Charts or Accuracy). Charts and Accuracy read `activeStageId` from `settings.get()` directly. When a stage is active, a small **"Viewing: [Stage Name]"** label appears at the top of the Charts and Accuracy screens (styled as a muted chip/badge). It is display-only — no interaction.
 
@@ -117,7 +117,7 @@ Phase 7 does NOT include:
 
 - `js/lib/forecast.js` — `forecast(dayRecords, settings)` — called per-day in the retroactive backtesting loop inside `js/lib/accuracy.js`. Signature unchanged.
 
-- `js/lib/stages.js` — `filterDayRecordsByStage(dayRecords, settings)` — called at the top of Charts and Accuracy screen mount functions when `settings.activeStageId` is non-null.
+- `js/lib/stages.js` — `filterDayRecordsByStage(dayRecords, stages, activeStageId)` — three-argument form (verified from source). Called at the top of Charts and Accuracy screen mount functions when `settings.activeStageId` is non-null.
 
 - `js/lib/db-shape.js` — `DEFAULT_SETTINGS` — reference for `settings.minDays`, `settings.maxDelta`, `settings.windowDays`, `settings.timeFormat` used in chart axis formatting and accuracy thresholds.
 
@@ -143,7 +143,7 @@ Phase 7 does NOT include:
 
 - **`js/lib/forecast.js` — `forecast(dayRecords, settings)`**: The pure forecast function is the core of accuracy backtesting. `computeAccuracy()` will call `forecast(dayRecords.slice(0, i), settings)` for each day index `i`. No changes to `forecast.js` needed.
 
-- **`js/lib/stages.js` — `filterDayRecordsByStage(dayRecords, settings)`**: Drop-in call at the top of Charts/Accuracy screen mounts to scope data to the active stage. Already tested and proven in Phase 6.
+- **`js/lib/stages.js` — `filterDayRecordsByStage(dayRecords, stages, activeStageId)`**: Three-argument form (verified from source in 07-RESEARCH.md). Drop-in call at the top of Charts/Accuracy screen mounts to scope data to the active stage. Call as `filterDayRecordsByStage(allDays, snap.stages || [], snap.activeStageId)`. Already tested and proven in Phase 6.
 
 - **`js/ui/dom.js`**: DOM helper utilities for creating elements safely. Phase 7 uses these for SVG element creation where applicable (e.g., `document.createElementNS('http://www.w3.org/2000/svg', 'rect')`).
 
