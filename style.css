@@ -427,76 +427,130 @@ button[data-log]:hover {
 }
 
 /* ==========================================================================
- * Plan 04-02 — Tab navigation, History table, rejected rows, responsive layout
+ * Plan 04-02 — History table, rejected rows, responsive layout
+ * Plan 07-04 — Bottom navigation bar, four-screen layout (D7-01..D7-04)
  * ==========================================================================
  *
- * Tab nav (D4-07): two-button Today | History switcher inside the header.
  * History table (D4-01): day-column grid layout.
  * Rejected rows (D4-10): ~50% opacity for outlier days.
+ * Bottom nav (D7-04): fixed four-tab bottom navigation replacing header tab bar.
  * Responsive: stacked columns on mobile (<640px), full grid on desktop.
  *
- * All dynamic content uses textContent (T-04-04); these selectors are not
- * innerHTML-dependent. Classes match history-screen.js output exactly.
+ * All dynamic content uses textContent (T-04-04 / T-07); these selectors are not
+ * innerHTML-dependent. Classes match history-screen.js and bottom-nav.js output.
+ *
+ * Note: .tabNav rules removed in Plan 07-04 (D7-01 — header tab nav replaced
+ * by bottom nav). The .appHeader justify-content reverts to space-between.
  */
 
-/* ── Tab navigation (.tabNav, [role="tab"]) ──────────────────────────────── */
+/* ── Bottom navigation bar (D7-04) ──────────────────────────────────────── */
 
-.tabNav {
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
   display: flex;
-  gap: 4px;
-  align-items: center;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  z-index: 100;
 }
 
-.tabNav button[role="tab"] {
-  padding: 6px 14px;
-  min-height: 36px;
-  font-size: 0.95rem;
-  font-weight: 500;
+.bottomNav button[role="tab"],
+.bottomNav .bottomNavTab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
   cursor: pointer;
   color: #64748b;
-  transition: color 0.1s, border-color 0.1s;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 0;
 }
 
-.tabNav button[role="tab"]:hover {
-  color: #1e293b;
-  background: #f1f5f9;
-  border-radius: 0.25rem 0.25rem 0 0;
-}
-
-.tabNav button[role="tab"][aria-selected="true"] {
-  font-weight: 700;
+.bottomNav button[role="tab"][aria-selected="true"],
+.bottomNav .bottomNavTab[aria-selected="true"] {
   color: #4f46e5;
-  border-bottom-color: #4f46e5;
 }
 
-.tabNav button[role="tab"]:focus-visible {
+.bottomNav button[role="tab"]:focus-visible,
+.bottomNav .bottomNavTab:focus-visible {
   outline: 2px solid #4f46e5;
   outline-offset: 2px;
-  border-radius: 0.25rem;
 }
 
-/* Header flex layout: subjectName (grow) | tabNav (shrink-0) | gear (shrink-0).
- * Override appHeader's space-between so tabNav sits between h1 and gear. */
-.appHeader {
-  justify-content: flex-start;
+/* Content padding compensation — prevents bottom-nav obscuring content (D7-04).
+ * 56px nav height + 8px buffer = 64px. Applied to #app (the content scroller). */
+#app {
+  padding-bottom: 64px;
 }
 
-.appHeader .subjectName {
-  flex: 1 1 auto;
-  min-width: 0; /* allow text-overflow ellipsis */
+/* ── Chart containers (D7-05..D7-08) ────────────────────────────────────── */
+
+.chartSection {
+  margin-bottom: 2rem;
 }
 
-.appHeader .tabNav {
-  flex: 0 0 auto;
-  margin: 0 4px;
+.chartSection h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5rem;
 }
 
-.appHeader .settingsTrigger {
-  flex: 0 0 auto;
+.chartSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Stage active badge (D7-18) */
+.stageChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Accuracy grid (D7-14) */
+.accuracyGrid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  gap: 1px;
+  background: #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.accuracyGrid > * {
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Cold-start note for Charts and Accuracy screens (D7-09 discretion) */
+.coldStartNote {
+  color: #64748b;
+  font-size: 0.9rem;
+  padding: 2rem 1rem;
+  text-align: center;
 }
 
 /* ── History screen root ─────────────────────────────────────────────────── */
@@ -668,10 +722,6 @@ button[data-log]:hover {
     min-width: 4.5rem;
   }
 
-  .tabNav button[role="tab"] {
-    padding: 5px 10px;
-    font-size: 0.88rem;
-  }
 }
 
 @media (min-width: 800px) {

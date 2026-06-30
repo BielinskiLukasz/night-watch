@@ -12,6 +12,12 @@
 //   - activeTab module-level state (persists across subscription re-renders)
 //   - onTabChange handler → show/hide today-screen / history-screen
 //   - mountHistoryScreen call (read-only; Wave 3 adds edit/delete)
+//
+// Plan 07-04 additions (D7-01..D7-04):
+//   - mountBottomNav call (replaces header tab nav)
+//   - Four-screen applyTabVisibility (today/history/charts/accuracy)
+//   - mountChartsScreen + mountAccuracyScreen stub calls
+//   - header.js import simplified (tab nav export removed in D7-01)
 
 import { createStorageLocal } from './adapters/storage-local.js';
 import { createClockSystem } from './adapters/clock-system.js';
@@ -19,8 +25,11 @@ import { newEventId } from './lib/id.js';
 import { createEventLog } from './store/event-log.js';
 import { createSettingsStore } from './store/settings.js';
 import { mountTodayScreen } from './ui/today-screen.js';
-import { mountHeader, setActiveTab } from './ui/header.js';
+import { mountHeader } from './ui/header.js';
 import { mountHistoryScreen } from './ui/history-screen.js';
+import { mountBottomNav } from './ui/bottom-nav.js';
+import { mountChartsScreen } from './ui/charts-screen.js';
+import { mountAccuracyScreen } from './ui/accuracy-screen.js';
 import { downloadJSON } from './lib/import-export.js';
 import { openSettings } from './ui/settings-modal.js';
 
@@ -44,33 +53,36 @@ const historyScreenEl = document.getElementById('history-screen');
 // history-table-root is the mount point for the day-column table; the outer
 // historyScreenEl is toggled visible/hidden by applyTabVisibility().
 const historyTableRootEl = document.getElementById('history-table-root');
+// Plan 07-04: new screen and nav elements (D7-01..D7-04)
+const chartsScreenEl = document.getElementById('charts-screen');
+const accuracyScreenEl = document.getElementById('accuracy-screen');
+const bottomNavEl = document.getElementById('bottom-nav');
 
-// Show/hide the two screens based on activeTab.
-// Called once at init and after every tab-change.
+// Show/hide all four screens based on activeTab.
+// Called once at init and after every tab-change (D7-04).
+// The SCREENS map uses direct element references captured above.
+const SCREENS = Object.freeze({
+  today: todayScreenEl,
+  history: historyScreenEl,
+  charts: chartsScreenEl,
+  accuracy: accuracyScreenEl,
+});
+
 function applyTabVisibility() {
-  if (!todayScreenEl || !historyScreenEl) return;
-  if (activeTab === 'history') {
-    todayScreenEl.style.display = 'none';
-    historyScreenEl.style.display = '';
-  } else {
-    todayScreenEl.style.display = '';
-    historyScreenEl.style.display = 'none';
+  for (const [tabId, el] of Object.entries(SCREENS)) {
+    if (el) el.style.display = (tabId === activeTab ? '' : 'none');
   }
-  // Keep aria-selected in sync (programmatic tab change without user click).
-  setActiveTab(headerEl, activeTab);
+  // Bottom nav handles its own aria-selected state internally via the
+  // delegated click listener in mountBottomNav.
 }
 
 // Plan 02-04 wiring: header reads settings.subjectName for h1 + document.title
 // and exposes the gear → openSettings({settings}) entrypoint.
-// Plan 04-02: also receives onTabChange to switch screens (D4-07).
 // Plan 05-04: onSettings callback injects eventLog, storage, id for CSV import.
+// Plan 07-04: onTabChange removed — tab navigation moved to bottom nav (D7-01).
 mountHeader({
   root: headerEl,
   settings,
-  onTabChange: (tabId) => {
-    activeTab = tabId;
-    applyTabVisibility();
-  },
   onSettings: () => openSettings({ settings, eventLog, storage, id: newEventId }),
 });
 
@@ -94,6 +106,29 @@ if (historyTableRootEl) {
   });
 }
 
-// Initial render: apply tab visibility so Today is shown and History is hidden
+// Plan 07-04 wiring: Bottom navigation bar (D7-01..D7-04).
+// Wires the four-tab bottom nav; onTabChange updates activeTab and calls
+// applyTabVisibility to show/hide the correct screen.
+if (bottomNavEl) {
+  mountBottomNav({
+    root: bottomNavEl,
+    onTabChange: (tabId) => {
+      activeTab = tabId;
+      applyTabVisibility();
+    },
+  });
+}
+
+// Plan 07-04 wiring: Charts screen (stub — full implementation in 07-05).
+if (chartsScreenEl) {
+  mountChartsScreen({ root: chartsScreenEl, eventLog, settings });
+}
+
+// Plan 07-04 wiring: Accuracy screen (stub — full implementation in 07-06).
+if (accuracyScreenEl) {
+  mountAccuracyScreen({ root: accuracyScreenEl, eventLog, settings });
+}
+
+// Initial render: apply tab visibility so Today is shown and all others hidden
 // (matching the 'today' default activeTab).
 applyTabVisibility();

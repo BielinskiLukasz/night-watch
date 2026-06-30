@@ -19,26 +19,15 @@
 </head>
 <body>
   <!--
-    App header (Plan 02-04 / D2-10). h1.subjectName is populated by
-    js/ui/header.js via .textContent (T-07 / Pitfall #5 — never innerHTML).
-    The gear button opens the Settings modal via dialog.showModal(). The
-    SVG icon is inline (no external asset) so the header has no network
-    dependency. min-width/height 44px on the trigger satisfies tap target.
-  -->
-  <!--
-    App header (Plan 02-04 / D2-10; Plan 04-02 / D4-07).
+    App header (Plan 02-04 / D2-10; Plan 07-04 / D7-01).
     h1.subjectName: populated by js/ui/header.js via .textContent (T-07).
-    nav.tabNav: two-tab header navigation (Today | History) per D4-07.
-    The gear button opens the Settings modal via dialog.showModal().
-    Tab buttons carry data-tab and aria-selected; header.js wires the click
-    handler and updates aria-selected state dynamically.
+    Tab navigation moved to #bottom-nav (D7-01): header now shows only
+    subject name + Settings gear. The gear button opens the Settings modal
+    via dialog.showModal(). SVG icon is inline (zero external assets).
+    min-width/height 44px on the trigger satisfies tap target (D7-02).
   -->
   <header class="appHeader">
     <h1 class="subjectName"></h1>
-    <nav class="tabNav" role="tablist" aria-label="Screen navigation">
-      <button type="button" role="tab" data-tab="today" aria-selected="true">Today</button>
-      <button type="button" role="tab" data-tab="history" aria-selected="false">History</button>
-    </nav>
     <button type="button" class="settingsTrigger" aria-label="Settings">
       <!-- Settings gear: Material Icons (Apache 2.0). Inline path keeps zero-deps constraint. -->
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -87,7 +76,29 @@
     <section id="history-screen" style="display: none;">
       <div id="history-table-root"></div>
     </section>
+
+    <!--
+      Charts screen (Plan 07-04 / D7-05). Initially hidden; shown when user
+      clicks the Charts tab. charts-screen.js mounts five chart sections via
+      replaceChildren(). Full implementation in Plan 07-05.
+    -->
+    <section id="charts-screen" style="display:none" aria-label="Charts"></section>
+
+    <!--
+      Accuracy screen (Plan 07-04 / D7-14). Initially hidden; shown when user
+      clicks the Accuracy tab. accuracy-screen.js mounts the 4x3 accuracy grid
+      via replaceChildren(). Full implementation in Plan 07-06.
+    -->
+    <section id="accuracy-screen" style="display:none" aria-label="Accuracy"></section>
   </main>
+
+  <!--
+    Bottom navigation bar (Plan 07-04 / D7-01..D7-04).
+    Four tabs: Today | History | Charts | Accuracy (D7-03).
+    Populated dynamically by js/ui/bottom-nav.js via mountBottomNav().
+    Fixed at viewport bottom via .bottomNav CSS (D7-04).
+  -->
+  <nav id="bottom-nav" class="bottomNav" role="tablist" aria-label="Screen navigation"></nav>
 
   <!--
     Manual-entry modal (Plan 01-04 / D-10 trigger, D-12 affordance reuse, D-13
