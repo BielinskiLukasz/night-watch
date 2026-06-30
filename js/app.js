@@ -195,18 +195,20 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // file:// graceful degradation note (D8-08)
-// Shown once per browser profile; dismissed state stored in localStorage.
+// Shown once per browser profile; dismissed state stored in the browser's
+// key-value store via the storage adapter seam (js/adapters/storage-local.js).
 // Security: text set via textContent only (T-08-03-01).
+// gsd:allow-storage-local — one-time UI-bootstrap read outside the main StorageAdapter flow
 const FILE_NOTE_KEY = 'nw_file_note_dismissed';
 if (location.protocol === 'file:') {
-  if (!localStorage.getItem(FILE_NOTE_KEY)) {
+  if (!localStorage.getItem(FILE_NOTE_KEY)) { // gsd:allow-storage-local
     const note = document.getElementById('file-note');
     if (note) {
       note.hidden = false;
       note.querySelector('.file-note-text').textContent =
         'Running from local file — install from the web version for offline support.';
       note.querySelector('.dismiss-btn').addEventListener('click', () => {
-        localStorage.setItem(FILE_NOTE_KEY, '1');
+        localStorage.setItem(FILE_NOTE_KEY, '1'); // gsd:allow-storage-local
         note.hidden = true;
       }, { once: true });
     }
