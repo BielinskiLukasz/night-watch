@@ -47,6 +47,13 @@ const HEATMAP_CFG = Object.freeze({ cellSize: 11, cellGap: 2, rowOffset: 18, col
 /** Extra vertical space (SVG units) reserved below the 7-day grid for the legend. */
 const HEATMAP_LEGEND_H = 18;
 
+/**
+ * Minimum weeks shown in the heatmap viewBox even when the dataset is smaller.
+ * Keeps the SVG aspect ratio sane so the chart fills the container without
+ * becoming excessively tall when only a few weeks of data exist.
+ */
+const HEATMAP_MIN_WEEKS = 26;
+
 /** Stage boundary line color (D7-19). */
 const STAGE_BOUNDARY_STROKE = '#94a3b8';
 
@@ -428,15 +435,19 @@ function renderHeatmap(sectionEl, days) {
 
   const maxWeek = cells.reduce((m, c) => Math.max(m, c.weekIndex), 0);
   const weeks = maxWeek + 1;
-  const svgW = colOffset + weeks * step + cellSize;
+  // Pad viewBox to at least HEATMAP_MIN_WEEKS so the aspect ratio stays sane
+  // when little data exists (prevents the chart from being excessively tall).
+  const svgW = colOffset + Math.max(weeks, HEATMAP_MIN_WEEKS) * step + cellSize;
   const svgH = rowOffset + 7 * step + HEATMAP_LEGEND_H;
 
   const svg = document.createElementNS(SVG_NS, 'svg'); // createElementNS — heatmap SVG root
   svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
-  // Natural pixel dimensions — no width:100% scaling. The .heatmapScroll wrapper
-  // scrolls horizontally so day-of-week labels stay readable at any dataset size.
-  svg.setAttribute('width', String(svgW));
-  svg.setAttribute('height', String(svgH));
+  // Scale to fill the container (width:100%) so the chart is never tiny.
+  // min-width prevents shrinking below the natural SVG width for large datasets —
+  // the .heatmapScroll wrapper then scrolls horizontally instead.
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+  svg.style.minWidth = svgW + 'px';
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Sleep calendar heatmap');
   svg.setAttribute('class', 'heatmapSvg');
