@@ -18,7 +18,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 - [x] **Phase 5: Data Import/Export** - CSV and JSON import (round-trip), JSON export, file-as-truth workflow, localStorage as cache (completed 2026-06-29)
 - [x] **Phase 6: Life Stages** - Manual stage boundaries (date range + name), scope forecasts to current stage (completed 2026-06-29)
 - [x] **Phase 7: Charts, Heatmap & Accuracy** - Sleep-length charts, time bands, nap patterns, activity correlation, calendar heatmap, three-metric accuracy dashboard, full navigation (completed 2026-06-30)
-- [ ] **Phase 8: PWA & Platform Hardening** - Multi-file vanilla JS split, PWA manifest + service worker, offline support + file:// loading, GitHub Pages deployment, English UI, calm theme, in-app notifications only
+- [x] **Phase 8: PWA & Platform Hardening** - Multi-file vanilla JS split, PWA manifest + service worker, offline support + file:// loading, GitHub Pages deployment, English UI, calm theme, in-app notifications only (completed 2026-06-30)
 
 ## Phase Details
 
@@ -259,7 +259,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   4. App is deployed to GitHub Pages and accessible via a public URL
   5. UI text is entirely in English, uses a calm dark/minimal theme distinct from mindful-breathing, and all notifications are in-app only (no browser/OS push)
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans complete
 
 **Wave 1** *(parallel — no dependencies)*
 
@@ -273,7 +273,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [ ] 08-05-PLAN.md — Phase gate: verify PLAT-01/02/03/04/05/06/07; full test suite; human checkpoint; REQUIREMENTS.md update
+  - [x] 08-05-PLAN.md — Phase gate: verify PLAT-01/02/03/04/05/06/07; full test suite; human checkpoint; REQUIREMENTS.md update
 
 ## Progress
 
@@ -286,7 +286,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 5. Data Import/Export | 5/5 | Complete | 2026-06-29 |
 | 6. Life Stages | 5/5 | Complete | 2026-06-29 |
 | 7. Charts, Heatmap & Accuracy | 6/6 | Complete   | 2026-06-30 |
-| 8. PWA & Platform Hardening | 4/5 | In Progress|  |
+| 8. PWA & Platform Hardening | 5/5 | Complete   | 2026-06-30 |
 
 ## Backlog
 

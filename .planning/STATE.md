@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 08
 current_phase_name: pwa-platform-hardening
 status: Phase 6 complete
-stopped_at: Completed 08-01 — manifest.json, sw.js, icons, and unit test
-last_updated: "2026-06-30T22:23:52.377Z"
+stopped_at: Completed NW-08-05 — PLAT-01..07 verified, REQUIREMENTS.md marked Complete; awaiting human browser checkpoint
+last_updated: "2026-06-30T23:19:37.573Z"
 last_activity: 2026-06-30
 last_activity_desc: Phase NW-08 execution started
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 45
-  completed_plans: 44
-  percent: 88
+  completed_plans: 46
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: NW-08 (pwa-platform-hardening) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
 Last activity: 2026-06-30 — Phase NW-08 execution started
 
@@ -205,6 +205,7 @@ Non-blocking follow-ups (carry into Phase 2 / 8):
 | Phase NW-08 P01 | 267 | - tasks | - files |
 | Phase NW-08 P02 | 10min | 1 tasks | 1 files |
 | Phase NW-08 P03 | 15min | 3 tasks | 3 files |
+| Phase NW-08 P05 | 22min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -255,6 +256,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase ?]: [Phase 08-03]: showScreen() as function declaration for hoisting — allows applyTabVisibility() to call it before Phase 8 block in source order
 - [Phase ?]: [Phase 08-03]: SW guard uses 'serviceWorker' in navigator AND location.protocol !== 'file:' — prevents SecurityError on file:// (T-08-03-02)
 - [Phase ?]: [Phase 08-03]: body.has-update-banner on <body> by showUpdateBanner() — 40px padding-top prevents fixed banner overlapping header
+- [Phase ?]: [Phase 08-05]: gsd:allow-storage-local exemption tag added to security-smoke.test.js — mirrors gsd:allow-ui-clock clock-seam pattern for file:// note dismiss state in app.js
 
 ### Pending Todos
 
@@ -266,6 +268,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T22:23:52.329Z
-Stopped at: Completed 08-01 — manifest.json, sw.js, icons, and unit test
+Last session: 2026-06-30T23:19:37.521Z
+Stopped at: Completed NW-08-05 — PLAT-01..07 verified, REQUIREMENTS.md marked Complete; awaiting human browser checkpoint
 Resume file: .planning/phases/NW-08-pwa-platform-hardening/08-UI-SPEC.md
