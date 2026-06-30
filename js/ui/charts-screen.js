@@ -84,7 +84,7 @@ function createChartSvg(viewBox, ariaLabel) {
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', ariaLabel);
-  svg.className = 'chartSvg';
+  svg.setAttribute('class', 'chartSvg');
   return svg;
 }
 
@@ -434,7 +434,7 @@ function renderHeatmap(sectionEl, days) {
   svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Sleep calendar heatmap');
-  svg.className = 'chartSvg';
+  svg.setAttribute('class', 'chartSvg');
 
   // Day-of-week labels on left (static literals — safe)
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
