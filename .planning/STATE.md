@@ -6,14 +6,14 @@ current_phase: 07
 current_phase_name: charts-heatmap-accuracy
 status: Phase 6 complete
 stopped_at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
-last_updated: "2026-06-30T11:09:28.704Z"
+last_updated: "2026-06-30T12:10:30.732Z"
 last_activity: 2026-06-30
 last_activity_desc: Phase NW-07 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 40
-  completed_plans: 39
+  completed_plans: 40
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: NW-07 (charts-heatmap-accuracy) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
 Last activity: 2026-06-30 — Phase NW-07 execution started
 
@@ -201,6 +201,7 @@ Non-blocking follow-ups (carry into Phase 2 / 8):
 | Phase 1 P7 | 18min | 2 tasks | 5 files |
 | Phase 1 P8 | 8min  | 2 tasks | 3 files |
 | Phase NW-07 P02 | 15 | 1 tasks | 1 files |
+| Phase NW-07 P05 | 25 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -238,6 +239,8 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 01]: Plan 01-08: EVENT_LABEL derived from BUTTONS via Object.fromEntries at module load — single source of truth for type→label mapping closes UAT gap 1 (label SSOT). BUTTONS + labelFor exported so the integration test pins parity at the module API layer (vs. duplicating the 4-entry table in test code — explicitly forbidden by gap-1 remediation). D-04 wire format unchanged on disk.
 - [Phase ?]: [Phase 07]: Plan 07-02: accuracy.total increments for every day with actual event and non-cold-start forecast, even when no prediction exists for that event type
 - [Phase ?]: .planning/phases/NW-07-charts-heatmap-accuracy/07-03-SUMMARY.md
+- [Phase ?]: Plan 07-05: mountChartsScreen uses svgText/createChartSvg helpers with explicit createElementNS for textContent security
+- [Phase ?]: Plan 07-05: getActivityLog added to eventLog store as defensive getter for db.activityLog (D5-17)
 
 ### Pending Todos
 
@@ -249,6 +252,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T11:09:28.642Z
+Last session: 2026-06-30T12:04:23.925Z
 Stopped at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
 Resume file: None
