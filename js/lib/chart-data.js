@@ -2,11 +2,11 @@
 // Pure data-transform helpers for the Charts screen visualizations.
 //
 // Requirements: UI-04, D7-05, D7-06, D7-07, D7-08, D7-09, D7-10, D7-11
-// Platform: PLAT-11 (pure module — zero DOM, zero I/O, zero localStorage)
+// Platform: PLAT-11 (pure module — zero DOM, zero I/O, zero browser storage)
 //
 // All five exported functions are pure transforms:
 //   - No DOM access
-//   - No localStorage access
+//   - No browser storage access (adapters only, see js/adapters/storage-local.js)
 //   - No side effects
 //   - Fully unit-testable with node:test
 //
