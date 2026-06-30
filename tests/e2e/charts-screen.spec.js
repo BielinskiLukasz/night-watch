@@ -33,8 +33,10 @@ test.describe('Charts screen — UI-04, D7-05..D7-11', () => {
     // when navigated to. Fresh state has 0 events < default minDays=7.
     await page.locator('#bottom-nav button[data-tab="charts"]').click();
 
-    // Cold-start note should be visible (D7-05 minimum data gate)
-    await expect(page.locator('.coldStartNote')).toBeVisible();
+    // Cold-start note should be visible inside the charts screen (D7-05 minimum data gate).
+    // Scoped to #charts-screen to avoid strict-mode violation when accuracy-screen
+    // also has a .coldStartNote element (both screens use the same class name).
+    await expect(page.locator('#charts-screen .coldStartNote')).toBeVisible();
   });
 
 });
