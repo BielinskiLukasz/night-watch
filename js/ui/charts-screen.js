@@ -264,10 +264,16 @@ function renderSleepLengthChart(sectionEl, days, snap) {
     .filter(Boolean);
 
   if (pointStrings.length >= 2) {
-    svg.appendChild(svgEl('polyline', {
+    const polyline = svgEl('polyline', {
       points: pointStrings.join(' '),
       fill: 'none', stroke: '#4f46e5', 'stroke-width': '2',
-    }));
+    });
+    // D8-12: draw-in animation via pathLength="1" normalization + CSS @keyframes drawLine.
+    // pathLength="1" means stroke-dasharray/offset values are in the [0,1] range —
+    // no JS getTotalLength() call needed. classList.add() is safe DOM API (ASVS V5).
+    polyline.setAttribute('pathLength', '1');
+    polyline.classList.add('chart-line');
+    svg.appendChild(polyline);
   }
 
   // Data points (circles)
@@ -478,6 +484,9 @@ function renderHeatmap(sectionEl, days) {
       width: String(cellSize), height: String(cellSize),
       fill, rx: '2',
     });
+    // D8-12: fade-in animation via CSS @keyframes fadeInEl.
+    // classList.add() is safe DOM API (ASVS V5, T-08-04-01).
+    rect.classList.add('chart-el-enter');
     // Native browser tooltip via SVG <title> — shows date + sleep hours on hover.
     const titleEl = document.createElementNS(SVG_NS, 'title');
     titleEl.textContent = (cell.sleepHours !== null && cell.sleepHours > 0)
