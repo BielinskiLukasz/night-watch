@@ -6,14 +6,14 @@ current_phase: 07
 current_phase_name: charts-heatmap-accuracy
 status: Phase 6 complete
 stopped_at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
-last_updated: "2026-06-30T09:38:59.652Z"
+last_updated: "2026-06-30T10:14:28.396Z"
 last_activity: 2026-06-30
 last_activity_desc: Phase NW-07 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 40
-  completed_plans: 37
+  completed_plans: 38
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: NW-07 (charts-heatmap-accuracy) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
 Last activity: 2026-06-30 — Phase NW-07 execution started
 
@@ -237,6 +237,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 01]: Plan 01-06: renderer single-iterates day.allEvents; compound className 'event extraNap' (both classes) keeps overflow rows actionable AND faint; renderExtraNapRow helper deleted entirely — single source of truth for "what to render" closes UAT gap 4 BLOCKER
 - [Phase 01]: Plan 01-08: EVENT_LABEL derived from BUTTONS via Object.fromEntries at module load — single source of truth for type→label mapping closes UAT gap 1 (label SSOT). BUTTONS + labelFor exported so the integration test pins parity at the module API layer (vs. duplicating the 4-entry table in test code — explicitly forbidden by gap-1 remediation). D-04 wire format unchanged on disk.
 - [Phase ?]: [Phase 07]: Plan 07-02: accuracy.total increments for every day with actual event and non-cold-start forecast, even when no prediction exists for that event type
+- [Phase ?]: .planning/phases/NW-07-charts-heatmap-accuracy/07-03-SUMMARY.md
 
 ### Pending Todos
 
@@ -248,6 +249,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T09:38:59.639Z
+Last session: 2026-06-30T10:14:28.357Z
 Stopped at: Completed NW-07-02-PLAN.md (computeAccuracy GREEN)
 Resume file: None
