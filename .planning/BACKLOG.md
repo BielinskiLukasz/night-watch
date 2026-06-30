@@ -536,6 +536,30 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
+## Prediction algorithm (captured 2026-06-30)
+
+### B-21 · Own prediction algorithm based on Excel model
+
+**Source:** user input (2026-06-30)
+**Status:** captured · not scheduled — details to be provided later
+**Earliest sensible slot:** post-Phase 7; likely replaces or extends the Phase 3 forecaster
+
+**What:** Replace or supplement the current forecasting algorithm with a custom algorithm modeled after the existing Excel spreadsheet workflow. Full specification to be provided by the user in a future session.
+
+**Why:** The spreadsheet has accumulated domain-specific heuristics and rules that the current Phase 3 forecaster does not replicate. Capturing those rules in code would make predictions match the user's established mental model.
+
+**Open questions when this gets planned:**
+
+- What are the specific formulas and rules in the Excel model?
+- Is this a replacement for the current forecaster or an additional prediction mode?
+- Should the old algorithm remain available as a fallback or toggle?
+
+**Implementation notes:**
+
+- Details pending user input. Reference the Phase 3 `js/lib/forecast.js` as the integration point — new algorithm slots in at the same return shape.
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
