@@ -225,7 +225,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
   3. User navigates to the "Accuracy" screen and sees three side-by-side metrics: percentage of forecasts within max_delta, within max_delta/2, and where actual time fell inside the predicted min/max band
   4. User can navigate between Today, History, Charts, and Accuracy screens from any screen via a persistent navigation menu
 
-**Plans**: 1/6 plans executed
+**Plans**: 2/6 plans executed
 
 **Wave 1** *(test stubs — parallel)*
 
@@ -233,7 +233,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 
 **Wave 2** *(blocked on Wave 1 — parallel)*
 
-  - [ ] 07-02-PLAN.md — TDD: computeAccuracy pure backtesting engine (RED→GREEN→REFACTOR) [UI-05, D7-16]
+  - [x] 07-02-PLAN.md — TDD: computeAccuracy pure backtesting engine (RED→GREEN→REFACTOR) [UI-05, D7-16]
   - [ ] 07-03-PLAN.md — TDD: chart-data.js five pure transform helpers (buildSleepLengthSeries, buildHeatmapData, buildTimeBandSeries, buildNapStats, buildActivityCorrelation) [UI-04]
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -271,7 +271,7 @@ Nightwatch is a vanilla-JS offline-first sleep prediction app that grows from a 
 | 4. History Screen & Edit/Delete | 4/4 | Complete | 2026-06-27 |
 | 5. Data Import/Export | 5/5 | Complete | 2026-06-29 |
 | 6. Life Stages | 5/5 | Complete | 2026-06-29 |
-| 7. Charts, Heatmap & Accuracy | 1/6 | In Progress|  |
+| 7. Charts, Heatmap & Accuracy | 2/6 | In Progress|  |
 | 8. PWA & Platform Hardening | 0/TBD | Not started | — |
 
 ## Backlog
