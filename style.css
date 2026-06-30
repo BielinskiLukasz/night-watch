@@ -8,6 +8,12 @@
   box-sizing: border-box;
 }
 
+/* Enforce hidden attribute — author stylesheet display rules (e.g. display:inline-flex)
+ * can override the UA-stylesheet [hidden]{display:none} rule without !important. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   margin: 0;
@@ -510,6 +516,17 @@ button[data-log]:hover {
 .chartSvg {
   width: 100%;
   height: auto;
+  display: block;
+}
+
+/* Calendar heatmap: natural pixel size + horizontal scroll for large datasets.
+ * Uses its own class (not .chartSvg) so the 100%-width scaling doesn't apply —
+ * scaling would make day-of-week labels microscopic when many weeks are shown. */
+.heatmapScroll {
+  overflow-x: auto;
+}
+
+.heatmapSvg {
   display: block;
 }
 
