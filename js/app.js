@@ -162,6 +162,11 @@ function showScreen(screenEl) {
  * postMessage SKIP_WAITING → controllerchange → location.reload().
  * Security: all DOM text via textContent only (T-08-03-01: no dynamic HTML injection).
  */
+// Set to true only when the user explicitly clicks Reload in the update banner.
+// Guards the controllerchange listener so clients.claim() on first install
+// (or any other controller change) does not trigger an unwanted reload.
+let pendingControllerReload = false;
+
 function showUpdateBanner(reg) {
   const banner = document.getElementById('update-banner');
   if (!banner) return;
@@ -170,6 +175,7 @@ function showUpdateBanner(reg) {
   banner.querySelector('.update-text').textContent = 'Update available';
   banner.querySelector('.reload-btn').addEventListener('click', () => {
     if (reg.waiting) {
+      pendingControllerReload = true;
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     }
   }, { once: true });
@@ -187,10 +193,10 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       });
     });
   });
-  // controllerchange fires after skipWaiting activates the new SW → reload to apply.
-  // T-08-03-03: reg.waiting check in showUpdateBanner prevents reload loop.
+  // controllerchange fires after skipWaiting + clients.claim() in sw.js.
+  // pendingControllerReload guard prevents reload on first-install claim().
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    location.reload();
+    if (pendingControllerReload) location.reload();
   });
 }
 
