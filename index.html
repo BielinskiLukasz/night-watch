@@ -93,7 +93,7 @@
       when user clicks the History tab. history-screen.js mounts the
       day-column table inside the root div via replaceChildren().
     -->
-    <section id="history-screen" class="screen-section" style="display: none;">
+    <section id="history-screen" class="screen-section" hidden>
       <div id="history-table-root"></div>
     </section>
 
@@ -102,14 +102,14 @@
       clicks the Charts tab. charts-screen.js mounts five chart sections via
       replaceChildren(). Full implementation in Plan 07-05.
     -->
-    <section id="charts-screen" class="screen-section" style="display:none" aria-label="Charts"></section>
+    <section id="charts-screen" class="screen-section" hidden aria-label="Charts"></section>
 
     <!--
       Accuracy screen (Plan 07-04 / D7-14). Initially hidden; shown when user
       clicks the Accuracy tab. accuracy-screen.js mounts the 4x3 accuracy grid
       via replaceChildren(). Full implementation in Plan 07-06.
     -->
-    <section id="accuracy-screen" class="screen-section" style="display:none" aria-label="Accuracy"></section>
+    <section id="accuracy-screen" class="screen-section" hidden aria-label="Accuracy"></section>
   </main>
 
   <!--
