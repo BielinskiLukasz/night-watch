@@ -1,7 +1,7 @@
 # Nightwatch
 
-![Status](https://img.shields.io/badge/status-active_development-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.0-blue)
+![Status](https://img.shields.io/badge/status-v1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -9,8 +9,6 @@
 
 An offline-first sleep tracker for one subject: log night sleep and naps, then let the app predict the next wake-up, bedtime, nap start, and nap end — with explicit uncertainty handling.  
 No backend. No dependencies. No installation.
-
-> **Actively developed** — 6 of 8 phases complete. GitHub Pages deploy coming in Phase 8.
 
 ---
 
@@ -28,6 +26,9 @@ No backend. No dependencies. No installation.
 - **Settings panel** — subject name, max_delta, min_days, rolling window, day-cutover hour (default 04:00), 12h/24h toggle, auto-outlier toggle
 - **Data import/export** — export full dataset as JSON; import JSON (lossless round-trip) or CSV (translated from the original Polish `sen.xlsx` schema)
 - **Life stages** — define named date-range stages (e.g., "Dropped second nap"); scope forecasts to the active stage only
+- **Charts & heatmap** — sleep-length line chart, time-band scatter plot, calendar heatmap, nap-pattern indicator, activity-vs-sleep correlation chart
+- **Accuracy dashboard** — three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) shown side-by-side across all four event types
+- **Installable PWA** — service worker with cache-first offline support, Web App Manifest, installable on Android and desktop
 - **Reactive updates** — all predictions recompute synchronously on every log, edit, delete, reject, or settings change
 
 ---
@@ -66,7 +67,7 @@ js/
   lib/                 # pure logic (time, day-bucket, forecast, stages, id)
   store/               # event-log.js, settings.js
   adapters/            # storage-local/memory, clock-system/fixed
-  ui/                  # today-screen, history-screen, header, manual-entry, dom helpers
+  ui/                  # today-screen, history-screen, charts-screen, header, manual-entry, dom helpers
 tests/
   unit/                # node:test, pure-logic modules
   integration/         # node:test, store + memory adapter + fixed clock
@@ -79,13 +80,13 @@ scripts/serve.js       # zero-dep static dev server
 
 ## Design decisions
 
-- **Zero runtime dependencies** — every feature uses a browser-native API: `localStorage`, `<dialog>`, `FileReader`, `URL.createObjectURL` (download). No framework, no CDN, no network required at runtime.
+- **Zero runtime dependencies** — every feature uses a browser-native API: `localStorage`, `<dialog>`, `FileReader`, `URL.createObjectURL` (download), `Canvas`. No framework, no CDN, no network required at runtime.
 - **Adapter seams for testability** — `new Date()` lives only in `js/adapters/clock-*.js`; `localStorage` is touched only in `js/adapters/storage-local.js`. The composition root injects both adapters everywhere else, making all logic unit-testable without a browser.
 - **XSS prevention** — all dynamic DOM updates go through `textContent` / `replaceChildren()` via `js/ui/dom.js`. No `innerHTML =` with user-controlled data anywhere in `js/`.
 - **No runtime dependencies enforced by CI** — `package.json` `dependencies` is literal `{}`. A separate CI step checks this before running any tests.
 - **Uncertainty over false precision** — when the P90–P10 band width exceeds `max_delta`, the forecast card switches to a cumulative probability table rather than printing a number the data does not support.
 - **File-as-truth** — exported JSON is the canonical dataset; `localStorage` is a rebuildable cache. Importing a JSON export fully restores all state.
-- **PWA hardening deferred to Phase 8** — the service worker is intentionally absent during Phases 1–7 so the data model can flex without cache-invalidation churn.
+- **Cache-first service worker** — precaches all app shell assets on install; serves them offline without any network round-trip.
 
 ---
 
@@ -100,13 +101,6 @@ scripts/serve.js       # zero-dep static dev server
 
 ---
 
-## What's next
-
-- **Phase 7 — Charts, Heatmap & Accuracy**: sleep-length line chart, time-band scatter plot, calendar heatmap, nap-pattern indicator, activity correlation, three-metric accuracy dashboard, full four-tab navigation
-- **Phase 8 — PWA & Platform Hardening**: service worker, offline support, `file://` loading, manifest, GitHub Pages deploy, calm visual theme
-
----
-
 ## Roadmap progress
 
 | Phase | Description | Status |
@@ -117,8 +111,8 @@ scripts/serve.js       # zero-dep static dev server
 | 4 | History Screen & Edit/Delete | ✅ Complete |
 | 5 | Data Import/Export | ✅ Complete |
 | 6 | Life Stages | ✅ Complete |
-| 7 | Charts, Heatmap & Accuracy | ⬜ Not started |
-| 8 | PWA & Platform Hardening | ⬜ Not started |
+| 7 | Charts, Heatmap & Accuracy | ✅ Complete |
+| 8 | PWA & Platform Hardening | ✅ Complete |
 
 Full phase details in `.planning/ROADMAP.md`.
 
