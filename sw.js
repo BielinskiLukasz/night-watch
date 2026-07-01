@@ -68,13 +68,17 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// activate: delete all caches whose name does not match CACHE_NAME.
-// This purges the previous version's cached assets on upgrade (T-08-01-03 / D8-07).
+// activate: delete all caches whose name does not match CACHE_NAME, then claim
+// all open clients so controllerchange fires in app.js after skipWaiting() (D8-05).
+// Without clients.claim(), navigator.serviceWorker.controller never changes and
+// the Reload button's postMessage chain silently drops (no reload).
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      )
+      .then(() => self.clients.claim())
   );
 });
 
