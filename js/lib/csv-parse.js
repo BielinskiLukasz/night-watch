@@ -1,0 +1,313 @@
+// js/lib/csv-parse.js
+// Pure CSV parser for Nightwatch — no DOM, no I/O.
+//
+// Handles the Polish sen.xlsx column schema (D5-06 to D5-10):
+//   - Delimiter auto-detection: ';' (Polish/European Excel) vs ',' (D5-09)
+//   - Date format auto-detection: DD.MM.YYYY dots vs YYYY-MM-DD dashes (D5-08)
+//   - Nap columns optional: empty nap cells → no napStart/napEnd events (D5-05)
+//   - Aggregate/computed columns silently ignored (D5-06)
+//   - Bad rows skipped with row number + reason in skipped[] (D5-10)
+//   - All event at-strings rounded to 5-minute boundary via parseLocalISO → roundTo5 → formatLocalISO (LOG-07)
+//
+// Returns: { events[], rejectedDays[], activityLog{}, stages[], skipped[{row, reason}] }
+
+import { parseLocalISO, roundTo5, formatLocalISO } from './time.js';
+
+/**
+ * Column name → internal field name mapping.
+ * Accepts both Polish headers (with/without diacritics) and English aliases.
+ * Object.freeze per CLAUDE.md / mindful-breathing pattern (D5-06).
+ */
+const COL = Object.freeze({
+  // Polish with diacritics (UTF-8 as exported by Excel/LibreOffice)
+  'Data':           'date',
+  'Pobudka':        'wake',
+  'Zaśnięcie':      'bedtime',
+  'Drzemka start':  'napStart',
+  'Drzemka stop':   'napEnd',
+  'Aktywność':      'activity',
+  'odrzucone':      'rejected',
+  // Polish without diacritics (ASCII fallback, common in some export tools)
+  'Zasniecie':      'bedtime',
+  'Aktywnosc':      'activity',
+  // English aliases for test fixtures and non-Polish users
+  'Date':           'date',
+  'Wake':           'wake',
+  'Bedtime':        'bedtime',
+  'Nap start':      'napStart',
+  'Nap end':        'napEnd',
+  'Activity':       'activity',
+  'Rejected':       'rejected',
+  // Stage / etap column (D6-07) — Polish and English variants
+  'etap':           'etap',
+  'Etap':           'etap',
+  'Stage':          'etap',
+  'stage':          'etap',
+});
+
+/**
+ * Normalize a header string for fuzzy matching:
+ * strip everything that is not a letter, digit, or space, then lowercase.
+ * This handles encoding-garbled headers such as "Za?ni?cie" (Zaśnięcie read
+ * as Windows-1250 in a UTF-8 reader) — the ? marks are stripped, leaving
+ * "zasniecie" which matches the ASCII fallback key in COL_FUZZY.
+ * @param {string} h
+ * @returns {string}
+ */
+function normalizeKey(h) {
+  return h.replace(/[^a-z0-9 ]/gi, '').toLowerCase().trim();
+}
+
+/** Fuzzy lookup built once from COL — same values, normalized keys. */
+const COL_FUZZY = Object.freeze(
+  Object.fromEntries(
+    Object.entries(COL)
+      .map(([k, v]) => [normalizeKey(k), v])
+      .filter(([k]) => k.length > 0),
+  ),
+);
+
+/**
+ * Detect the CSV delimiter from the header line.
+ * Counts semicolons vs commas; semicolons win on a tie.
+ * @param {string} headerLine
+ * @returns {';' | ','}
+ */
+function detectDelimiter(headerLine) {
+  const semis = (headerLine.match(/;/g) || []).length;
+  const commas = (headerLine.match(/,/g) || []).length;
+  return semis >= commas ? ';' : ',';
+}
+
+/**
+ * Detect the date format from a sample date cell.
+ * @param {string} sampleDate  raw date string from CSV
+ * @returns {'dmy-dot' | 'dmy-dash' | 'iso' | null}
+ */
+function detectDateFormat(sampleDate) {
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(sampleDate.trim())) return 'dmy-dot';
+  if (/^\d{2}-\d{2}-\d{4}$/.test(sampleDate.trim())) return 'dmy-dash'; // e.g. 30-03-2026
+  if (/^\d{4}-\d{2}-\d{2}$/.test(sampleDate.trim())) return 'iso';
+  return null;
+}
+
+/**
+ * Convert a raw date cell to an ISO date string (YYYY-MM-DD).
+ * @param {string} raw
+ * @param {'dmy-dot' | 'dmy-dash' | 'iso'} fmt
+ * @returns {string}
+ */
+function parseDate(raw, fmt) {
+  const s = raw.trim();
+  if (fmt === 'dmy-dot') {
+    const [d, m, y] = s.split('.');
+    return `${y}-${m}-${d}`;
+  }
+  if (fmt === 'dmy-dash') {
+    const [d, m, y] = s.split('-');
+    return `${y}-${m}-${d}`;
+  }
+  return s; // already ISO
+}
+
+/**
+ * Build a canonical 5-min-rounded 'YYYY-MM-DDTHH:MM' at-string.
+ * Slices time to first 5 chars so "HH:MM:SS" Excel suffix is handled.
+ * @param {string} dateStr  YYYY-MM-DD
+ * @param {string} timeStr  HH:MM or HH:MM:SS
+ * @returns {string}
+ * @throws {Error} on malformed input
+ */
+function parseEventAt(dateStr, timeStr) {
+  const hhmm = timeStr.trim().slice(0, 5).padStart(5, '0'); // strip seconds; pad "7:30" → "07:30"
+  const raw = `${dateStr}T${hhmm}`;
+  return formatLocalISO(roundTo5(parseLocalISO(raw)));
+}
+
+/**
+ * Parse a CSV string (UTF-8 text) into structured event data.
+ *
+ * @param {string} text  full CSV content as a string
+ * @returns {{
+ *   events: Array<{id: string, type: string, at: string}>,
+ *   rejectedDays: string[],
+ *   activityLog: Object<string, number>,
+ *   stages: Array<{id: string, name: string, startDate: string, endDate: string|null}>,
+ *   skipped: Array<{row: number, reason: string}>
+ * }}
+ */
+export function parseCSV(text) {
+  const events = [];
+  const rejectedDays = [];
+  const activityLog = {};
+  const skipped = [];
+
+  // Stage accumulator for etap column (D6-07, D6-08)
+  const stages = [];
+  let currentEtap = null;
+  let currentEtapStart = null;
+  let currentEtapEnd = null;
+
+  // Strip UTF-8 BOM (﻿) that Excel prepends to CSV exports.
+  // Without this, the first header becomes "﻿Data" and misses the COL map.
+  const normalized = text.replace(/^﻿/, '');
+  const lines = normalized.split(/\r?\n/);
+  if (lines.length === 0) return { events, rejectedDays, activityLog, stages, skipped };
+
+  const headerLine = lines[0];
+  const delimiter = detectDelimiter(headerLine);
+  const headers = headerLine.split(delimiter).map(h => h.trim());
+  console.log('[NW-CSV] delimiter:', JSON.stringify(delimiter), '| headers:', headers.map(h => JSON.stringify(h)));
+
+  // Build index: column position → field name (only for recognized headers).
+  // Exact match first; fall back to fuzzy match (strips non-alphanumeric chars)
+  // to handle headers garbled by encoding mismatch (e.g. "Za?ni?cie" → "zasniecie").
+  const colIdx = {};
+  const seen = new Set(); // track field names to avoid duplicate-column issues
+  for (let i = 0; i < headers.length; i++) {
+    const field = COL[headers[i]] ?? COL_FUZZY[normalizeKey(headers[i])];
+    if (field && !seen.has(field)) {
+      colIdx[i] = field;
+      seen.add(field);
+    }
+  }
+  console.log('[NW-CSV] recognized columns:', colIdx);
+
+  let dateFmt = null; // detected lazily from first parseable row
+
+  for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
+    if (!line || !line.trim()) continue; // skip empty/whitespace-only lines
+
+    const rowNum = lineIdx + 1; // 1-based for user-facing messages (header = row 1)
+    const cells = line.split(delimiter);
+
+    // Build a field→value map for this row
+    const row = {};
+    for (const [idxStr, field] of Object.entries(colIdx)) {
+      row[field] = (cells[+idxStr] || '').trim();
+    }
+
+    // Require date
+    if (!row.date) {
+      skipped.push({ row: rowNum, reason: 'missing date' });
+      continue;
+    }
+
+    // Require wake time
+    if (!row.wake) {
+      skipped.push({ row: rowNum, reason: 'missing wake time' });
+      continue;
+    }
+
+    // Detect date format lazily from first parseable row
+    if (!dateFmt) {
+      dateFmt = detectDateFormat(row.date);
+      if (!dateFmt) {
+        skipped.push({ row: rowNum, reason: `unrecognized date format: ${row.date}` });
+        continue;
+      }
+    }
+
+    let dateStr;
+    try {
+      dateStr = parseDate(row.date, dateFmt);
+    } catch {
+      skipped.push({ row: rowNum, reason: `invalid date: ${row.date}` });
+      continue;
+    }
+
+    // Required: wake event
+    let wakeAt;
+    try {
+      wakeAt = parseEventAt(dateStr, row.wake);
+    } catch {
+      skipped.push({ row: rowNum, reason: `invalid wake time: ${row.wake}` });
+      continue;
+    }
+    events.push({ type: 'wake', at: wakeAt });
+
+    // Optional: bedtime event
+    if (row.bedtime) {
+      try {
+        events.push({ type: 'bedtime', at: parseEventAt(dateStr, row.bedtime) });
+      } catch { /* swallow parse errors for optional fields */ }
+    }
+
+    // Optional: nap start event
+    if (row.napStart) {
+      try {
+        events.push({ type: 'napStart', at: parseEventAt(dateStr, row.napStart) });
+      } catch { /* swallow */ }
+    }
+
+    // Optional: nap end event
+    if (row.napEnd) {
+      try {
+        events.push({ type: 'napEnd', at: parseEventAt(dateStr, row.napEnd) });
+      } catch { /* swallow */ }
+    }
+
+    // Rejected flag (D5-07): truthy and not '0' and not 'false'
+    if (row.rejected && row.rejected !== '0' && row.rejected.toLowerCase() !== 'false') {
+      rejectedDays.push(dateStr);
+    }
+
+    // Activity log (D5-17): store numeric value if parseable
+    if (row.activity) {
+      const val = parseFloat(row.activity);
+      if (!isNaN(val)) {
+        activityLog[dateStr] = val;
+      }
+    }
+
+    // Process etap column for stage auto-creation (D6-07)
+    // dateStr is guaranteed to be in scope here (row passed all required-field checks above).
+    const etapVal = (row.etap || '').trim();
+    if (etapVal) {
+      if (etapVal !== currentEtap) {
+        // New etap run — close the previous run if any
+        if (currentEtap !== null) {
+          stages.push({
+            id: String(stages.length + 1),
+            name: currentEtap,
+            startDate: currentEtapStart,
+            endDate: currentEtapEnd,
+          });
+        }
+        // Start new run
+        currentEtap = etapVal;
+        currentEtapStart = dateStr;
+        currentEtapEnd = dateStr;
+      } else {
+        // Same run — extend end date
+        currentEtapEnd = dateStr;
+      }
+    } else {
+      // Empty etap — close any open run (non-consecutive runs get separate objects D6-08)
+      if (currentEtap !== null) {
+        stages.push({
+          id: String(stages.length + 1),
+          name: currentEtap,
+          startDate: currentEtapStart,
+          endDate: currentEtapEnd,
+        });
+        currentEtap = null;
+        currentEtapStart = null;
+        currentEtapEnd = null;
+      }
+    }
+  }
+
+  // Close the final etap run — open-ended (D6-07: last run has endDate: null)
+  if (currentEtap !== null) {
+    stages.push({
+      id: String(stages.length + 1),
+      name: currentEtap,
+      startDate: currentEtapStart,
+      endDate: null,
+    });
+  }
+
+  return { events, rejectedDays, activityLog, stages, skipped };
+}

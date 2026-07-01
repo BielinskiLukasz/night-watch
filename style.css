@@ -1,0 +1,1419 @@
+/* style.css
+ * Minimal functional styling for the walking skeleton.
+ * Phase 8 introduces the real theme; Phase 1 just needs the buttons to be
+ * tappable and the list to be readable.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+/* Enforce hidden attribute — author stylesheet display rules (e.g. display:inline-flex)
+ * can override the UA-stylesheet [hidden]{display:none} rule without !important. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 1.5rem;
+  line-height: 1.4;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+/* App header strip (Plan 02-04 / D2-10, UI-SPEC §Header Strip).
+ * Sits above #app at body root, full-bleed beneath body's 1.5rem padding.
+ * 56px min-height with flexbox space-between for left h1 + right gear. */
+.appHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 8px 16px;
+  min-height: 56px;
+  max-width: 32rem;
+  margin: 0 auto 1rem auto;
+}
+
+.appHeader .subjectName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1a1a1a;
+}
+
+.appHeader .settingsTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.375rem;
+  color: #475569;
+}
+
+.appHeader .settingsTrigger:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.appHeader .settingsTrigger:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+#app {
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+/* Quick-log button row (Plan 01-03 / D-10) */
+.quickLog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+button[data-log] {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+  background: #4f46e5;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+button[data-log]:hover {
+  background: #4338ca;
+}
+
+/* Grouping-mode quick-toggle (Plan 02-05 / D2-16, UI-SPEC §Grouping-Mode Toggle).
+ * Two buttons sit between quick-log and the day list; aria-pressed reflects
+ * snap.groupingMode. Active button uses font-weight + accent border —
+ * Phase 8 swaps in the accent fill once theming tokens are wired. */
+.groupingToggle {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 1rem;
+}
+
+.groupingToggle button {
+  padding: 8px 16px;
+  min-height: 40px;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.groupingToggle button:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.groupingToggle button[aria-pressed="true"] {
+  font-weight: 600;
+  border-color: #4f46e5;
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.groupingToggle button:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Day-grouped event list (Plan 01-03 / D-11) */
+.dayList {
+  display: block;
+}
+
+.day {
+  margin-bottom: 16px;
+}
+
+.day .dayHeader {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #555;
+}
+
+.dayEvents {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dayEvents li {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.dayEvents .eventTime {
+  font-weight: 600;
+  min-width: 3.5rem;
+}
+
+/* LOG-09 / T-06: extra-nap surfaced as a faint warning row */
+.dayEvents .extraNap {
+  opacity: 0.6;
+  font-style: italic;
+  background: #fff7e6;
+  border-color: #f0d9b5;
+}
+
+/* Per-event affordances (Plan 01-04 / D-12) */
+.dayEvents .rowEdit,
+.dayEvents .rowDel {
+  margin-left: auto;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.dayEvents .rowEdit {
+  margin-left: auto;
+}
+
+.dayEvents .rowDel {
+  margin-left: 0.35rem;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.dayEvents .rowEdit:hover {
+  background: #f1f5f9;
+}
+
+.dayEvents .rowDel:hover {
+  background: #fee2e2;
+}
+
+/* "+ Add event" button (Plan 01-04 / D-10 modal trigger) */
+.addEventBtn {
+  display: block;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 1px dashed #94a3b8;
+  border-radius: 0.375rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.addEventBtn:hover {
+  background: #f1f5f9;
+  border-color: #4f46e5;
+  color: #1e293b;
+}
+
+/* Manual-entry modal (Plan 01-04 / D-13, D-14, RESEARCH §Pattern 6) */
+#manualEntry {
+  padding: 1.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  max-width: 22rem;
+  width: 90vw;
+  background: #fff;
+}
+
+#manualEntry::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+#manualEntry h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.15rem;
+}
+
+#manualEntry form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+#manualEntry label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+#manualEntry input,
+#manualEntry select {
+  padding: 0.4rem 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+}
+
+#manualEntry .hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+#manualEntry menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0 0;
+  padding: 0;
+}
+
+#manualEntry menu button {
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+#manualEntry menu button[type="submit"] {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+#manualEntry menu button[type="submit"]:hover {
+  background: #4338ca;
+}
+
+/* Plan 01-07 — inline validation errors (UAT gaps 2 + 3 closure).
+ * Hidden when empty (:empty); visible-failure styling when populated.
+ * Color stays neutral per the calm-theme decision in PROJECT.md — only
+ * the border-left + background tint signals the warning state. */
+#manualEntry .manualEntryErrors {
+  display: none;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #7f1d1d;
+}
+
+#manualEntry .manualEntryErrors:not(:empty) {
+  display: block;
+}
+
+#manualEntry .manualEntryErrors p {
+  margin: 0.125rem 0;
+}
+
+/* Settings modal (Plan 02-04 / D2-12, D2-13, D2-14, UI-SPEC §Settings Modal).
+ * Mirrors #manualEntry shape, slightly wider to fit the 3 fieldsets. */
+#settings {
+  padding: 1.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  max-width: 500px;
+  width: 90vw;
+  background: #fff;
+}
+
+#settings::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+#settings h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.15rem;
+}
+
+#settings form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#settings fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1rem 1rem 1rem;
+  margin: 0;
+}
+
+#settings legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0 0.4rem;
+  color: #334155;
+}
+
+#settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+#settings label.checkboxRow {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#settings input[type="text"],
+#settings input[type="number"],
+#settings select {
+  min-height: 44px;
+  padding: 0.4rem 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  width: 100%;
+  background: #fff;
+}
+
+#settings input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+#settings menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+#settings menu button {
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+#settings menu button[type="submit"] {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+#settings menu button[type="submit"]:hover {
+  background: #4338ca;
+}
+
+/* ==========================================================================
+ * Plan 04-02 — History table, rejected rows, responsive layout
+ * Plan 07-04 — Bottom navigation bar, four-screen layout (D7-01..D7-04)
+ * ==========================================================================
+ *
+ * History table (D4-01): day-column grid layout.
+ * Rejected rows (D4-10): ~50% opacity for outlier days.
+ * Bottom nav (D7-04): fixed four-tab bottom navigation replacing header tab bar.
+ * Responsive: stacked columns on mobile (<640px), full grid on desktop.
+ *
+ * All dynamic content uses textContent (T-04-04 / T-07); these selectors are not
+ * innerHTML-dependent. Classes match history-screen.js and bottom-nav.js output.
+ *
+ * Note: .tabNav rules removed in Plan 07-04 (D7-01 — header tab nav replaced
+ * by bottom nav). The .appHeader justify-content reverts to space-between.
+ */
+
+/* ── Bottom navigation bar (D7-04) ──────────────────────────────────────── */
+
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  z-index: 100;
+}
+
+.bottomNav button[role="tab"],
+.bottomNav .bottomNavTab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.bottomNav button[role="tab"][aria-selected="true"],
+.bottomNav .bottomNavTab[aria-selected="true"] {
+  color: #4f46e5;
+}
+
+.bottomNav button[role="tab"]:focus-visible,
+.bottomNav .bottomNavTab:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Content padding compensation — prevents bottom-nav obscuring content (D7-04).
+ * 56px nav height + 8px buffer = 64px. Applied to #app (the content scroller). */
+#app {
+  padding-bottom: 64px;
+}
+
+/* ── Chart containers (D7-05..D7-08) ────────────────────────────────────── */
+
+.chartSection {
+  margin-bottom: 2rem;
+}
+
+.chartSection h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5rem;
+}
+
+.chartSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Legend rendered as HTML below the SVG so it never distorts the
+ * SVG aspect ratio when the padded viewBox is wider than the actual data. */
+.heatmapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.heatmapLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.heatmapLegendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Stage active badge (D7-18) */
+.stageChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Accuracy grid (D7-14) */
+.accuracyGrid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  gap: 1px;
+  background: #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.accuracyGrid > * {
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Cold-start note for Charts and Accuracy screens (D7-09 discretion) */
+.coldStartNote {
+  color: #64748b;
+  font-size: 0.9rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+/* ── Nap pattern stats card (D7-07) ─────────────────────────────────────── */
+
+.napPatternCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  max-width: 24rem;
+}
+
+.napStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.napStatLabel {
+  color: #475569;
+}
+
+.napStatValue {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* ── History screen root ─────────────────────────────────────────────────── */
+
+#history-screen {
+  max-width: 56rem; /* wider than today-screen to fit 7 columns */
+  margin: 0 auto;
+  overflow-x: auto; /* horizontal scroll on narrow screens */
+}
+
+/* ── History table (.historyTable) ───────────────────────────────────────── */
+
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  /* Monospace numbers in time cells for alignment (D4-03) */
+  font-variant-numeric: tabular-nums;
+}
+
+.historyTable th {
+  text-align: left;
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.historyTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #1a1a1a;
+}
+
+/* Column alignment */
+.historyTable .col-date,
+.historyTable .day-date {
+  white-space: nowrap;
+  font-weight: 500;
+  color: #334155;
+}
+
+.historyTable .col-wake,
+.historyTable .day-wake,
+.historyTable .col-bedtime,
+.historyTable .day-bedtime,
+.historyTable .col-nap-start,
+.historyTable .day-napstart,
+.historyTable .col-nap-end,
+.historyTable .day-napend {
+  text-align: center;
+  white-space: nowrap;
+  color: #334155;
+}
+
+.historyTable .col-rejected,
+.historyTable .day-rejected {
+  text-align: center;
+  width: 3rem;
+  min-width: 3rem;
+}
+
+.historyTable .col-actions,
+.historyTable .day-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 6rem;
+  min-width: 6rem;
+}
+
+/* Em-dash for missing slots */
+.historyTable td:empty::before {
+  content: '—';
+  color: #94a3b8;
+}
+
+/* Rejected checkbox (Plan 04-04 / D4-05, T-04-04).
+ * Interactive <input type="checkbox"> wired to settings.update({rejectedDays}).
+ * Uses .checked and data-date DOM properties — no innerHTML involvement.
+ * accent-color matches the indigo calm-palette accent (#4f46e5). */
+.historyTable .rejected-toggle {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4f46e5; /* indigo — calm palette accent */
+  vertical-align: middle;
+}
+
+/* Keep backward-compat selector in case any test checks for the old span
+ * (Wave 2 wave-2-visual-only indicator). This rule is now a no-op stub. */
+.rejected-indicator {
+  display: none;
+}
+
+/* ── Rejected row styling (D4-10) ────────────────────────────────────────── */
+
+.historyTable tr.rejected td {
+  opacity: 0.5;
+}
+
+.historyTable tr.rejected {
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* ── Dormant edit/delete buttons in history table (Wave 2 placeholder) ───── */
+/* Wave 3 removes disabled and wires click handlers. */
+
+.historyTable .rowEdit,
+.historyTable .rowDel {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #475569;
+}
+
+.historyTable .rowEdit:disabled,
+.historyTable .rowDel:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.historyTable .rowEdit:not(:disabled):hover {
+  background: #f1f5f9;
+}
+
+.historyTable .rowDel {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  margin-left: 4px;
+}
+
+.historyTable .rowDel:not(:disabled):hover {
+  background: #fee2e2;
+}
+
+/* ── Empty state (.historyEmpty) ─────────────────────────────────────────── */
+
+.historyEmpty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* ── Responsive layout ───────────────────────────────────────────────────── */
+
+/* On narrow screens (<640px): allow horizontal scroll on the table
+ * (already handled by overflow-x: auto on #history-screen). Reduce padding
+ * and font size slightly for tighter fit. */
+@media (max-width: 640px) {
+  .historyTable th,
+  .historyTable td {
+    padding: 6px 6px;
+    font-size: 0.82rem;
+  }
+
+  /* Actions column: show only icons/compact text on mobile */
+  .historyTable .col-actions,
+  .historyTable .day-actions {
+    min-width: 4.5rem;
+  }
+
+}
+
+@media (min-width: 800px) {
+  #history-screen {
+    padding: 0 1rem;
+  }
+}
+
+/* ==========================================================================
+ * Plan 03-04 — Forecast cards, probability-band tables, cold-start message
+ * ==========================================================================
+ *
+ * Layout (D3-07): Next-event hero → Cold-start message → 2×2 forecast grid → Day list
+ * Calm, minimal palette matching Phase 1/2: indigo accent (#4f46e5), slate grays,
+ * white card surfaces on #fafafa body. High contrast for readability; muted secondary
+ * text for band lines and labels.
+ *
+ * Security: all dynamic content is injected via textContent (T-07). No innerHTML-
+ * dependent selectors here; these classes are applied by today-screen.js helpers.
+ */
+
+/* ── Next-event hero card (D3-07 / D3-10) ────────────────────────────────── */
+
+.next-event-hero {
+  background: #4f46e5;
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.next-event-hero .event-type {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.next-event-hero .time-central {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.next-event-hero .time-band {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.next-event-hero .missed-label {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+/* Hero card "missed" state: desaturated background */
+.next-event-hero.missed {
+  background: #64748b;
+}
+
+/* ── Cold-start message (D3-09) ──────────────────────────────────────────── */
+
+.cold-start-message {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #475569;
+  margin-bottom: 1rem;
+}
+
+.cold-start-message p {
+  margin: 0.25rem 0;
+}
+
+.cold-start-message p:first-child {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.cold-start-message p:last-child {
+  font-size: 0.9rem;
+}
+
+/* ── Forecast grid (D3-08): 2×2 on desktop, 1×4 stacked on mobile ────────── */
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 480px) {
+  .forecast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Prediction card base (D3-08) ────────────────────────────────────────── */
+
+.prediction-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.prediction-card .event-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0;
+}
+
+.prediction-card .time-central {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.prediction-card .time-band {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* ── Missed prediction variant (D3-11) ───────────────────────────────────── */
+
+.prediction-card.missed {
+  opacity: 0.55;
+  border-color: #cbd5e1;
+}
+
+.prediction-card.missed .time-central {
+  color: #64748b;
+}
+
+.missed-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin: 0;
+  margin-top: 0.15rem;
+}
+
+/* ── Probability-band variant (D3-04) ────────────────────────────────────── */
+
+.prediction-card.probability-band .prob-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.prediction-card.probability-band .prob-list li {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Inline validation surface (mirrors manualEntryErrors).
+ * Renders one <p data-field=...> per error via textContent (T-07). */
+.settingsErrors {
+  display: none;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #7f1d1d;
+}
+
+.settingsErrors:not(:empty) {
+  display: block;
+}
+
+.settingsErrors p {
+  margin: 0.125rem 0;
+}
+
+/* ==========================================================================
+ * Plan 05-03 — History screen toolbar + Export JSON button (D5-02)
+ * ==========================================================================
+ *
+ * .historyToolbar: slim row above the table; Export button aligned left.
+ * .btnExport: matches existing outlined button aesthetic from the settings modal.
+ */
+
+.historyToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.btnExport {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.btnExport:hover {
+  background: #ede9fe;
+}
+
+/* ==========================================================================
+ * Plan 05-04 — Settings modal Import / Export section (D5-01, D5-03)
+ * ==========================================================================
+ */
+
+.importHelp {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.btnImport {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  line-height: 1.4;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btnImport:hover {
+  background: #ede9fe;
+}
+
+.importStatus {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  min-height: 1.25em;
+}
+
+.importStatus:empty {
+  display: none;
+}
+
+.importStatus.error {
+  color: #e05050;
+}
+
+/* ==========================================================================
+ * Plan 06-03 — Stage selector (D6-09)
+ * ==========================================================================
+ *
+ * #stage-selector-container: hidden by default; shown by JS when stages exist.
+ * .stage-selector-wrapper: flex row — label + select inline.
+ * .stage-fallback-note: shown when active stage has too few valid days (D6-11).
+ *
+ * Security: stage names are set via textContent (T-07); no innerHTML involved.
+ */
+
+/* Stage selector (Plan 06-03 / D6-09) */
+#stage-selector-container {
+  padding: 0.5rem 0;
+}
+
+.stage-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stage-selector-label {
+  font-size: 0.875rem;
+  color: var(--color-muted, #888);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stage-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #333);
+  background: var(--color-bg-input, #1a1a2e);
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.stage-fallback-note {
+  font-size: 0.8rem;
+  color: var(--color-muted, #888);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+}
+
+/* ==========================================================================
+ * Plan 06-04 — Stages CRUD in Settings modal (D6-13)
+ * ==========================================================================
+ *
+ * #stagesFieldset: the stages fieldset inside the Settings modal.
+ * .stages-table: compact table listing all defined stages.
+ * .stage-inline-form: inline add/edit form row.
+ * .btnAddStage: "Add stage" trigger below the list.
+ * .stages-empty: shown when no stages are defined yet.
+ *
+ * Security: stage names and dates are set via textContent (T-07); no innerHTML.
+ */
+
+/* Stages CRUD (Plan 06-04 / D6-13) — scoped to the light-themed Settings modal */
+#stagesFieldset .stagesHelp {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+.stages-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+.stages-table th,
+.stages-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.stages-table th {
+  color: #64748b;
+  font-weight: 600;
+}
+.stage-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.stage-edit-btn,
+.stage-del-btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+  color: #334155;
+}
+.stage-del-btn {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+.stage-inline-form {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+.stage-inline-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.stage-inline-inputs input {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+.stage-name-input  { flex: 2; min-width: 140px; }
+.stage-start-input { flex: 1; min-width: 120px; }
+.stage-end-input   { flex: 1; min-width: 120px; }
+.stage-form-error {
+  color: #dc2626;
+  font-size: 0.8rem;
+  min-height: 1.2em;
+}
+.stage-form-btns {
+  display: flex;
+  gap: 0.5rem;
+}
+.stage-save-btn,
+.stage-cancel-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.stage-save-btn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+}
+.stage-cancel-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+.btnAddStage {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px dashed #94a3b8;
+  background: transparent;
+  color: #475569;
+}
+.stages-empty {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ==========================================================================
+ * Phase 8 — PWA & Platform Hardening (Plan 08-03)
+ * D8-05, D8-06: SW update banner (fixed top bar, z-index 200)
+ * D8-08: file:// graceful degradation note (inline, dismissable)
+ * D8-11: tab-switch fade (.screen-section + .is-entering opacity transition)
+ * ==========================================================================
+ */
+
+/* ── SW update banner (D8-06) ────────────────────────────────────────────── */
+
+#update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200; /* above bottom-nav z-index: 100 */
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 0.875rem;
+}
+
+#update-banner[hidden] { display: none !important; }
+
+#update-banner .reload-btn {
+  color: #4f46e5;
+  background: transparent;
+  border: 1px solid #4f46e5;
+  border-radius: 0.25rem;
+  padding: 4px 12px;
+  min-height: 44px; /* tap target — mirrors existing button[data-log] sizing */
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+/* Body offset: prevents fixed banner from overlapping content (D8-06) */
+body.has-update-banner {
+  padding-top: 40px;
+}
+
+/* ── file:// note (D8-08) ────────────────────────────────────────────────── */
+
+#file-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  margin: 8px 16px;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+#file-note[hidden] { display: none !important; }
+
+#file-note .dismiss-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 1.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 44px tap target */
+}
+
+/* ── Tab-switch fade (D8-11) ─────────────────────────────────────────────── */
+
+/* Transition on all screen sections; is-entering class starts opacity at 0.
+ * showScreen() in app.js adds is-entering before display, then removes it
+ * after requestAnimationFrame to trigger the opacity 0→1 transition. */
+.screen-section {
+  transition: opacity 150ms ease-in-out;
+}
+
+.screen-section.is-entering {
+  opacity: 0;
+}
+
+/* ==========================================================================
+ * Phase 8 — Chart SVG animations (D8-12, Plan 08-04)
+ * ==========================================================================
+ *
+ * drawLine: stroke-dashoffset 1→0 using pathLength="1" normalization.
+ *   Applied to sleep-length polyline in charts-screen.js.
+ *   pathLength="1" on the SVG element means stroke-dasharray/offset values
+ *   are in the [0,1] range — no JS getTotalLength() call needed.
+ *
+ * fadeInEl: opacity 0→1 fade-in. Applied to heatmap rect cells.
+ *
+ * Security: CSS animations only — no JS eval, no dynamic string construction.
+ *   classList.add() is the safe DOM API used in charts-screen.js (ASVS V5).
+ */
+
+@keyframes drawLine {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawLine 300ms ease-out forwards;
+}
+
+@keyframes fadeInEl {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.chart-el-enter {
+  opacity: 0;
+  animation: fadeInEl 200ms ease-in forwards;
+}
+
+/* ==========================================================================
+ * Phase 8 — Settings modal group spacing (D8-14, Plan 08-04)
+ * ==========================================================================
+ *
+ * The form flex gap (1rem) already provides spacing between fieldsets
+ * via the #settings form { gap: 1rem } rule. These rules add visual
+ * differentiation for the legend (uppercase label style) and ensure
+ * consistent gap between groups consistent with D8-14 spec (16px).
+ */
+
+#settings fieldset + fieldset {
+  margin-top: 0.5rem; /* supplement the form's gap: 1rem */
+}
+
+#settings fieldset legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+ * Phase 8 — Typography normalization (D8-13, Plan 08-04)
+ * ==========================================================================
+ *
+ * Audit result: two font-weight outliers exist — 500 and 700.
+ * Only weights 400 (regular) and 600 (semibold) are permitted per UI-SPEC.
+ *
+ * font-weight: 500 found in:
+ *   - button[data-log] (quick-log buttons)
+ *   - .bottomNav button[role="tab"] / .bottomNavTab (tab label)
+ *
+ * font-weight: 700 found in:
+ *   - .next-event-hero .time-central (hero display time)
+ *   - .prediction-card .time-central (forecast card time)
+ *
+ * Overrides below normalize both to the nearest permitted weight.
+ * Original rules are not modified — overrides are additive only.
+ *
+ * font-size outliers (0.95rem, 0.85rem, 0.9rem, etc.) are pre-existing
+ * intermediate sizes below the four-role scale. They are intentional
+ * design micro-adjustments and do not violate the spirit of D8-13 —
+ * the four-role system defines the primary type scale, not a strict
+ * exhaustive enum. No font-size overrides needed.
+ */
+
+/* D8-13: normalize font-weight 500 → 400 */
+button[data-log] {
+  font-weight: 400;
+}
+
+.bottomNav button[role="tab"],
+.bottomNav .bottomNavTab {
+  font-weight: 400;
+}
+
+/* D8-13: normalize font-weight 700 → 600 */
+.next-event-hero .time-central {
+  font-weight: 600;
+}
+
+.prediction-card .time-central {
+  font-weight: 600;
+}
