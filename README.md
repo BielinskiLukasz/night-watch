@@ -1,6 +1,6 @@
 # Nightwatch
 
-![Status](https://img.shields.io/badge/status-v1.0.0-brightgreen)
+![Status](https://img.shields.io/badge/status-active_development-brightgreen)
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
