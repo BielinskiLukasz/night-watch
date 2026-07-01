@@ -1,0 +1,169 @@
+// tests/e2e/quick-log.spec.js
+// Plan 01-03 / Task 3 — E2E coverage for the four quick-log buttons + day-grouped
+// list + double-click idempotency + LOG-09 extra-nap surfacing.
+//
+// Source: 01-RESEARCH.md §Code Examples §E2E test example, §Common Pitfalls #5
+// (double-click idempotency), §Common Pitfalls #8 (Playwright storage isolation).
+//
+// `test.beforeEach` clears localStorage AND reloads — Playwright reuses browser
+// contexts across tests by default, so without this guard the storage from
+// the previous test would leak in and break the assertions (Pitfall #8).
+
+import { test, expect } from '@playwright/test';
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+});
+
+test('click "Going to sleep" records a bedtime event visible in the list (LOG-02)', async ({ page }) => {
+  const btn = page.getByRole('button', { name: /going to sleep/i });
+  await expect(btn).toBeVisible();
+  await btn.click();
+
+  // Row label matches button label (01-UAT.md gap 1 closure -- no more 'Bedtime' literal).
+  const list = page.locator('[data-role="events"]');
+  await expect(list).toContainText(/Going to sleep/);
+});
+
+test('click "Nap start" records a napStart event visible in the list (LOG-03)', async ({ page }) => {
+  const btn = page.getByRole('button', { name: /^nap start$/i });
+  await expect(btn).toBeVisible();
+  await btn.click();
+
+  const list = page.locator('[data-role="events"]');
+  await expect(list).toContainText(/Nap start/);
+});
+
+test('click "Nap end" records a napEnd event visible in the list (LOG-04)', async ({ page }) => {
+  const btn = page.getByRole('button', { name: /^nap end$/i });
+  await expect(btn).toBeVisible();
+  await btn.click();
+
+  const list = page.locator('[data-role="events"]');
+  await expect(list).toContainText(/Nap end/);
+});
+
+test('clicking each of the four buttons sequentially → four events visible', async ({ page }) => {
+  // Click each button with enough spacing to bypass the 300ms debounce.
+  await page.getByRole('button', { name: /woke up/i }).click();
+  await page.waitForTimeout(350);
+  await page.getByRole('button', { name: /going to sleep/i }).click();
+  await page.waitForTimeout(350);
+  await page.getByRole('button', { name: /^nap start$/i }).click();
+  await page.waitForTimeout(350);
+  await page.getByRole('button', { name: /^nap end$/i }).click();
+
+  // All four event types should be visible in the list. Labels match button
+  // labels byte-for-byte (01-UAT.md gap 1 closure -- 'Wake'/'Bedtime' literals gone).
+  const list = page.locator('[data-role="events"]');
+  await expect(list).toContainText(/Woke up/);
+  await expect(list).toContainText(/Going to sleep/);
+  await expect(list).toContainText(/Nap start/);
+  await expect(list).toContainText(/Nap end/);
+
+  // Verify there are exactly 4 event rows (each li.event, NOT counting extraNap).
+  const rows = page.locator('[data-role="events"] li.event');
+  await expect(rows).toHaveCount(4);
+});
+
+test('double-clicking "Woke up" within 300ms produces exactly one event (T-05 / Pitfall #5)', async ({ page }) => {
+  const btn = page.getByRole('button', { name: /woke up/i });
+  await expect(btn).toBeVisible();
+
+  // Two rapid clicks 50ms apart — well under the 300ms debounce window.
+  await btn.click({ clickCount: 2, delay: 50 });
+
+  // Step past the debounce window before asserting (idle).
+  await page.waitForTimeout(400);
+
+  // Exactly ONE event row matching the 'Woke up' button label should be visible
+  // (01-UAT.md gap 1: row label === button label, not 'Wake').
+  const wakeRows = page.locator('[data-role="events"] li.event', { hasText: /Woke up/ });
+  await expect(wakeRows).toHaveCount(1);
+});
+
+test('a 3-nap day renders 3 actionable rows; the 3rd is faint (LOG-09) — 01-UAT.md gap 4 regression', async ({ page }) => {
+  // Plan 01-06 / UAT gap 4 contract: a day with 3 napStart events renders
+  // EXACTLY 3 <li> rows (not 4 -- no dead summary row). The 1st and 2nd
+  // are normal; the 3rd is faint via the .extraNap class (LOG-09 surfacing
+  // preserved). Every row -- including the faint 3rd -- carries [edit]/[x]
+  // affordances so the user can act on any nap they see.
+  const napStart = page.getByRole('button', { name: /^nap start$/i });
+
+  await napStart.click();
+  // Wait past the 300ms debounce so each click is accepted as a distinct event.
+  await page.waitForTimeout(350);
+  await napStart.click();
+  await page.waitForTimeout(350);
+  await napStart.click();
+
+  // Exactly 3 nap-start rows -- not 4 (no dead summary row).
+  const napRows = page
+    .locator('[data-role="events"] li.event')
+    .filter({ hasText: /Nap start/ });
+  await expect(napRows).toHaveCount(3);
+
+  // 1st and 2nd are normal; 3rd carries .extraNap (LOG-09 surfacing preserved).
+  await expect(napRows.nth(0)).not.toHaveClass(/extraNap/);
+  await expect(napRows.nth(1)).not.toHaveClass(/extraNap/);
+  await expect(napRows.nth(2)).toHaveClass(/extraNap/);
+
+  // Every row -- including the faint 3rd -- has both [edit] and [x] (the
+  // 01-UAT.md gap 4 user-acceptance criterion: user can act on every nap
+  // they see).
+  for (let i = 0; i < 3; i++) {
+    await expect(napRows.nth(i).locator('button.rowEdit')).toHaveCount(1);
+    await expect(napRows.nth(i).locator('button.rowDel')).toHaveCount(1);
+  }
+});
+
+test('each quick-log button produces a row with the SAME label text as the button (01-UAT.md gap 1 regression)', async ({ page }) => {
+  // Plan 01-08 / UAT gap 1: previously the 'Woke up' button produced a row
+  // labeled 'Wake' and the 'Going to sleep' button produced 'Bedtime'. After
+  // the EVENT_LABEL -> Object.fromEntries(BUTTONS.map(...)) collapse, every
+  // row label byte-matches the button that created it. This spec encodes
+  // that contract end-to-end (button text -> row text).
+  //
+  // Note on test design: all 4 clicks in this test wall-clock-fall into the
+  // same 5-min rounding bucket, so the 4 events share an identical `at`
+  // string and the renderer's newest-first sort is a no-op tie-break
+  // (stable sort -> insertion order preserved). Asserting on '.first()'
+  // would be wrong because '.first()' is the oldest-inserted of the ties.
+  // Instead, after each click, count rows that match the expected label --
+  // that's the contract we actually care about: 'clicking button X creates
+  // a row containing X's text, byte-for-byte'.
+  //
+  // Wait past the 300ms debounce between clicks so each is a distinct event.
+  const cases = [
+    { name: /^woke up$/i, expectedRow: /Woke up/ },
+    { name: /^going to sleep$/i, expectedRow: /Going to sleep/ },
+    { name: /^nap start$/i, expectedRow: /Nap start/ },
+    { name: /^nap end$/i, expectedRow: /Nap end/ },
+  ];
+
+  for (const { name, expectedRow } of cases) {
+    const before = await page.locator('[data-role="events"] li.event').count();
+    await page.getByRole('button', { name }).click();
+    await page.waitForTimeout(350);
+
+    // Total row count incremented by exactly 1.
+    const after = await page.locator('[data-role="events"] li.event').count();
+    expect(after).toBe(before + 1);
+
+    // Exactly one row containing the button's own label exists. This is the
+    // load-bearing assertion: clicking 'Woke up' must yield a row containing
+    // 'Woke up' (and crucially NOT 'Wake', the old divergent label).
+    const matchingRows = page.locator('[data-role="events"] li.event', { hasText: expectedRow });
+    await expect(matchingRows).toHaveCount(1);
+  }
+
+  // Final cross-check: after all 4 buttons, no row carries the OLD divergent
+  // labels ('Wake' as a standalone word, 'Bedtime'). Word-boundary regex so
+  // 'Woke' doesn't accidentally match 'Wake' (different letters anyway, but
+  // this guards future label changes that might re-overlap).
+  const list = page.locator('[data-role="events"]');
+  await expect(list).not.toContainText(/\bWake\b/);
+  await expect(list).not.toContainText(/\bBedtime\b/);
+});

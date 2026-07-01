@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nightwatch</title>
+  <meta name="description" content="Offline-first sleep tracker — log wake, bedtime, and naps; forecast the next ones." />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Nightwatch" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23111'/><circle cx='22' cy='10' r='5' fill='%234f46e5'/><circle cx='14' cy='18' r='6' fill='none' stroke='%234f46e5' stroke-width='2'/></svg>" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!--
+    App header (Plan 02-04 / D2-10; Plan 07-04 / D7-01).
+    h1.subjectName: populated by js/ui/header.js via .textContent (T-07).
+    Tab navigation moved to #bottom-nav (D7-01): header now shows only
+    subject name + Settings gear. The gear button opens the Settings modal
+    via dialog.showModal(). SVG icon is inline (zero external assets).
+    min-width/height 44px on the trigger satisfies tap target (D7-02).
+  -->
+  <header class="appHeader">
+    <h1 class="subjectName"></h1>
+    <button type="button" class="settingsTrigger" aria-label="Settings">
+      <!-- Settings gear: Lucide Icons (ISC license). Stroke-based, unified style (D8-10). -->
+      <!-- viewBox 0 0 24 24, stroke-width 1.5, fill none, stroke currentColor (D8-10 icon contract) -->
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <!--
+    Update banner (Plan 08-03 / D8-05, D8-06).
+    Shown when a new service worker is waiting. Fixed top bar (z-index 200).
+    Text set via textContent in app.js (T-08-03-01: no innerHTML).
+    hidden attribute toggled by showUpdateBanner() in app.js.
+  -->
+  <div id="update-banner" hidden role="status" aria-live="polite">
+    <span class="update-text"></span>
+    <button type="button" class="reload-btn" aria-label="Reload to apply update">Reload</button>
+  </div>
+
+  <!--
+    file:// note (Plan 08-03 / D8-08).
+    Shown once when location.protocol === 'file:'; dismissed to localStorage.
+    Text set via textContent in app.js (T-08-03-01: no innerHTML).
+  -->
+  <div id="file-note" hidden role="note">
+    <span class="file-note-text"></span>
+    <button type="button" class="dismiss-btn" aria-label="Dismiss">×</button>
+  </div>
+
+  <!--
+    Main content area with two screens (Plan 04-02 / D4-07).
+    app.js toggles display on today-screen / history-screen based on activeTab.
+    The no-JS skeleton lives inside today-screen so the quick-log buttons
+    are still accessible when JS is disabled. History screen is hidden by
+    default (display:none via style attribute + JS-controlled toggle).
+  -->
+  <main id="app">
+    <!--
+      Today screen (Plan 01-03 / D-10; Plan 03-04 forecast section).
+      js/ui/today-screen.js calls root.replaceChildren(...) on mount, so the
+      skeleton below is shown only momentarily during module loading and as a
+      progressive-enhancement fallback when JS is disabled.
+      D3-07 layout order: Quick-log → hero card → cold-start → forecast grid →
+                          grouping toggle → day list → add button.
+    -->
+    <section id="today-screen" class="screen-section">
+      <div class="quickLog">
+        <button type="button" data-log="wake">Woke up</button>
+        <button type="button" data-log="bedtime">Going to sleep</button>
+        <button type="button" data-log="napStart">Nap start</button>
+        <button type="button" data-log="napEnd">Nap end</button>
+      </div>
+      <!-- Stage selector (Plan 06-03 / D6-09). Hidden by default; shown by JS when stages exist. -->
+      <div id="stage-selector-container" style="display:none"></div>
+      <div id="next-event-card"></div>
+      <div id="cold-start-message"></div>
+      <section id="forecast-cards" class="forecast-grid"></section>
+      <section class="dayList" data-role="events"></section>
+      <button type="button" id="addEventBtn" class="addEventBtn">+ Add event</button>
+    </section>
+
+    <!--
+      History screen (Plan 04-02 / D4-01, D4-07). Initially hidden; shown
+      when user clicks the History tab. history-screen.js mounts the
+      day-column table inside the root div via replaceChildren().
+    -->
+    <section id="history-screen" class="screen-section" hidden>
+      <div id="history-table-root"></div>
+    </section>
+
+    <!--
+      Charts screen (Plan 07-04 / D7-05). Initially hidden; shown when user
+      clicks the Charts tab. charts-screen.js mounts five chart sections via
+      replaceChildren(). Full implementation in Plan 07-05.
+    -->
+    <section id="charts-screen" class="screen-section" hidden aria-label="Charts"></section>
+
+    <!--
+      Accuracy screen (Plan 07-04 / D7-14). Initially hidden; shown when user
+      clicks the Accuracy tab. accuracy-screen.js mounts the 4x3 accuracy grid
+      via replaceChildren(). Full implementation in Plan 07-06.
+    -->
+    <section id="accuracy-screen" class="screen-section" hidden aria-label="Accuracy"></section>
+  </main>
+
+  <!--
+    Bottom navigation bar (Plan 07-04 / D7-01..D7-04).
+    Four tabs: Today | History | Charts | Accuracy (D7-03).
+    Populated dynamically by js/ui/bottom-nav.js via mountBottomNav().
+    Fixed at viewport bottom via .bottomNav CSS (D7-04).
+  -->
+  <nav id="bottom-nav" class="bottomNav" role="tablist" aria-label="Screen navigation"></nav>
+
+  <!--
+    Manual-entry modal (Plan 01-04 / D-10 trigger, D-12 affordance reuse, D-13
+    field shape, D-14 two-number HH+MM picker, RESEARCH §Pattern 6 native
+    <dialog>). The form uses method="dialog" so the Save button's
+    `value="save"` becomes the close returnValue; manual-entry.js dispatches
+    onSave only when returnValue === 'save'. Native showModal() gives us
+    focus trap + ESC-to-close + aria-modal automatically (V14 zero-deps
+    accessibility).
+  -->
+  <dialog id="manualEntry" aria-labelledby="manualEntryTitle">
+    <form method="dialog">
+      <h2 id="manualEntryTitle">Add event</h2>
+      <label>
+        Date
+        <input type="date" name="date" required>
+      </label>
+      <label>
+        Hour
+        <input type="number" name="hour" min="0" max="23" required>
+      </label>
+      <label>
+        Minute
+        <input type="number" name="minute" min="0" max="55" step="5" required>
+      </label>
+      <small class="hint">Times are stored in 5-minute increments.</small>
+      <label>
+        Type
+        <select name="type" required>
+          <option value="wake">Wake</option>
+          <option value="bedtime">Bedtime</option>
+          <option value="napStart">Nap start</option>
+          <option value="napEnd">Nap end</option>
+        </select>
+      </label>
+      <!--
+        Plan 01-07 — inline validation surface (UAT gaps 2 + 3 closure).
+        js/ui/manual-entry.js writes per-field error <p> children into this
+        block via el({ textContent }) (T-07: never innerHTML). aria-live
+        announces errors to screen readers when they appear. The block is
+        hidden via :empty CSS when no errors are present.
+      -->
+      <output id="manualEntryErrors" class="manualEntryErrors" aria-live="polite"></output>
+      <menu>
+        <button type="button" id="manualCancel" formnovalidate>Cancel</button>
+        <!--
+          formnovalidate on Save: the HTML5 step="5" constraint on the minute
+          input would block form submission for non-5 multiples, but the
+          modal's contract (Open Question #2 + LOG-07) is to SILENTLY round
+          to the nearest 5. The JS submit handler in js/ui/manual-entry.js
+          normalizes via Math.round(rawMinute / 5) * 5; the store re-rounds
+          again via roundTo5 as the second layer of defense. The min/max
+          bounds (0-23 hour, 0-55 minute) and required field checks still
+          fire because formnovalidate is per-button; the input's own
+          ::invalid styling still surfaces the out-of-step value as a hint.
+        -->
+        <button type="submit" value="save" formnovalidate>Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!--
+    Settings modal (Plan 02-04 / D2-12, D2-13, D2-14). Native <dialog> mirrors
+    the manualEntry pattern: form method="dialog", Save submit fires close
+    with returnValue='save', Cancel/ESC fire close with empty returnValue.
+    Three fieldsets group the 9 settings (Profile / Time & Day / Forecast
+    tuning per D2-13 — NO welcome banner). The settingsErrors <output>
+    block uses aria-live="polite" and renders one <p data-field=...> per
+    error via .textContent (T-07).
+  -->
+  <dialog id="settings" aria-labelledby="settingsTitle">
+    <form method="dialog">
+      <h2 id="settingsTitle">Settings</h2>
+
+      <!-- D8-14: Settings modal reorganized into five logical groups (Plan 08-04). -->
+      <!-- Group 1: Subject & Display — CFG-01, CFG-09 -->
+      <fieldset>
+        <legend>Subject &amp; Display</legend>
+        <label>
+          Subject name
+          <input type="text" name="subjectName" maxlength="40" placeholder="e.g., Baby, Maya, Liam...">
+        </label>
+        <label>
+          Time format
+          <select name="timeFormat">
+            <option value="24h">24-hour</option>
+            <option value="12h">12-hour</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <!-- Group 2: Day Structure — CFG-08 -->
+      <fieldset>
+        <legend>Day Structure</legend>
+        <label>
+          Day cutover hour
+          <input type="number" name="cutoverHour" min="0" max="23">
+        </label>
+        <label>
+          View grouping
+          <select name="groupingMode">
+            <option value="calendar">Calendar day</option>
+            <option value="sleepCycle">Sleep cycle</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <!-- Group 3: Forecast & Prediction — CFG-02..07 -->
+      <fieldset>
+        <legend>Forecast &amp; Prediction</legend>
+        <label class="checkboxRow">
+          <input type="checkbox" name="autoOutlier">
+          Auto outlier detection
+        </label>
+        <label>
+          Max delta (minutes)
+          <input type="number" name="maxDelta" min="5" max="120">
+        </label>
+        <label>
+          Min days of history
+          <input type="number" name="minDays" min="1" max="90">
+        </label>
+        <label>
+          Rolling window (days)
+          <input type="number" name="windowDays" min="3" max="90">
+        </label>
+        <label>
+          Statistical blend
+          <select name="statBlend">
+            <option value="median">Median</option>
+            <option value="mean">Mean</option>
+            <option value="blend">Blend</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <output id="settingsErrors" class="settingsErrors" aria-live="polite"></output>
+
+      <!-- Group 4: Data — Import / Export (Plan 05-04, D5-01, D5-03) -->
+      <fieldset>
+        <legend>Data</legend>
+        <p class="importHelp">Replace all data by importing a CSV or JSON file. Export the current dataset as a dated JSON backup.</p>
+        <button type="button" id="importCsvBtn" class="btnImport">Import CSV</button>
+        <button type="button" id="importJsonBtn" class="btnImport">Import JSON</button>
+        <p id="importStatus" class="importStatus" aria-live="polite"></p>
+      </fieldset>
+
+      <!-- Group 5: Stages — STAGE-01 (Plan 06-04 / D6-13). Stage list populated dynamically by settings-modal.js. -->
+      <!-- CRITICAL: id="stagesFieldset" preserved — settings-modal.js queries this ID. -->
+      <fieldset id="stagesFieldset">
+        <legend>Stages</legend>
+        <p class="stagesHelp">Define named date ranges to scope forecasts to specific developmental periods.</p>
+        <div id="stagesList" role="list" aria-label="Sleep stages"></div>
+        <button type="button" id="addStageBtn" class="btnAddStage">+ Add stage</button>
+      </fieldset>
+
+      <menu>
+        <button type="button" id="settingsCancel" formnovalidate>Cancel</button>
+        <!--
+          formnovalidate on Save: HTML5 min/max on the number inputs would
+          block submission before validateSettings could surface a structured
+          error in <output id="settingsErrors">. Mirrors the same idiom on
+          #manualEntry's Save (LOG-07 silent rounding) — the JS validator is
+          the source of truth; HTML attributes are belt-and-suspenders hints.
+        -->
+        <button type="submit" value="save" formnovalidate>Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Hidden file inputs for import (Plan 05-04 / D5-01). Triggered programmatically
+       by the Settings modal import buttons; never visible to the user directly. -->
+  <input type="file" id="csvInput" accept=".csv,text/csv" style="display:none">
+  <input type="file" id="jsonInput" accept=".json,application/json" style="display:none">
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
