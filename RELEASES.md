@@ -1,5 +1,22 @@
 # Release Notes
 
+## 🟩 **v1.0.1**
+*Release date: 2026‑07‑03*
+
+Post-release housekeeping patch — no user-facing feature changes.
+
+### Fix
+- **E2E test race condition** (`tests/e2e/settings-modal.spec.js`): Guard CFG-01 and CFG-02..07 reload tests against the `<dialog>` close macrotask race. Adds intermediate DOM assertions (subject name text / `aria-pressed` attribute) so `localStorage` is written before `page.reload()` fires.
+
+### Docs & planning
+- Add v1.0.0 release notes (`RELEASES.md`) and update README for the v1.0.0 release; bump version badge to 1.0.1.
+- Add v1.0 milestone audit (`v1.0-MILESTONE-AUDIT.md`).
+- Archive v1.0 milestone: freeze `REQUIREMENTS.md` and `ROADMAP.md` into `milestones/v1.0-*`; trim live planning docs to v1.1 scope.
+- Add backlog items B-23 (wrong event-type dropdown order), B-24 (additional planning item), B-25 (more charts + sleep-length calculation audit).
+- Disable auto tag creation in GSD config.
+
+---
+
 ## 🟩 **v1.0.0**  
 *Release date: 2026‑07‑01*
 
