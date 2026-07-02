@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-30 (B-22 added)
+Last updated: 2026-07-03 (B-23 added)
 
 ---
 
@@ -582,6 +582,26 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 **Implementation notes:**
 
 - Details pending user input. Reference the Phase 3 `js/lib/forecast.js` as the integration point — new algorithm slots in at the same return shape.
+
+---
+
+## Add-event popup UX (captured 2026-07-03)
+
+### B-23 · Wrong event-type order in add-event popup dropdown
+
+**Source:** user observation (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** any phase — isolated one-liner fix to the event-type `<select>` option order
+
+**What:** The event-type dropdown in the add-event popup lists "bedtime" in a position other than last. The correct order should be: wake → nap-start → nap-end → **bedtime** (bedtime last, reflecting chronological event sequence within a day).
+
+**Why:** Chronological ordering matches the mental model of a day: child wakes, takes a nap (start then end), and finally goes to bed. Placing bedtime anywhere other than last breaks the natural reading order and causes unnecessary UI confusion.
+
+**Implementation notes:**
+
+- Locate the `<select>` (or equivalent option array) in the add-event popup — likely in `js/ui/manual-entry.js` or `index.html`.
+- Reorder the `<option>` elements so "bedtime" is the last entry.
+- No data model or logic changes — display order only.
 
 ---
 
