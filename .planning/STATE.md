@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v1.1
 milestone_name: milestone
-current_phase: 08
-current_phase_name: pwa-platform-hardening
-status: Phase 6 complete
-stopped_at: Completed NW-08-05 — PLAT-01..07 verified, REQUIREMENTS.md marked Complete; awaiting human browser checkpoint
-last_updated: "2026-06-30T23:19:37.573Z"
-last_activity: 2026-06-30
-last_activity_desc: Phase NW-08 execution started
+current_phase: ~
+current_phase_name: ~
+status: Milestone v1.0 archived — ready for next milestone
+stopped_at: v1.0 archived 2026-07-03; run /gsd-new-milestone to start v1.1
+last_updated: "2026-07-03T00:00:00.000Z"
+last_activity: 2026-07-03
+last_activity_desc: v1.0 milestone archived
 progress:
   total_phases: 8
   completed_phases: 8
