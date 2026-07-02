@@ -136,6 +136,37 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | — Pending |
 | Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | — Pending |
 
+## Current State (v1.0 — shipped 2026-06-30)
+
+Nightwatch v1.0 is complete and tagged `v1.0.0`. All 51 v1 requirements delivered across 8 phases in 35 days. The app is a functioning offline-first PWA:
+
+- **Logging**: 4 quick-log buttons, manual entry/edit/delete, 5-min precision, subjective-night grouping
+- **Settings**: subject name, max_delta, min_days, rolling window, stat blend, cutover hour, time format
+- **Forecast**: 4-event predictions with min/max bands, probability-band fallback, cold-start gate, reactive updates
+- **History**: scrollable table, per-row edit/delete, "rejected" outlier toggle
+- **Import/Export**: CSV + JSON import, JSON export, file-as-truth storage model
+- **Life stages**: named date ranges, CRUD in Settings, scope-to-stage forecast
+- **Charts + Accuracy**: 5 SVG visualizations + 3-metric accuracy dashboard + bottom-nav
+- **PWA**: manifest + SW + offline + file:// support + GitHub Pages deploy + 495-test TDD scaffold
+
+**Pending before GitHub Pages promotion:** Human browser checkpoint (PWA install, SW lifecycle, offline, file:// note, chart animations, settings modal groups).
+
+**Archive:** `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
+
+## Next Milestone Goals (v1.1 — not yet defined)
+
+To be defined via `/gsd-new-milestone`. Candidates from v1.0 tech debt and backlog:
+
+- **B-24**: Human PWA browser checkpoint (install, offline, file:// note) — prerequisite for GitHub Pages promotion
+- **TD-2**: Hero card "Next Predicted Event" explicit label
+- **TD-3**: Probability-band E2E fixture test with realistic 7+ day history
+- **B-23**: Wrong event-type dropdown order in manual entry
+- Backlog items promoted via `/gsd-review-backlog`
+
+## Requirements
+
+v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`. Fresh requirements for v1.1 defined via `/gsd-new-milestone`.
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
@@ -154,4 +185,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-26 after initialization*
+*Last updated: 2026-07-03 — v1.0 milestone archived*
