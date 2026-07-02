@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-06-30 (B-22 added)
+Last updated: 2026-07-03 (B-25 added)
 
 ---
 
@@ -585,6 +585,93 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
+## Add-event popup UX (captured 2026-07-03)
+
+### B-23 · Wrong event-type order in add-event popup dropdown
+
+**Source:** user observation (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** any phase — isolated one-liner fix to the event-type `<select>` option order
+
+**What:** The event-type dropdown in the add-event popup lists "bedtime" in a position other than last. The correct order should be: wake → nap-start → nap-end → **bedtime** (bedtime last, reflecting chronological event sequence within a day).
+
+**Why:** Chronological ordering matches the mental model of a day: child wakes, takes a nap (start then end), and finally goes to bed. Placing bedtime anywhere other than last breaks the natural reading order and causes unnecessary UI confusion.
+
+**Implementation notes:**
+
+- Locate the `<select>` (or equivalent option array) in the add-event popup — likely in `js/ui/manual-entry.js` or `index.html`.
+- Reorder the `<option>` elements so "bedtime" is the last entry.
+- No data model or logic changes — display order only.
+
+---
+
+## PWA browser verification (pending, 2026-07-03)
+
+### B-24 · Human browser checkpoint — PWA install and SW lifecycle
+
+**Source:** Phase NW-08-05 phase gate (2026-06-30); milestone audit (2026-07-03)
+**Status:** pending · not yet executed
+**Earliest sensible slot:** before pushing to GitHub Pages for end-user access
+
+**What:** Walk through the following checklist in a real browser (Chrome/Edge recommended for PWA install):
+
+1. Open app from GitHub Pages URL → confirm PWA install prompt appears
+2. Install the app → open from home screen / app launcher, confirm it loads offline
+3. With DevTools → Application → Service Workers: confirm `nightwatch-v1` SW is active and controlling the page
+4. Go offline (DevTools → Network → Offline) → reload → confirm app loads fully from SW cache
+5. Trigger a SW update (bump cache key or re-deploy) → confirm update banner appears at the top of the app
+6. Dismiss the file:// note (if opening from `file://`) → confirm it hides and stays dismissed after reload
+7. Confirm tab-switch fade animation plays when switching between Today / History / Charts / Accuracy
+8. Open Charts → confirm SVG draw-in animation plays on sleep-length line
+9. Open Settings → confirm modal shows exactly 5 groups: Subject, Forecast Tuning, Outlier Rules, Time & Day, Stages
+10. Confirm all four quick-log buttons, History table, and Accuracy grid render correctly
+
+**Why:** PLAT-03 (PWA manifest + SW + offline + file:// guard) automated checks passed in Plan NW-08-05, but visual/functional verification of install flow, SW lifecycle, animations, and modal layout requires a human with a browser. This is the only remaining unautomated gate before v1.0 is considered fully verified.
+
+**Implementation notes:**
+
+- No code changes expected. This is a verification-only task.
+- If any item fails, open a targeted bug fix (likely a one-plan patch). Most likely candidates: SW scope path, PRECACHE_LIST omission, or CSS animation timing.
+- After all 10 items pass, this item can be closed and the milestone pushed to GitHub Pages.
+
+---
+
+## More charts and sleep-length calculation audit (captured 2026-07-03)
+
+### B-25 · More diagrams + verify sleep length calculation
+
+**Source:** user input (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js
+
+**What:** Two related tasks:
+
+1. **Audit the sleep-length calculation** used in `buildSleepLengthSeries` (chart-data.js) and the Sleep Length chart (charts-screen.js): confirm the formula is `bedtime.at − wake.at` (accounting for the subjective-night cutover), matches the spreadsheet's `Długość snu` column, handles midnight-crossing correctly, and excludes rejected days. Fix any discrepancy.
+
+2. **Add more chart types** to the Charts screen, building on the existing five visualizations. Candidates (to be prioritised during planning):
+   - **Sleep duration histogram** — distribution of night-sleep lengths (binned by 15–30 min intervals); reveals modal and tail behaviour better than the line chart.
+   - **Nap-length line chart** — time series of nap duration (see also B-17); mirrors Sleep Length chart structure.
+   - **Bedtime vs. wake-time scatter** — cross-axis scatter to see if later bedtimes correlate with later wakes; requires two-axis layout.
+   - **Rolling-average overlay** — add a 7-day rolling mean line to the Sleep Length chart so short-term noise is visually separated from the trend.
+   - **Stage-boundary annotations** — vertical lines at stage transitions on the Sleep Length and Time Bands charts; users already define stages but cannot see them on charts.
+
+**Why:** The Sleep Length chart is the most prominent visualization in the app — if its formula is wrong (e.g., using calendar midnight instead of the subjective cutover, or not excluding rejected days), every user decision built on it is suspect. The audit is a prerequisite for trusting the chart output. Additional chart types increase the diagnostic power of the Charts screen, especially for parents trying to detect regressions or confirm stage transitions.
+
+**Open questions when this gets planned:**
+
+- What is the exact formula in `buildSleepLengthSeries`? Does it use `bedtime.at - wake.at` or `wake.at + 24h - bedtime.at` for nights that cross midnight?
+- Does it correctly scope to the stage's data when `activeStageId` is set?
+- For the histogram and rolling-average overlay: should they appear as sub-sections or replace/extend section 1 (Sleep Length)?
+- Which additional charts are highest priority — let user rank before planning begins.
+
+**Implementation notes:**
+
+- Audit: read `js/lib/chart-data.js` `buildSleepLengthSeries`, compare against `js/lib/day-bucket.js` day-length derivation and the spreadsheet's `Długość snu` column (PROJECT.md Context). Write a unit test that pins the formula with known inputs including midnight-crossings and rejected days.
+- New charts: each follows the existing pattern in `charts-screen.js` — `buildXxx(days)` in chart-data.js + `renderXxxChart(sectionEl, days, snap)` in charts-screen.js + a new `sectionN` div in `mountChartsScreen`. Unit-test the data transform; E2E-test that the chart section renders.
+- Stage-boundary annotations: require passing `stages` and `activeStageId` to the render functions (not currently threaded through all chart renderers).
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
@@ -595,7 +682,7 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 ## Related
 
 - `ROADMAP.md` — active milestone phases
-- `REQUIREMENTS.md` — v1 traceability table
+- `milestones/v1.0-REQUIREMENTS.md` — v1.0 archived requirements (all 51 complete)
 - `PROJECT.md` — core constraints (single subject v1, no build step, no frameworks)
 - `CLAUDE.md` — v1/v2 split rules
 

@@ -64,6 +64,11 @@ test('CFG-01: subject name persists across reload (D2-04 + D2-09)', async ({ pag
   await page.locator('button.settingsTrigger').click();
   await page.locator('#settings input[name="subjectName"]').fill('Alice');
   await page.locator('#settings button[type="submit"]').click();
+  // Wait for the settings subscriber to propagate (h1 updates synchronously within
+  // settings.update()). This guards against the dialog 'close' event firing as a
+  // queued macrotask: without this wait, page.reload() can destroy the page before
+  // the close handler runs and localStorage is written.
+  await expect(page.locator('header.appHeader h1.subjectName')).toHaveText('Alice');
 
   await page.reload();
 
@@ -124,6 +129,11 @@ test('CFG-02..04, CFG-06..07: forecast-tuning + time/day fields round-trip Save 
   await page.locator('#settings input[name="autoOutlier"]').check();
 
   await page.locator('#settings button[type="submit"]').click();
+  // Wait for the settings subscriber to propagate (groupingMode change sets
+  // aria-pressed on the data-grouping toggle). Guards against the same
+  // macrotask race as CFG-01: dialog 'close' fires async, so without this
+  // wait page.reload() can destroy the page before localStorage is written.
+  await expect(page.locator('button[data-grouping="sleepCycle"]')).toHaveAttribute('aria-pressed', 'true');
   await page.reload();
   await page.locator('button.settingsTrigger').click();
 
