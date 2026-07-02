@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-03 (B-24 added)
+Last updated: 2026-07-03 (B-25 added)
 
 ---
 
@@ -636,6 +636,42 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
+## More charts and sleep-length calculation audit (captured 2026-07-03)
+
+### B-25 · More diagrams + verify sleep length calculation
+
+**Source:** user input (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js
+
+**What:** Two related tasks:
+
+1. **Audit the sleep-length calculation** used in `buildSleepLengthSeries` (chart-data.js) and the Sleep Length chart (charts-screen.js): confirm the formula is `bedtime.at − wake.at` (accounting for the subjective-night cutover), matches the spreadsheet's `Długość snu` column, handles midnight-crossing correctly, and excludes rejected days. Fix any discrepancy.
+
+2. **Add more chart types** to the Charts screen, building on the existing five visualizations. Candidates (to be prioritised during planning):
+   - **Sleep duration histogram** — distribution of night-sleep lengths (binned by 15–30 min intervals); reveals modal and tail behaviour better than the line chart.
+   - **Nap-length line chart** — time series of nap duration (see also B-17); mirrors Sleep Length chart structure.
+   - **Bedtime vs. wake-time scatter** — cross-axis scatter to see if later bedtimes correlate with later wakes; requires two-axis layout.
+   - **Rolling-average overlay** — add a 7-day rolling mean line to the Sleep Length chart so short-term noise is visually separated from the trend.
+   - **Stage-boundary annotations** — vertical lines at stage transitions on the Sleep Length and Time Bands charts; users already define stages but cannot see them on charts.
+
+**Why:** The Sleep Length chart is the most prominent visualization in the app — if its formula is wrong (e.g., using calendar midnight instead of the subjective cutover, or not excluding rejected days), every user decision built on it is suspect. The audit is a prerequisite for trusting the chart output. Additional chart types increase the diagnostic power of the Charts screen, especially for parents trying to detect regressions or confirm stage transitions.
+
+**Open questions when this gets planned:**
+
+- What is the exact formula in `buildSleepLengthSeries`? Does it use `bedtime.at - wake.at` or `wake.at + 24h - bedtime.at` for nights that cross midnight?
+- Does it correctly scope to the stage's data when `activeStageId` is set?
+- For the histogram and rolling-average overlay: should they appear as sub-sections or replace/extend section 1 (Sleep Length)?
+- Which additional charts are highest priority — let user rank before planning begins.
+
+**Implementation notes:**
+
+- Audit: read `js/lib/chart-data.js` `buildSleepLengthSeries`, compare against `js/lib/day-bucket.js` day-length derivation and the spreadsheet's `Długość snu` column (PROJECT.md Context). Write a unit test that pins the formula with known inputs including midnight-crossings and rejected days.
+- New charts: each follows the existing pattern in `charts-screen.js` — `buildXxx(days)` in chart-data.js + `renderXxxChart(sectionEl, days, snap)` in charts-screen.js + a new `sectionN` div in `mountChartsScreen`. Unit-test the data transform; E2E-test that the chart section renders.
+- Stage-boundary annotations: require passing `stages` and `activeStageId` to the render functions (not currently threaded through all chart renderers).
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
@@ -646,7 +682,7 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 ## Related
 
 - `ROADMAP.md` — active milestone phases
-- `REQUIREMENTS.md` — v1 traceability table
+- `milestones/v1.0-REQUIREMENTS.md` — v1.0 archived requirements (all 51 complete)
 - `PROJECT.md` — core constraints (single subject v1, no build step, no frameworks)
 - `CLAUDE.md` — v1/v2 split rules
 
