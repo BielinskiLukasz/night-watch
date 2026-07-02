@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-03 (B-23 added)
+Last updated: 2026-07-03 (B-24 added)
 
 ---
 
@@ -602,6 +602,37 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 - Locate the `<select>` (or equivalent option array) in the add-event popup — likely in `js/ui/manual-entry.js` or `index.html`.
 - Reorder the `<option>` elements so "bedtime" is the last entry.
 - No data model or logic changes — display order only.
+
+---
+
+## PWA browser verification (pending, 2026-07-03)
+
+### B-24 · Human browser checkpoint — PWA install and SW lifecycle
+
+**Source:** Phase NW-08-05 phase gate (2026-06-30); milestone audit (2026-07-03)
+**Status:** pending · not yet executed
+**Earliest sensible slot:** before pushing to GitHub Pages for end-user access
+
+**What:** Walk through the following checklist in a real browser (Chrome/Edge recommended for PWA install):
+
+1. Open app from GitHub Pages URL → confirm PWA install prompt appears
+2. Install the app → open from home screen / app launcher, confirm it loads offline
+3. With DevTools → Application → Service Workers: confirm `nightwatch-v1` SW is active and controlling the page
+4. Go offline (DevTools → Network → Offline) → reload → confirm app loads fully from SW cache
+5. Trigger a SW update (bump cache key or re-deploy) → confirm update banner appears at the top of the app
+6. Dismiss the file:// note (if opening from `file://`) → confirm it hides and stays dismissed after reload
+7. Confirm tab-switch fade animation plays when switching between Today / History / Charts / Accuracy
+8. Open Charts → confirm SVG draw-in animation plays on sleep-length line
+9. Open Settings → confirm modal shows exactly 5 groups: Subject, Forecast Tuning, Outlier Rules, Time & Day, Stages
+10. Confirm all four quick-log buttons, History table, and Accuracy grid render correctly
+
+**Why:** PLAT-03 (PWA manifest + SW + offline + file:// guard) automated checks passed in Plan NW-08-05, but visual/functional verification of install flow, SW lifecycle, animations, and modal layout requires a human with a browser. This is the only remaining unautomated gate before v1.0 is considered fully verified.
+
+**Implementation notes:**
+
+- No code changes expected. This is a verification-only task.
+- If any item fails, open a targeted bug fix (likely a one-plan patch). Most likely candidates: SW scope path, PRECACHE_LIST omission, or CSS animation timing.
+- After all 10 items pass, this item can be closed and the milestone pushed to GitHub Pages.
 
 ---
 
