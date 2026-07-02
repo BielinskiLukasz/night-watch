@@ -73,7 +73,6 @@ tests/
   integration/         # node:test, store + memory adapter + fixed clock
   e2e/                 # Playwright specs against the running app
 scripts/serve.js       # zero-dep static dev server
-.github/workflows/ci.yml
 ```
 
 ---
@@ -83,7 +82,7 @@ scripts/serve.js       # zero-dep static dev server
 - **Zero runtime dependencies** — every feature uses a browser-native API: `localStorage`, `<dialog>`, `FileReader`, `URL.createObjectURL` (download), `Canvas`. No framework, no CDN, no network required at runtime.
 - **Adapter seams for testability** — `new Date()` lives only in `js/adapters/clock-*.js`; `localStorage` is touched only in `js/adapters/storage-local.js`. The composition root injects both adapters everywhere else, making all logic unit-testable without a browser.
 - **XSS prevention** — all dynamic DOM updates go through `textContent` / `replaceChildren()` via `js/ui/dom.js`. No `innerHTML =` with user-controlled data anywhere in `js/`.
-- **No runtime dependencies enforced by CI** — `package.json` `dependencies` is literal `{}`. A separate CI step checks this before running any tests.
+- **No runtime dependencies** — `package.json` `dependencies` is literal `{}`. The app uses only browser-native APIs; no CDN, no bundler, no framework.
 - **Uncertainty over false precision** — when the P90–P10 band width exceeds `max_delta`, the forecast card switches to a cumulative probability table rather than printing a number the data does not support.
 - **File-as-truth** — exported JSON is the canonical dataset; `localStorage` is a rebuildable cache. Importing a JSON export fully restores all state.
 - **Cache-first service worker** — precaches all app shell assets on install; serves them offline without any network round-trip.
