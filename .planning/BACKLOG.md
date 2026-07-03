@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-03 (B-25 added)
+Last updated: 2026-07-03 (B-25, B-26, B-27 added)
 
 ---
 
@@ -669,6 +669,95 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 - Audit: read `js/lib/chart-data.js` `buildSleepLengthSeries`, compare against `js/lib/day-bucket.js` day-length derivation and the spreadsheet's `Długość snu` column (PROJECT.md Context). Write a unit test that pins the formula with known inputs including midnight-crossings and rejected days.
 - New charts: each follows the existing pattern in `charts-screen.js` — `buildXxx(days)` in chart-data.js + `renderXxxChart(sectionEl, days, snap)` in charts-screen.js + a new `sectionN` div in `mountChartsScreen`. Unit-test the data transform; E2E-test that the chart section renders.
 - Stage-boundary annotations: require passing `stages` and `activeStageId` to the render functions (not currently threaded through all chart renderers).
+
+---
+
+### B-26 · Calculated sleep & activity metrics dashboard
+
+**Source:** user input (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js and/or history-screen.js
+
+**What:** Add a new metrics display section (cards, table, or dedicated screen) that shows calculated daily and historical sleep/activity statistics:
+
+**Daily metrics (per day):**
+- Sleep duration (night sleep: bedtime → wake, in hours:minutes)
+- Nap duration (nap-end − nap-start, in hours:minutes)
+- Sleep + nap combined duration (total rest time)
+- Activity time between wake and bedtime (time spent awake)
+- Activity before nap (wake time → nap-start, time from last event to nap)
+- Activity after nap (nap-end → bedtime, time from nap end to next sleep)
+
+**Historical aggregates (weekly, monthly, or full history):**
+- Average sleep duration
+- Average nap duration
+- Average combined duration
+- Average activity time
+- Min/max sleep and nap durations (with dates)
+- Longest activity gap (to spot atypical days)
+
+**Why:** These metrics are derived from the existing event log but not currently surfaced in the app. Parents need these values to:
+- Track whether a child's sleep quantity is improving/regressing
+- Understand the balance between night sleep and naps
+- Detect when activity periods extend beyond normal
+- Validate stage transitions (e.g., "when nap duration dropped below 30 min, we switched to single-nap stage")
+
+Today these calculations are done mentally or in the spreadsheet; exposing them as real-time values removes friction from decision-making.
+
+**Open questions when this gets planned:**
+
+- Should metrics appear on the History screen (as totals per row), the Charts screen (as a summary card), or a new dedicated Metrics tab?
+- Which metrics are highest priority — all of the above, or a curated subset?
+- Should metrics be filterable by date range or stage?
+- For activity gaps: should the app highlight anomalies (e.g., "activity time 2× normal today")?
+- Should metrics include percentiles (e.g., "nap 45 min today; typical range is 40–60 min based on stage history")?
+
+**Implementation notes:**
+
+- Data transforms: add calculation functions to `js/lib/day-bucket.js` or a new `js/lib/metrics.js`:
+  - `dayMetrics(day)` → returns object with sleep, nap, combined, activity, activityBeforeNap, activityAfterNap durations
+  - `aggregateMetrics(days)` → returns averages, min/max, percentiles
+- UI: render as a card grid (each metric = one card with value + trend arrow/color) or a summary table
+- Interaction with stages: pass `activeStageId` to metric functions so aggregates reflect only the current stage's data when requested
+- No data shape changes — all computed from existing events.
+
+---
+
+### B-27 · Additional chart types: sleep & nap combined, activity histograms
+
+**Source:** user input (2026-07-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js, paired with B-25 and B-26
+
+**What:** Expand the Charts screen with visualization types that pair or combine the existing event-duration data:
+
+1. **Sleep + Nap combined duration line chart** — stacked or overlaid line showing total rest time per day (sleep duration + nap duration). Useful for spotting days when total rest drops below normal.
+
+2. **Nap duration distribution histogram** — binned histogram of nap lengths (15–30 min buckets) showing which nap durations are most common; complements the existing Sleep Length histogram (B-25).
+
+3. **Activity time histogram** — distribution of awake time (bedtime → wake) to spot whether activity periods vary widely or cluster.
+
+4. **Before-nap activity scatter** — plot wake-to-nap-start gap (X-axis: date, Y-axis: minutes) to see if pre-nap activity is stable or drifts. Overlaid with rolling average (B-25 concept).
+
+5. **After-nap activity scatter** — plot nap-end-to-bedtime gap, same pattern as before-nap.
+
+**Why:** These charts surface behavioral patterns that individual event times miss. E.g., a child might wake at a consistent time but stay awake for 4 hours one day and 5 hours the next — the activity chart reveals the drift, while the wake-time chart alone does not. Composite charts (sleep + nap, before/after nap gaps) are also powerful diagnostic tools for parents detecting stage transitions or activity regressions.
+
+**Open questions when this gets planned:**
+
+- Layout: where do these new charts appear? Extend the existing 5–6 sections, or organize into separate "Daily metrics" and "Activity patterns" sections?
+- Which are highest priority — likely sleep+nap combined and activity histograms first?
+- For scatter plots (before/after nap): should they show points only for days with naps, or include all days with a null/skip marker?
+- Should activity-time statistics include outlier filtering (e.g., exclude days with unusual activity for a clearer trend view)?
+
+**Implementation notes:**
+
+- Add `buildCombinedDurationSeries(days)` to chart-data.js — sums sleep + nap durations per day.
+- Add `buildActivityHistogram(days)`, `buildNapHistogram(days)` for binned distributions.
+- Add `buildBeforeNapActivitySeries(days)` and `buildAfterNapActivitySeries(days)` for time-gap scatter plots.
+- Add corresponding render functions in charts-screen.js: `renderCombinedDurationChart`, `renderActivityHistograms`, `renderActivityScatters`.
+- Each render function follows the existing pattern: Y-axis auto-scaling, stage boundaries, rejected-day greying, legend.
+- Unit-test the data transforms (especially activity gaps when nap is missing).
 
 ---
 
