@@ -1,35 +1,32 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T15:30:14.776Z",
-  "phase": null,
-  "phase_name": null,
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-07-09T22:58:04.075Z",
+  "phase": "09",
+  "phase_name": "ux-polish",
+  "phase_dir": ".planning/phases/NW-09-ux-polish",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 6,
   "status": "paused",
-  "context": "milestone-boundary",
-  "completed_tasks": [
-    {"id": 1, "name": "Gathered v1.1 feature scope from user (4 features + 3 tech debt items)", "status": "done"},
-    {"id": 2, "name": "Initialized milestone v1.1 UX Polish — updated PROJECT.md, reset STATE.md", "status": "done", "commit": "61086a8"},
-    {"id": 3, "name": "Defined 9 requirements (LOG-10, LOG-11, CFG-10, UI-07..10, PLAT-12..13) — wrote REQUIREMENTS.md", "status": "done", "commit": "af552a3"},
-    {"id": 4, "name": "Created roadmap — Phase 9: UX Polish covering all 9 requirements", "status": "done", "commit": "8faee1d"},
-    {"id": 5, "name": "Cleaned up stale v1.0 execution logs from STATE.md", "status": "done", "commit": "18ac03d"}
-  ],
+  "completed_tasks": [],
   "remaining_tasks": [
-    {"id": 6, "name": "Run /gsd-plan-phase 9 to break Phase 9 into executable plans", "status": "not_started"}
+    {"id": 1, "name": "09-01: Add event button reposition (UI-08) + hero label (UI-10) + scratch dir removal (PLAT-13)", "status": "not_started", "wave": 1},
+    {"id": 2, "name": "09-02: History edit-mode toggle (UI-07)", "status": "not_started", "wave": 2},
+    {"id": 3, "name": "09-03: Probability-band card collapse (UI-09)", "status": "not_started", "wave": 2},
+    {"id": 4, "name": "09-04: Confirm before logging toggle (CFG-10 / LOG-10)", "status": "not_started", "wave": 2},
+    {"id": 5, "name": "09-05: Save more button (LOG-11) — depends on 09-04", "status": "not_started", "wave": 3},
+    {"id": 6, "name": "09-06: E2E forecast.spec.js rewrite (PLAT-12) — depends on 09-01, 09-03", "status": "not_started", "wave": 3}
   ],
   "blockers": [],
   "async_jobs": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "All 9 v1.1 requirements in a single Phase 9", "rationale": "All are presentation-layer changes; no data model work; grouping by touch-point within one phase is cleaner", "phase": "9"},
-    {"decision": "Confirm-before-logging toggle goes in Time & Day settings group", "rationale": "User selected this; avoids a new group for a single setting", "phase": "9"},
-    {"decision": "Save more: Wake→Nap start→Nap end→Bedtime→Wake, date +1 after Bedtime", "rationale": "User confirmed wrap-to-next-day behavior for batch historical data entry", "phase": "9"},
-    {"decision": "Uncertain prediction cards: per-card collapse, collapsed state shows label + window + chevron", "rationale": "User confirmed both choices via AskUserQuestion", "phase": "9"},
-    {"decision": "History edit-mode toggle state resets on tab navigation (per-session)", "rationale": "Simpler default; backlog B-20 open question resolved conservatively", "phase": "9"}
+    {"decision": "Wave structure: 09-01 first (Wave 1), then 09-02/03/04 in parallel (Wave 2), then 09-05/06 in parallel (Wave 3)", "rationale": "09-05 depends on 09-04 (confirmBeforeLogging in db-shape); 09-06 depends on 09-01 (UI-10 hero label) and 09-03 (collapsed card CSS)", "phase": "09"},
+    {"decision": "09-06-PLAN.md wave corrected from 1 to 3, depends_on updated", "rationale": "Plan was initially generated with incorrect wave metadata; corrected before execution", "phase": "09"}
   ],
-  "uncommitted_files": [],
-  "next_action": "Run /gsd-plan-phase 9 to break Phase 9: UX Polish into executable plans",
-  "context_notes": "v1.1 milestone fully initialized. Roadmap approved. STATE.md cleaned of v1.0 execution logs. Phase 9 has 9 requirements across 4 categories — all UI/presentation, no data model changes. Plan-phase should split into ~3-4 plans by touch-point: (1) history edit-mode + settings toggle, (2) manual-entry Save more + confirm-before-logging behavior, (3) today-screen button reposition + prediction card collapse + hero label, (4) test/platform cleanup."
+  "uncommitted_files": [
+    ".planning/phases/NW-09-ux-polish/09-06-PLAN.md"
+  ],
+  "next_action": "Stage and commit the 09-06-PLAN.md metadata fix, then execute Phase 9 via /gsd-execute-phase starting with Wave 1 (Plan 09-01)",
+  "context_notes": "All 6 phase plans are complete and verified (09-01 through 09-06). UI-SPEC is finalized with 4 canonical type sizes and spacing exceptions documented. The only outstanding item before execution begins is committing the 09-06-PLAN.md wave/depends_on metadata correction."
 }
