@@ -41,7 +41,10 @@ Declared values (all multiples of 4px):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level spacing |
 
-Exceptions: None. All Phase 9 additions use this scale.
+Exceptions (v1.0 inherited baselines — do NOT change to grid values):
+- 0.875rem (14px) vertical padding — matches v1.0 card component baseline
+- 0.3rem (4.8px) vertical padding — matches v1.0 toolbar button baseline
+- 0.45rem (7.2px) vertical padding — matches v1.0 modal button baseline
 
 ---
 
