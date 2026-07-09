@@ -512,30 +512,6 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-### B-20 · History screen: hide edit/delete/reject controls by default; toggle to reveal
-
-**Source:** user input (2026-06-30)
-**Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 7 — history-screen.js UI-only change
-
-**What:** In the History table, hide the `[Edit]` buttons (per cell), `[Delete]` button (per row), and the Rejected checkbox by default. Add a single "Edit history" toggle button (e.g., in the historyToolbar or above the table) that shows/hides all these controls. When controls are hidden, the table shows only the data values without interactive affordances.
-
-**Why:** The history table currently shows edit/delete/reject controls on every row at all times. For a read-only review of history (the most common use case), these controls add visual noise and increase the risk of accidental edits. Hiding them by default and enabling them via an explicit "Edit history" toggle improves data visibility and reduces accidental mutations.
-
-**Open questions when this gets planned:**
-
-- Toggle state: per-session (resets on tab switch) or persistent (saved in settings)?
-- Button placement: inside the existing `.historyToolbar` alongside Export, or a separate row above the table?
-- Should the "Rejected" column be hidden entirely when not editing, or just the checkbox made non-interactive?
-
-**Implementation notes:**
-
-- In `history-screen.js`: add a boolean `editMode` flag (default `false`). Render the table with `.rowEdit`, `.rowDel`, and `.rejected-toggle` elements hidden (CSS `display: none`) when `editMode = false`. Toggle button flips the flag and triggers a re-render.
-- CSS: add `.historyTable.edit-mode .rowEdit`, `.historyTable.edit-mode .rowDel`, `.historyTable.edit-mode .rejected-toggle` rules to show controls only in edit mode. This avoids per-element show/hide logic.
-- No data or store changes — purely a presentation-layer toggle.
-
----
-
 ### B-22 · Heatmap cell rich tooltip (custom popover)
 
 **Source:** user input (2026-06-30)
