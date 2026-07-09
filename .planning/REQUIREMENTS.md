@@ -61,21 +61,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOG-10 | — | Pending |
-| LOG-11 | — | Pending |
-| CFG-10 | — | Pending |
-| UI-07 | — | Pending |
-| UI-08 | — | Pending |
-| UI-09 | — | Pending |
-| UI-10 | — | Pending |
-| PLAT-12 | — | Pending |
-| PLAT-13 | — | Pending |
+| LOG-10 | Phase 9 | Pending |
+| LOG-11 | Phase 9 | Pending |
+| CFG-10 | Phase 9 | Pending |
+| UI-07 | Phase 9 | Pending |
+| UI-08 | Phase 9 | Pending |
+| UI-09 | Phase 9 | Pending |
+| UI-10 | Phase 9 | Pending |
+| PLAT-12 | Phase 9 | Pending |
+| PLAT-13 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 9 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 9 ⚠
+- Mapped to phases: 9 (Phase 9)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-09*
-*Last updated: 2026-07-09 after initial definition*
+*Last updated: 2026-07-09 — traceability filled after roadmap creation*
