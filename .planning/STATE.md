@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UX Polish
-status: planning
-last_updated: "2026-07-09T13:18:03.779Z"
+status: ready
+last_updated: "2026-07-09T00:00:00.000Z"
 last_activity: 2026-07-09
 progress:
-  total_phases: 0
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,29 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase NW-08 — pwa-platform-hardening
+**Current focus:** Phase NW-09 — ux-polish
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: NW-09 (Phase 9: UX Polish)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-09 — Milestone v1.1 started
+Status: Roadmap created — ready for /gsd-plan-phase 9
+Last activity: 2026-07-09 — Roadmap created for v1.1
+
+Progress bar: [          ] 0% (0/1 phases complete)
+
+### Phase NW-09 scope
+
+Requirements: LOG-10, LOG-11, CFG-10, UI-07, UI-08, UI-09, UI-10, PLAT-12, PLAT-13
+
+Files in scope:
+- js/ui/today-screen.js — "Add event" button reposition (UI-08), hero label (UI-10), card collapse (UI-09)
+- js/ui/history-screen.js — edit-mode toggle (UI-07)
+- js/ui/manual-entry.js — "Save more" button (LOG-11), confirm-before-logging pre-fill (LOG-10)
+- js/ui/settings-modal.js — "Confirm before logging" toggle (CFG-10)
+- js/store/settings.js — DEFAULT_SETTINGS for confirmBeforeLogging key (CFG-10)
+- tests/e2e/forecast.spec.js — probability-band fixture rewrite (PLAT-12)
+- nw-research-test/ — removal (PLAT-13)
 
 ### Phase 02 execution progress
 
@@ -168,7 +183,7 @@ Non-blocking follow-ups (carry into Phase 2 / 8):
 ### Open follow-ups (non-blocking)
 
 - Verify first green CI run lands on `main` once GitHub Actions recovers (push any commit OR click "Run workflow" on the ci.yml workflow page)
-- `nw-research-test/` directory at repo root is untracked, pre-existing scratch work — triage when convenient
+- `nw-research-test/` directory at repo root is untracked, pre-existing scratch work — addressed by PLAT-13 in Phase 9
 
 ## Performance Metrics
 
@@ -262,6 +277,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-30T23:19:37.521Z
-Stopped at: Completed NW-08-05 — PLAT-01..07 verified, REQUIREMENTS.md marked Complete; awaiting human browser checkpoint
-Resume file: .planning/phases/NW-08-pwa-platform-hardening/08-UI-SPEC.md
+Last session: 2026-07-09
+Stopped at: Roadmap created for v1.1 — Phase 9 (NW-09: UX Polish) defined with 9 requirements
+Resume: /gsd-plan-phase 9
