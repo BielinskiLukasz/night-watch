@@ -54,8 +54,8 @@ Font weights are strictly limited to 400 (regular) and 600 (semibold) per Phase 
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 1rem (16px) | 400 | 1.4 | Default text, event labels |
-| Label | 0.9rem / 0.875rem (14–15px) | 400 | 1.4 | Form labels, field descriptions |
+| Label | 0.875rem (14px) | 400 | 1.4 | Form labels, field descriptions, hero label, toolbar text |
+| Body | 1rem (16px) | 400 | 1.4 | Default text, event labels, button text |
 | Heading | 1.15rem (18px) | 600 | 1.4 | Modal titles, section headings |
 | Display | 2.25rem (36px) | 600 | 1.1 | Hero card time display |
 
@@ -161,7 +161,7 @@ Example: `Bedtime • 22:00–23:45 ↓`
 
 **Styling:**
 - Padding: 0.3rem 0.75rem (match existing toolbar buttons)
-- Font size: 0.85rem
+- Font size: 0.875rem
 - Border radius: 0.25rem
 - Cursor: pointer
 - Hover (when hidden): background #f1f5f9, text #1e293b
@@ -198,7 +198,7 @@ Example: `Bedtime • 22:00–23:45 ↓`
 **Styling:**
 - No changes from v1.0 (padding 0.5rem 1rem, border 1px dashed #94a3b8, transparent background)
 - Hover: background #f1f5f9, border-color #4f46e5, text #1e293b
-- Typography: 0.95rem, weight 400
+- Typography: 1rem, weight 400
 
 **Behavior:** Same as v1.0 — opens manual-entry modal with `mode: 'add'`.
 
@@ -222,7 +222,7 @@ Example: `Bedtime • 22:00–23:45 ↓`
 
 ```css
 .next-event-hero .hero-label {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -257,7 +257,7 @@ Example: `Bedtime • 22:00–23:45 ↓`
 
 **Styling:**
 - Padding: 0.45rem 1rem (match existing buttons)
-- Font size: 0.95rem, weight 400
+- Font size: 1rem, weight 400
 - Background: #fff, border 1px solid #cbd5e1, color #475569 (matches Cancel)
 - Hover: background #f1f5f9
 - Hidden by default; shown only when opened via "+ Add event" button
