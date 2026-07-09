@@ -153,15 +153,15 @@ Nightwatch v1.0 is complete and tagged `v1.0.0`. All 51 v1 requirements delivere
 
 **Archive:** `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
 
-## Next Milestone Goals (v1.1 — not yet defined)
+## Current Milestone: v1.1 UX Polish
 
-To be defined via `/gsd-new-milestone`. Candidates from v1.0 tech debt and backlog:
+**Goal:** Reduce daily logging friction and improve visual clarity on the Today, History, and prediction screens.
 
-- **B-24**: Human PWA browser checkpoint (install, offline, file:// note) — prerequisite for GitHub Pages promotion
-- **TD-2**: Hero card "Next Predicted Event" explicit label
-- **TD-3**: Probability-band E2E fixture test with realistic 7+ day history
-- **B-23**: Wrong event-type dropdown order in manual entry
-- Backlog items promoted via `/gsd-review-backlog`
+**Target features:**
+- B-20: History screen edit-mode toggle — edit/delete/rejected controls hidden by default; "Edit history" button reveals them
+- Confirm-before-logging: New "Confirm before logging" toggle in Time & Day settings group; when ON, quick-log buttons open the full manual-entry dialog pre-filled to current time + event type
+- B-16 (revised): "Add event" button moves to top of Today screen above prediction cards; manual-entry popup gets a "Save more" button that saves the event and advances the type in sequence (Wake → Nap start → Nap end → Bedtime → Wake next day, retaining same date until bedtime wraps to next day)
+- Prediction card collapse: each prediction card in probability-band fallback (high uncertainty) renders as a compact single line showing label + window + chevron; tap to expand to full card
 
 ## Requirements
 
@@ -185,4 +185,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 — v1.0 milestone archived*
+*Last updated: 2026-07-09 — v1.1 milestone started*

@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: milestone
-current_phase: ~
-current_phase_name: ~
-status: Milestone v1.0 archived — ready for next milestone
-stopped_at: v1.0 archived 2026-07-03; run /gsd-new-milestone to start v1.1
-last_updated: "2026-07-03T00:00:00.000Z"
-last_activity: 2026-07-03
-last_activity_desc: v1.0 milestone archived
+milestone_name: UX Polish
+status: planning
+last_updated: "2026-07-09T13:18:03.779Z"
+last_activity: 2026-07-09
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 45
-  completed_plans: 46
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -29,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: NW-08 (pwa-platform-hardening) — EXECUTING
-Plan: 5 of 5
-Next: run /gsd-plan-phase 7 (Charts, Heatmap & Accuracy)
-Last activity: 2026-06-30 — Phase NW-08 execution started
-
-Progress: [████████████████████████████████████████████████] Phase 6 100% (5/5 plans); overall: 6 phases complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-09 — Milestone v1.1 started
 
 ### Phase 02 execution progress
 
