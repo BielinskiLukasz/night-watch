@@ -791,6 +791,38 @@ Implementation notes:
 
 ---
 
+B‑30 · Show “missed time” indicator only in hero prediction card
+
+Source: user input (2026‑07‑10)  
+Status: captured · not scheduled  
+Earliest sensible slot: Phase 7 (UX review & polish) — or bundled with B‑07 (missing nap impact)
+
+What:  
+Restrict the “missed time” indicator so that it appears only in the hero prediction card (the main “Next Predicted Event” card).  
+The indicator should not appear on the four secondary prediction cards.  
+Hero card = single source of truth for contextual flags.
+
+Why:  
+Users scan the hero card first and rely on it as the authoritative summary of what’s happening today.  
+Showing “missed time” on all prediction cards creates noise and dilutes the meaning of the flag.  
+Keeping it exclusively in the hero card improves clarity and reduces cognitive load.
+
+Open questions when this gets planned:
+
+- Should the hero card show a short text (“Missed time today”) or an icon/badge?  
+- Should the indicator affect the hero card’s color scheme or only appear as metadata?  
+- Interaction with B‑09 (explicit hero label): should the missed-time flag appear next to the label or inside the card body?  
+- Should the missed-time flag also appear in the Today tab header (optional)?
+
+Implementation notes:
+
+- Add conditional rendering inside renderNextEventCard() only.  
+- Remove missed-time flag from the prediction-card renderer (renderForecastSection() or equivalent).  
+- Ensure the forecaster still computes the missed-time condition (B‑07), but presentation-layer decides where it is shown.  
+- No changes to prediction algorithm or data shape — purely UI logic.
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
