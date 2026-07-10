@@ -1,7 +1,7 @@
 # Nightwatch
 
 ![Status](https://img.shields.io/badge/status-active_development-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -15,15 +15,19 @@ No backend. No dependencies. No installation.
 ## Features
 
 - **Four quick-log buttons** — Woke up, Going to sleep, Nap start, Nap end; each records the current time rounded to the nearest 5 minutes
+- **Confirm-before-logging** — optional toggle in Settings (Time & Day group); when ON, quick-log buttons open the full manual-entry dialog pre-filled with the current time and event type instead of logging instantly
 - **Manual entry & editing** — native `<dialog>` modal for back-filling past events or correcting any record; future-date guard prevents accidental errors
+- **"Save more" in manual entry** — saves the current event, keeps the modal open, and advances the form to the next event type in sequence (Wake → Nap start → Nap end → Bedtime); date advances automatically after saving Bedtime
 - **Forecast engine** — predicts the next four sleep events (wake, bedtime, nap start, nap end) from a configurable rolling window of history using P10/P50/P90 percentiles
-- **Hero "next event" card** — a cycle-aware priority card shows the single most relevant upcoming event, updated immediately on every log action
-- **Uncertainty-honest cards** — tight band (≤ max_delta): shows `central (min – max)`; wide band (> max_delta): switches to a probability table (`P(wake by 07:00) = 71%`)
+- **Hero "Next Predicted Event" card** — a cycle-aware priority card shows the single most relevant upcoming event with an explicit label, updated immediately on every log action
+- **Uncertainty-honest cards** — tight band (≤ max_delta): shows `central (min – max)`; wide band (> max_delta): collapses to a compact single line with a chevron; tap to expand to the full probability table (`P(wake by 07:00) = 71%`)
 - **Cold-start gate** — when history is below `min_days`, displays an explicit "N more days needed" message instead of fabricating predictions
+- **"Add event" button** — positioned above the prediction cards on the Today screen for faster access
 - **History screen** — scrollable day-column table (Date, Wake, Nap Start, Nap End, Bedtime, Rejected, Actions); most-recent first
+- **History edit-mode toggle** — edit/delete/rejected controls are hidden by default; "Edit history" button reveals them; state resets automatically when navigating away from the History tab
 - **Edit & delete events** — per-event `[Edit]` opens the pre-populated modal; per-row `[Delete]` confirms before removing; forecasts recompute immediately
 - **Reject outliers** — checkbox per row marks a day as rejected; forecast downweights it at 0.5× without erasing the data
-- **Settings panel** — subject name, max_delta, min_days, rolling window, day-cutover hour (default 04:00), 12h/24h toggle, auto-outlier toggle
+- **Settings panel** — subject name, max_delta, min_days, rolling window, day-cutover hour (default 04:00), 12h/24h toggle, auto-outlier toggle, confirm-before-logging toggle
 - **Data import/export** — export full dataset as JSON; import JSON (lossless round-trip) or CSV (translated from the original Polish `sen.xlsx` schema)
 - **Life stages** — define named date-range stages (e.g., "Dropped second nap"); scope forecasts to the active stage only
 - **Charts & heatmap** — sleep-length line chart, time-band scatter plot, calendar heatmap, nap-pattern indicator, activity-vs-sleep correlation chart
@@ -102,16 +106,17 @@ scripts/serve.js       # zero-dep static dev server
 
 ## Roadmap progress
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1 | Log & Persist | ✅ Complete |
-| 2 | Configuration & Settings | ✅ Complete |
-| 3 | Forecast Engine & Today Screen | ✅ Complete |
-| 4 | History Screen & Edit/Delete | ✅ Complete |
-| 5 | Data Import/Export | ✅ Complete |
-| 6 | Life Stages | ✅ Complete |
-| 7 | Charts, Heatmap & Accuracy | ✅ Complete |
-| 8 | PWA & Platform Hardening | ✅ Complete |
+| Milestone | Phase | Description | Status |
+|-----------|-------|-------------|--------|
+| v1.0 | 1 | Log & Persist | ✅ Complete |
+| v1.0 | 2 | Configuration & Settings | ✅ Complete |
+| v1.0 | 3 | Forecast Engine & Today Screen | ✅ Complete |
+| v1.0 | 4 | History Screen & Edit/Delete | ✅ Complete |
+| v1.0 | 5 | Data Import/Export | ✅ Complete |
+| v1.0 | 6 | Life Stages | ✅ Complete |
+| v1.0 | 7 | Charts, Heatmap & Accuracy | ✅ Complete |
+| v1.0 | 8 | PWA & Platform Hardening | ✅ Complete |
+| v1.1 | 9 | UX Polish | ✅ Complete |
 
 Full phase details in `.planning/ROADMAP.md`.
 
