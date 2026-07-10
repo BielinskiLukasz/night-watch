@@ -129,12 +129,10 @@ if (bottomNavEl) {
   });
 }
 
-// Plan 07-04 wiring: Charts screen (stub — full implementation in 07-05).
 if (chartsScreenEl) {
   mountChartsScreen({ root: chartsScreenEl, eventLog, settings });
 }
 
-// Plan 07-04 wiring: Accuracy screen (stub — full implementation in 07-06).
 if (accuracyScreenEl) {
   mountAccuracyScreen({ root: accuracyScreenEl, eventLog, settings });
 }
