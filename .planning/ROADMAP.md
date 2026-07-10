@@ -26,10 +26,10 @@
   4. Today screen displays the "Add event" button above the prediction cards and hero card; each probability-band fallback card (±delta > max_delta) renders as a compact single line showing event label, time window, and a chevron — tapping expands it to the full card, tapping again collapses it; hero card shows an explicit "Next Predicted Event" label above the predicted time and type
   5. Probability-band E2E test passes using a realistic 30+ day fixture covering all four event types (wake, nap-start, nap-end, bedtime) and validating fallback rendering; the nw-research-test/ directory does not exist at the repository root
 
-**Plans**: 1/6 plans executed
+**Plans**: 2/6 plans executed
 
 - [x] 09-01-PLAN.md — PLAT-13 (delete nw-research-test/), UI-08 (Add event button repositioned), UI-10 (hero card label)
-- [ ] 09-02-PLAN.md — UI-07 (history edit-mode toggle)
+- [x] 09-02-PLAN.md — UI-07 (history edit-mode toggle)
 - [ ] 09-03-PLAN.md — UI-09 (probability-band card collapse)
 - [ ] 09-04-PLAN.md — CFG-10 + LOG-10 (confirm before logging setting + quick-log handler)
 - [ ] 09-05-PLAN.md — LOG-11 (Save more button in manual-entry modal)
@@ -41,7 +41,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 9. UX Polish | 1/6 | In Progress|  |
+| 9. UX Polish | 2/6 | In Progress|  |
 
 ## Backlog
 
