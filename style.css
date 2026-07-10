@@ -979,6 +979,42 @@ button[data-log]:hover {
   gap: 0.5rem;
 }
 
+/* ── UI-09: collapsed probability-band forecast card ─────────────────────── */
+
+/* Hide full content when card is collapsed */
+.prediction-card.collapsed .card-full {
+  display: none;
+}
+/* Show compact summary row only when collapsed */
+.prediction-card.collapsed .card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px; /* tap target compliance */
+  width: 100%;
+}
+/* Hide summary row when expanded */
+.prediction-card:not(.collapsed) .card-summary {
+  display: none;
+}
+.card-summary-label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #1a1a1a;
+}
+.card-chevron {
+  font-size: 1rem;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+.prediction-card:hover .card-chevron {
+  color: #4f46e5;
+}
+.prediction-card.collapsed {
+  cursor: pointer;
+}
+
 /* Inline validation surface (mirrors manualEntryErrors).
  * Renders one <p data-field=...> per error via textContent (T-07). */
 .settingsErrors {
