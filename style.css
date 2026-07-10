@@ -1031,6 +1031,30 @@ button[data-log]:hover {
   background: #ede9fe;
 }
 
+/* UI-07: Edit history toggle button (Plan NW-09-02) */
+.btnEditToggle {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.btnEditToggle:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.btnEditToggle[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+.btnEditToggle[aria-pressed="true"]:hover {
+  background: #ede9fe;
+}
+
 /* ==========================================================================
  * Plan 05-04 — Settings modal Import / Export section (D5-01, D5-03)
  * ==========================================================================
