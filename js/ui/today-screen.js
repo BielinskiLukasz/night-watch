@@ -642,10 +642,14 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
 
   // "+ Add event" click → openManualEntry({ mode: 'add' }).
   addEventBtn.addEventListener('click', () => {
+    // LOG-11 / D9-08: saveMore: true shows the Save more button in the modal.
+    // This path is distinct from the confirm-before-logging path (D9-08).
     openManualEntry({
       mode: 'add',
       existing: null,
-      settings, // Plan 02-06 / CFG-09: feeds applyTimeFormat
+      settings,
+      clock,
+      saveMore: true,
       onSave: ({ type, at }) => {
         // D3-12: addEventAt fires the eventLog subscriber synchronously.
         eventLog.addEventAt(type, at);

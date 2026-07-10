@@ -165,6 +165,9 @@
       <output id="manualEntryErrors" class="manualEntryErrors" aria-live="polite"></output>
       <menu>
         <button type="button" id="manualCancel" formnovalidate>Cancel</button>
+        <!-- LOG-11 / D9-08/D9-09: Save more button — shown only when opened via +Add event.
+             openManualEntry shows/hides this button based on the saveMore parameter. -->
+        <button type="button" id="saveMoreBtn" style="display:none">Save more</button>
         <!--
           formnovalidate on Save: the HTML5 step="5" constraint on the minute
           input would block form submission for non-5 multiples, but the
