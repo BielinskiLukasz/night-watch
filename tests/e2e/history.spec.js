@@ -69,6 +69,22 @@ async function seedAndReload(page) {
   await page.reload();
 }
 
+/**
+ * Ensure the History screen is in edit mode (UI-07 / NW-09-02).
+ * Checks aria-pressed first so it's safe to call multiple times in one test
+ * (e.g. after a tab switch where editMode may already be true if the screen
+ * was shown/hidden rather than fully remounted).
+ */
+async function enterEditMode(page) {
+  const btn = page.locator('button.btnEditToggle');
+  await expect(btn).toBeVisible();
+  const pressed = await btn.getAttribute('aria-pressed');
+  if (pressed !== 'true') {
+    await btn.click();
+    await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
@@ -321,6 +337,9 @@ test('edit event — [Edit] button opens modal with pre-populated data and saves
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: edit controls are hidden by default; enter edit mode first.
+  await enterEditMode(page);
+
   // Find the [Edit] button for the wake event on the most recent day (ev-d5-w: 06:45).
   // The table is newest-first (D4-02); the first row is 2026-05-24.
   // The wake cell (td.day-wake) contains the time and the [Edit] button.
@@ -365,6 +384,9 @@ test('edit event — pre-populated type field matches the existing event type', 
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: enter edit mode before using edit controls.
+  await enterEditMode(page);
+
   // Find the [Edit] button for the nap-start event (ev-d4-ns on 2026-05-23)
   // That day is 2 rows from top (dates: 24, 23, 22, 21, 20)
   const rows = page.locator('table.historyTable tbody tr.day-row');
@@ -398,6 +420,9 @@ test('delete day — [Delete] button shows confirm dialog and removes the row on
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: enter edit mode before using delete controls.
+  await enterEditMode(page);
+
   // Count rows before deletion (should be 5 days)
   const rows = page.locator('table.historyTable tbody tr.day-row');
   const rowCountBefore = await rows.count();
@@ -428,6 +453,9 @@ test('delete day — Cancel on confirm dialog leaves the row intact', async ({ p
   await seedAndReload(page);
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // UI-07 / NW-09-02: enter edit mode before using delete controls.
+  await enterEditMode(page);
 
   const rows = page.locator('table.historyTable tbody tr.day-row');
   const rowCountBefore = await rows.count();
@@ -460,6 +488,9 @@ test('delete last day — History shows empty-state message after all events rem
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: enter edit mode before using delete controls.
+  await enterEditMode(page);
+
   // Accept the confirm dialog
   page.once('dialog', (dialog) => dialog.accept());
 
@@ -482,6 +513,9 @@ test('toggle rejected checkbox — row gets "rejected" class and checkbox stays 
   // Navigate to History tab
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // UI-07 / NW-09-02: enter edit mode before using rejected-toggle controls.
+  await enterEditMode(page);
 
   // Find the first row (most recent day: 2026-05-24)
   const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
@@ -520,6 +554,9 @@ test('toggle rejected — uncheck restores row to non-rejected (D4-05, D4-10)', 
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: enter edit mode before using rejected-toggle controls.
+  await enterEditMode(page);
+
   const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
 
   // Row should be rejected initially (pre-seeded)
@@ -543,6 +580,9 @@ test('toggle rejected persists across tab switch (D4-05, CFG-05)', async ({ page
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
+  // UI-07 / NW-09-02: enter edit mode before using rejected-toggle controls.
+  await enterEditMode(page);
+
   // Check the checkbox on the first row
   const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
   const checkbox = firstRow.locator('input.rejected-toggle');
@@ -553,13 +593,16 @@ test('toggle rejected persists across tab switch (D4-05, CFG-05)', async ({ page
   await page.locator('button[data-tab="today"]').click();
   await expect(page.locator('#today-screen')).toBeVisible();
 
-  // Switch back to History
+  // Switch back to History (remount resets editMode to false per UI-07 / D9-04)
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
-  // Verify checkbox is still checked and row still rejected (settings persisted)
+  // Row's rejected class persists (data-driven, not dependent on editMode)
   const firstRowAfter = page.locator('table.historyTable tbody tr.day-row').first();
   await expect(firstRowAfter).toHaveClass(/rejected/);
+
+  // Enter edit mode again to verify the checkbox state (UI-07: controls hidden by default)
+  await enterEditMode(page);
   await expect(firstRowAfter.locator('input.rejected-toggle')).toBeChecked();
 });
 
@@ -569,6 +612,11 @@ test('toggle rejected persists across page reload (D4-05, CFG-05)', async ({ pag
 
   // Navigate to History and check a day rejected
   await page.locator('button[data-tab="history"]').click();
+  await expect(page.locator('table.historyTable')).toBeVisible();
+
+  // UI-07 / NW-09-02: enter edit mode before using rejected-toggle controls.
+  await enterEditMode(page);
+
   const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
   const checkbox = firstRow.locator('input.rejected-toggle');
   await checkbox.check();
@@ -581,9 +629,12 @@ test('toggle rejected persists across page reload (D4-05, CFG-05)', async ({ pag
   await page.locator('button[data-tab="history"]').click();
   await expect(page.locator('table.historyTable')).toBeVisible();
 
-  // First row should still be rejected after reload
+  // Row's rejected class persists (data-driven, not dependent on editMode)
   const firstRowAfterReload = page.locator('table.historyTable tbody tr.day-row').first();
   await expect(firstRowAfterReload).toHaveClass(/rejected/);
+
+  // Enter edit mode again to verify the checkbox state
+  await enterEditMode(page);
   await expect(firstRowAfterReload.locator('input.rejected-toggle')).toBeChecked();
 });
 
@@ -596,6 +647,9 @@ test('edit event — History table re-renders reactively without page reload (D3
   // This validates the subscriber pattern fires after editEvent() without a reload.
   await seedAndReload(page);
   await page.locator('button[data-tab="history"]').click();
+
+  // UI-07 / NW-09-02: enter edit mode before using edit controls.
+  await enterEditMode(page);
 
   const firstRow = page.locator('table.historyTable tbody tr.day-row').first();
   const wakeCell = firstRow.locator('td.day-wake');

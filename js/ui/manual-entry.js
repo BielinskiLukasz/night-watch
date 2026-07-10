@@ -53,6 +53,36 @@
 import { el, clear } from './dom.js';
 import { roundTo5, formatLocalISO, parseLocalISO, to24h, to12h } from '../lib/time.js';
 
+// LOG-11: module-level handler ref prevents listener accumulation on repeated opens.
+let _saveMoreHandler = null;
+
+/** Fixed type advancement sequence for Save more (D9-10). */
+const SAVE_MORE_SEQUENCE = Object.freeze(['wake', 'napStart', 'napEnd', 'bedtime']);
+
+/**
+ * Return the next event type in the Save more sequence (D9-10).
+ * @param {string} currentType
+ * @returns {string}
+ */
+function nextInSequence(currentType) {
+  const idx = SAVE_MORE_SEQUENCE.indexOf(currentType);
+  return SAVE_MORE_SEQUENCE[(idx + 1) % SAVE_MORE_SEQUENCE.length] ?? SAVE_MORE_SEQUENCE[0];
+}
+
+/**
+ * Advance a YYYY-MM-DD date string by one calendar day (D9-11).
+ * Uses Date arithmetic (DST-safe via noon). Returns 'YYYY-MM-DD'.
+ * @param {string} dateStr  'YYYY-MM-DD'
+ * @returns {string}
+ */
+function advanceDateByOneDay(dateStr) {
+  // Use T12:00 to avoid DST hour-boundary ambiguity on the date change.
+  const d = new Date(`${dateStr}T12:00`);
+  d.setDate(d.getDate() + 1);
+  const pad2 = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 /** Pad an integer to 2 chars (shared between validate + UI default-prefill). */
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -181,7 +211,7 @@ export function validate({ date, hourStr, minuteStr, type }, { now }) {
  *   exempted). The pure validate() never reaches that fallback at the test
  *   path because the test imports validate() directly.
  */
-export function openManualEntry({ mode, existing, onSave, clock, settings }) {
+export function openManualEntry({ mode, existing, onSave, clock, settings, saveMore = false }) {
   if (mode !== 'add' && mode !== 'edit') {
     // Pitfall #6 architectural mitigation — the UI cannot dispatch the
     // wrong store method because the dispatcher has no fallback branch.
@@ -196,6 +226,9 @@ export function openManualEntry({ mode, existing, onSave, clock, settings }) {
   const minuteInput = form.elements.namedItem('minute');
   const typeInput = form.elements.namedItem('type');
   const cancelBtn = dlg.querySelector('#manualCancel');
+  const saveMoreBtn = dlg.querySelector('#saveMoreBtn');
+  // LOG-11 / D9-08: Save more is only visible when opened via +Add event.
+  if (saveMoreBtn) saveMoreBtn.style.display = saveMore ? '' : 'none';
   const errorsEl = dlg.querySelector('#manualEntryErrors');
 
   // ── CFG-09 / Plan 02-06: 12h time-picker support ─────────────────────────
@@ -277,15 +310,16 @@ export function openManualEntry({ mode, existing, onSave, clock, settings }) {
     dateInput.max = todayYMD;
   }
 
-  if (mode === 'edit' && existing) {
+  if (existing) {
     // Pre-fill from canonical 'YYYY-MM-DDTHH:MM' via string slicing.
+    // Covers edit mode AND the confirm-before-logging add path (mode='add', existing set).
     // All assignments use the .value property (V5 / T-07 — never innerHTML).
     dateInput.value = existing.at.slice(0, 10);
     hourInput.value = String(parseInt(existing.at.slice(11, 13), 10));
     minuteInput.value = String(parseInt(existing.at.slice(14, 16), 10));
     typeInput.value = existing.type;
   } else {
-    // Add mode: default the date input to today if empty.
+    // Add mode (no existing): default the date input to today if empty.
     if (!dateInput.value) {
       dateInput.value = todayYMD;
     }
@@ -417,7 +451,86 @@ export function openManualEntry({ mode, existing, onSave, clock, settings }) {
     unsubSettings = settings.subscribe(applyTimeFormat);
   }
 
+  // LOG-11: Save more handler — saves current event, keeps dialog open, advances type.
+  if (saveMoreBtn) {
+    const onSaveMore = () => {
+      // Validate and save current form values using the same logic as the regular Save path.
+      const data = new FormData(form);
+      let hourStr = String(data.get('hour') ?? '');
+      if (settings && settings.get().timeFormat === '12h' && ampmSelect) {
+        try {
+          hourStr = String(to24h(hourStr, String(data.get('ampm') ?? '')));
+        } catch {
+          hourStr = '';
+        }
+      }
+
+      const result = validate(
+        {
+          date: String(data.get('date') ?? ''),
+          hourStr,
+          minuteStr: String(data.get('minute') ?? ''),
+          type: String(data.get('type') ?? ''),
+        },
+        { now: nowFn },
+      );
+
+      if (!result.ok) {
+        // Show validation errors without closing the dialog.
+        if (errorsEl) {
+          clear(errorsEl);
+          for (const err of result.errors) {
+            errorsEl.appendChild(
+              el('p', { 'data-field': err.field, textContent: err.message }),
+            );
+          }
+        }
+        // Focus the first errored field.
+        const firstField = result.errors[0]?.field ?? null;
+        if (firstField) {
+          const target = form.elements.namedItem(firstField);
+          if (target && typeof target.focus === 'function') {
+            try { target.focus(); } catch { /* non-fatal */ }
+          }
+        }
+        return;
+      }
+
+      // Save the current event.
+      onSave({ type: result.type, at: result.atString });
+
+      // Advance to next type in sequence (D9-10).
+      const nextType = nextInSequence(result.type);
+
+      // Advance date by one day when saving Bedtime → next type is Wake (D9-11).
+      if (result.type === 'bedtime') {
+        const currentDate = String(data.get('date') ?? '').trim();
+        if (currentDate) {
+          dateInput.value = advanceDateByOneDay(currentDate);
+        }
+      }
+
+      // Update type select and clear time fields.
+      typeInput.value = nextType;
+      hourInput.value = '';
+      minuteInput.value = '';
+      if (ampmSelect) ampmSelect.value = 'AM'; // reset AM/PM to safe default in 12h mode
+
+      // Clear errors and re-focus.
+      if (errorsEl) clear(errorsEl);
+      hourInput.focus();
+    };
+
+    // Remove prior handler before attaching new one (module-level ref prevents accumulation).
+    if (_saveMoreHandler) saveMoreBtn.removeEventListener('click', _saveMoreHandler);
+    _saveMoreHandler = onSaveMore;
+    saveMoreBtn.addEventListener('click', _saveMoreHandler);
+  }
+
   // showModal() gives focus trap + ESC-to-close + aria-modal automatically
   // (V14 zero-deps modal accessibility — RESEARCH §Pattern 6).
   dlg.showModal();
 }
+
+// LOG-11: Export sequence helpers for unit testing (Plan 09-05).
+export { nextInSequence, advanceDateByOneDay };

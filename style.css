@@ -221,6 +221,7 @@ button[data-log]:hover {
 .addEventBtn {
   display: block;
   margin-top: 1rem;
+  margin-bottom: 1rem;
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
   background: transparent;
@@ -308,6 +309,21 @@ button[data-log]:hover {
 
 #manualEntry menu button[type="submit"]:hover {
   background: #4338ca;
+}
+
+/* LOG-11: Save more button in manual-entry modal */
+#saveMoreBtn {
+  padding: 0.45rem 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+#saveMoreBtn:hover {
+  background: #f1f5f9;
 }
 
 /* Plan 01-07 — inline validation errors (UAT gaps 2 + 3 closure).
@@ -854,6 +870,18 @@ button[data-log]:hover {
   background: #64748b;
 }
 
+/* UI-10 / D9-17: "Next Predicted Event" label above the time on the hero card */
+.next-event-hero .hero-label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: #fff;
+  margin: 0;
+  margin-bottom: 0.5rem;
+}
+
 /* ── Cold-start message (D3-09) ──────────────────────────────────────────── */
 
 .cold-start-message {
@@ -967,6 +995,42 @@ button[data-log]:hover {
   gap: 0.5rem;
 }
 
+/* ── UI-09: collapsed probability-band forecast card ─────────────────────── */
+
+/* Hide full content when card is collapsed */
+.prediction-card.collapsed .card-full {
+  display: none;
+}
+/* Show compact summary row only when collapsed */
+.prediction-card.collapsed .card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px; /* tap target compliance */
+  width: 100%;
+}
+/* Hide summary row when expanded */
+.prediction-card:not(.collapsed) .card-summary {
+  display: none;
+}
+.card-summary-label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #1a1a1a;
+}
+.card-chevron {
+  font-size: 1rem;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+.prediction-card:hover .card-chevron {
+  color: #4f46e5;
+}
+.prediction-card.collapsed {
+  cursor: pointer;
+}
+
 /* Inline validation surface (mirrors manualEntryErrors).
  * Renders one <p data-field=...> per error via textContent (T-07). */
 .settingsErrors {
@@ -1016,6 +1080,30 @@ button[data-log]:hover {
 }
 
 .btnExport:hover {
+  background: #ede9fe;
+}
+
+/* UI-07: Edit history toggle button (Plan NW-09-02) */
+.btnEditToggle {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.btnEditToggle:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.btnEditToggle[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+.btnEditToggle[aria-pressed="true"]:hover {
   background: #ede9fe;
 }
 

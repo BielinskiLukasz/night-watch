@@ -53,6 +53,7 @@ export const RULES = Object.freeze({
   statBlend:    { type: 'enum',     values: new Set(['median', 'mean', 'blend']) },
   stages:        { type: 'stage[]' },         // D6-01: array of life-stage objects
   activeStageId: { type: 'null-or-string' },  // D6-02: selected stage id or null
+  confirmBeforeLogging: { type: 'boolean' },  // CFG-10 / D9-13: confirm before quick-log
 });
 
 // ---------------------------------------------------------------------------

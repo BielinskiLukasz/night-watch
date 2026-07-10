@@ -8,6 +8,9 @@ Post-release housekeeping patch — no user-facing feature changes.
 ### Fix
 - **E2E test race condition** (`tests/e2e/settings-modal.spec.js`): Guard CFG-01 and CFG-02..07 reload tests against the `<dialog>` close macrotask race. Adds intermediate DOM assertions (subject name text / `aria-pressed` attribute) so `localStorage` is written before `page.reload()` fires.
 
+### Infrastructure
+- **Remove CI/Deploy workflow** (`.github/workflows/ci.yml`): The workflow assumed npm dependencies and Playwright setup that conflict with the project's no-build, no-dependencies constraint. Removed; tests remain runnable locally via `npm test` and `npm run test:e2e`.
+
 ### Docs & planning
 - Add v1.0.0 release notes (`RELEASES.md`) and update README for the v1.0.0 release; bump version badge to 1.0.1.
 - Add v1.0 milestone audit (`v1.0-MILESTONE-AUDIT.md`).

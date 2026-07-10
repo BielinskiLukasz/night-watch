@@ -40,7 +40,7 @@
 
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
-import { formatTime, to12h } from '../lib/time.js';
+import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
 import { forecast, selectNextEvent } from '../lib/forecast.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -120,6 +120,12 @@ function renderNextEventCard(prediction, timeFormat) {
   const heroClass = prediction.isMissed ? 'next-event-hero missed' : 'next-event-hero';
   const card = el('div', { className: heroClass });
 
+  // UI-10 / D9-17: "Next Predicted Event" label above event type for visual hierarchy.
+  card.appendChild(el('p', {
+    className: 'hero-label',
+    textContent: 'Next Predicted Event',
+  }));
+
   // Event type label (e.g., "WAKE", "BEDTIME")
   card.appendChild(el('p', {
     className: 'event-type',
@@ -181,7 +187,7 @@ function renderNextEventCard(prediction, timeFormat) {
  * @param {'24h'|'12h'} timeFormat
  * @returns {HTMLElement}
  */
-function renderPredictionCard(prediction, eventType, timeFormat) {
+export function renderPredictionCard(prediction, eventType, timeFormat) {
   // Determine if the prediction's central time is in the past (D3-11)
   let isMissed = false;
   if (prediction.central) {
@@ -202,14 +208,30 @@ function renderPredictionCard(prediction, eventType, timeFormat) {
 
   const card = el('div', { className: cardClass });
 
-  // Event type label
-  card.appendChild(el('p', {
-    className: 'event-label',
-    textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
-  }));
-
   if (hasProbBand) {
-    // High-uncertainty: probability table (D3-04)
+    // UI-09 / D9-05: probability-band cards render collapsed by default.
+    // D9-06: collapsed state resets on every re-render (replaceChildren rebuilds DOM).
+    card.classList.add('collapsed');
+
+    // Compact summary row: "EventLabel • startTime–endTime ↓"
+    const firstTime = prediction.probabilityBand[0]?.time;
+    const lastTime = prediction.probabilityBand[prediction.probabilityBand.length - 1]?.time;
+    const rangeText = (firstTime && lastTime)
+      ? `${formatHHMM(firstTime, timeFormat)}–${formatHHMM(lastTime, timeFormat)}`
+      : '—';
+    const labelText = `${EVENT_TYPE_LABEL[eventType] ?? eventType} • ${rangeText}`;
+
+    const summary = el('span', { className: 'card-summary' });
+    summary.appendChild(el('span', { className: 'card-summary-label', textContent: labelText }));
+    summary.appendChild(el('span', { className: 'card-chevron', textContent: '↓' }));
+    card.appendChild(summary);
+
+    // Full card content (hidden when .collapsed CSS rule is active)
+    const fullContent = el('div', { className: 'card-full' });
+    fullContent.appendChild(el('p', {
+      className: 'event-label',
+      textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
+    }));
     const ul = el('ul', { className: 'prob-list' });
     for (const entry of prediction.probabilityBand) {
       const li = el('li', {});
@@ -219,9 +241,21 @@ function renderPredictionCard(prediction, eventType, timeFormat) {
       li.appendChild(el('span', { textContent: `${entry.prob}%` }));
       ul.appendChild(li);
     }
-    card.appendChild(ul);
+    fullContent.appendChild(ul);
+    card.appendChild(fullContent);
+
+    // Click handler: toggle collapsed/expanded state and flip chevron.
+    card.addEventListener('click', () => {
+      const isNowCollapsed = card.classList.toggle('collapsed');
+      const chevron = card.querySelector('.card-chevron');
+      if (chevron) chevron.textContent = isNowCollapsed ? '↓' : '↑';
+    });
   } else {
-    // Normal: central time + band
+    // Normal: event label + central time + band
+    card.appendChild(el('p', {
+      className: 'event-label',
+      textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
+    }));
     card.appendChild(el('p', {
       className: 'time-central',
       textContent: prediction.central ? formatHHMM(prediction.central, timeFormat) : '—',
@@ -427,9 +461,10 @@ function renderStageSelector(container, stages, activeStageId, settingsStore) {
  *     update: (patch: object) => object,
  *     subscribe: (fn: (snap: object) => void) => () => void,
  *   },
+ *   clock?: { now: () => Date },
  * }} deps
  */
-export function mountTodayScreen({ root, eventLog, settings }) {
+export function mountTodayScreen({ root, eventLog, settings, clock }) {
   // Per-mount debounce ledger. NOTE: this is the ONE place outside the clock
   // adapter that reads a wall-clock-like value, and it deliberately uses
   // performance.now() (monotonic, non-domain) so the grep gate forbidding
@@ -489,9 +524,10 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     textContent: '+ Add event',
   });
 
-  // D3-07 layout: quickLog → stageSelector → nextEventCard → coldStartMsg → forecastCards → toggle → dayList → addBtn
-  // Plan 06-03: stageSelectorContainer inserted between quickLog and nextEventCard (D6-09).
-  root.replaceChildren(quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList, addEventBtn);
+  // D9-16 layout: quickLog → stageSelector → addEventBtn → nextEventCard → coldStartMsg → forecastCards → toggle → dayList
+  // Per UI-08/D9-16: addEventBtn moved from tail to position 2 (before nextEventCard).
+  // Plan 06-03: stageSelectorContainer inserted between quickLog and addEventBtn (D6-09).
+  root.replaceChildren(quickLog, stageSelectorContainer, addEventBtn, nextEventCard, coldStartMsg, forecastCards, toggle, dayList);
 
   // Grouping toggle click — commit-on-click via settings.update (D2-16).
   // No-op when clicking the already-active button to avoid spurious
@@ -542,10 +578,27 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     }
     lastClickAt[type] = now;
 
-    eventLog.addEvent(type);
-    // render() will be called by the eventLog subscriber above (D3-12).
-    // Avoid double-render by relying on the subscriber rather than calling render() here.
-    // NOTE: addEvent fires the subscriber synchronously, so the forecast updates inline.
+    const snap = settings.get();
+    if (snap.confirmBeforeLogging && clock) {
+      // CFG-10 / LOG-10 / D9-15: open confirm dialog pre-filled with type + current time.
+      // clock.now() preserves the clock-adapter seam (D-07) — the Date constructor is
+      // never called directly here; domain time flows through the injected clock only.
+      // D9-08: saveMore is NOT passed (confirm path never shows Save more button).
+      const nowDate = clock.now();
+      const nowISO = typeof nowDate === 'string' ? nowDate : formatLocalISO(nowDate);
+      openManualEntry({
+        mode: 'add',
+        existing: { type, at: nowISO },
+        settings,
+        clock,
+        onSave: ({ type: t, at }) => {
+          eventLog.addEventAt(t, at);
+        },
+      });
+    } else {
+      eventLog.addEvent(type);
+      // render() called by eventLog subscriber (D3-12). No double-render.
+    }
   });
 
   // Delegated click listener for per-row affordances (D-12).
@@ -589,10 +642,14 @@ export function mountTodayScreen({ root, eventLog, settings }) {
 
   // "+ Add event" click → openManualEntry({ mode: 'add' }).
   addEventBtn.addEventListener('click', () => {
+    // LOG-11 / D9-08: saveMore: true shows the Save more button in the modal.
+    // This path is distinct from the confirm-before-logging path (D9-08).
     openManualEntry({
       mode: 'add',
       existing: null,
-      settings, // Plan 02-06 / CFG-09: feeds applyTimeFormat
+      settings,
+      clock,
+      saveMore: true,
       onSave: ({ type, at }) => {
         // D3-12: addEventAt fires the eventLog subscriber synchronously.
         eventLog.addEventAt(type, at);

@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
@@ -9,6 +13,21 @@ Seeded by an existing multi-month spreadsheet (`sen.xlsx`); intended to replace 
 
 See `.planning/PROJECT.md` for the full context, requirements, constraints, and key decisions.
 <!-- GSD:project-end -->
+
+## Commands
+
+```bash
+npm run serve           # zero-dep static dev server → http://localhost:8081
+npm test                # full suite: node --test + Playwright (server auto-starts for E2E)
+npm run test:unit       # unit + integration via node --test only (~5 s, no browser)
+npm run test:e2e        # Playwright E2E against http://localhost:8081
+```
+
+Run a single test file:
+```bash
+node --test tests/unit/forecast.test.js           # unit or integration file
+npx playwright test tests/e2e/history.spec.js     # single E2E spec
+```
 
 <!-- GSD:stack-start source:STACK.md -->
 ## Technology Stack
@@ -40,12 +59,32 @@ See `.planning/PROJECT.md` for the full context, requirements, constraints, and 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
-Architecture is still emerging — Phase 1 lays down the first slice (log → persist → view). Follow these guides until a phase produces a richer architecture doc:
+v1.0 shipped all 8 phases. The layered module structure is stable:
 
-- **Vertical-slice phases.** The roadmap is structured as vertical MVPs (see `.planning/ROADMAP.md`), each landing an end-to-end user-visible capability. Avoid building horizontal layers ahead of the phase that needs them.
-- **Reference app:** `../mindful-breathing` (single-file vanilla PWA). It demonstrates the offline + service worker + localStorage + Web APIs pattern. Adapt its patterns to the multi-file split.
-- **Data model source of truth:** the translated `sen.xlsx` column schema in `.planning/PROJECT.md` § Context. The runtime data model should round-trip exactly to the canonical JSON export.
-- **PWA hardening is intentionally deferred to Phase 8** so the data model can flex during Phases 1–4 without service-worker churn.
+```
+js/
+  app.js          # Composition root — the ONLY place adapters are selected and injected
+  lib/            # Pure functions (no DOM, no side effects): forecast, day-bucket, csv-parse, accuracy, time…
+  store/          # Stateful stores with pub/sub: event-log.js, settings.js
+  adapters/       # Injectable seams: storage-local/memory, clock-system/fixed
+  ui/             # DOM rendering modules: today-screen, history-screen, charts-screen…
+tests/
+  unit/           # node:test — pure lib/ modules
+  integration/    # node:test — stores wired to memory adapter + fixed clock (no browser)
+  e2e/            # Playwright specs against the running app
+```
+
+**Key cross-file invariants to understand before editing:**
+
+- **Adapter injection** — `js/app.js` injects adapters into every module that needs clock or storage. Modules in `lib/` and `store/` never call `new Date()` or `localStorage` directly. Tests use `storage-memory.js` + `clock-fixed.js` without touching real storage.
+
+- **XSS guard** — all dynamic DOM updates must go through helpers in `js/ui/dom.js` (`textContent` / `replaceChildren()`). No `innerHTML` with user-controlled data anywhere in `js/`.
+
+- **Day boundary** — `js/lib/day-bucket.js` uses the cutover hour setting (default 04:00) to group events into sleep-days (not calendar days). Anything that reasons about "a day's events" must go through this module.
+
+- **Service worker cache versioning** — `sw.js` has a frozen `PRECACHE_LIST` and the cache key `nightwatch-v1`. Adding new app-shell files requires updating both, and `tests/unit/sw-precache.test.js` enforces the list is exhaustive.
+
+- **Schema migration** — `js/lib/db-shape.js` validates shape and runs V1→V2 migration. Any data-model change must bump the schema version here.
 <!-- GSD:architecture-end -->
 
 <!-- GSD:skills-start source:skills/ -->
