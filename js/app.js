@@ -103,14 +103,14 @@ mountTodayScreen({ root: todayScreenEl, eventLog, settings, clock });
 // Plan 05-03 wiring: onExport callback injects downloadJSON so the Export JSON
 // button on the History toolbar can trigger a download without importing
 // storage/clock into history-screen.js directly (composition-root pattern).
-if (historyTableRootEl) {
-  mountHistoryScreen({
-    root: historyTableRootEl,
-    eventLog,
-    settings,
-    onExport: () => downloadJSON(storage, clock),
-  });
-}
+const historyScreen = historyTableRootEl
+  ? mountHistoryScreen({
+      root: historyTableRootEl,
+      eventLog,
+      settings,
+      onExport: () => downloadJSON(storage, clock),
+    })
+  : null;
 
 // Plan 07-04 wiring: Bottom navigation bar (D7-01..D7-04).
 // Wires the four-tab bottom nav; onTabChange updates activeTab and calls
@@ -119,6 +119,10 @@ if (bottomNavEl) {
   mountBottomNav({
     root: bottomNavEl,
     onTabChange: (tabId) => {
+      // D9-04: reset History edit mode whenever the user leaves the History tab.
+      if (activeTab === 'history' && tabId !== 'history') {
+        historyScreen?.resetEditMode();
+      }
       activeTab = tabId;
       applyTabVisibility();
     },
