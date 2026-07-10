@@ -187,7 +187,7 @@ function renderNextEventCard(prediction, timeFormat) {
  * @param {'24h'|'12h'} timeFormat
  * @returns {HTMLElement}
  */
-function renderPredictionCard(prediction, eventType, timeFormat) {
+export function renderPredictionCard(prediction, eventType, timeFormat) {
   // Determine if the prediction's central time is in the past (D3-11)
   let isMissed = false;
   if (prediction.central) {
