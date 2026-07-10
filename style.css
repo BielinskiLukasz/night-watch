@@ -310,6 +310,21 @@ button[data-log]:hover {
   background: #4338ca;
 }
 
+/* LOG-11: Save more button in manual-entry modal */
+#saveMoreBtn {
+  padding: 0.45rem 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+#saveMoreBtn:hover {
+  background: #f1f5f9;
+}
+
 /* Plan 01-07 — inline validation errors (UAT gaps 2 + 3 closure).
  * Hidden when empty (:empty); visible-failure styling when populated.
  * Color stays neutral per the calm-theme decision in PROJECT.md — only
