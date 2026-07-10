@@ -132,6 +132,15 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
       unsubEventLog();
       unsubSettings();
     },
+    // D9-04: called by app.js onTabChange when user leaves the History tab,
+    // so editMode resets even though the screen is shown/hidden (not remounted).
+    resetEditMode() {
+      if (!editMode) return;
+      editMode = false;
+      btnEditToggle.textContent = 'Edit history';
+      btnEditToggle.setAttribute('aria-pressed', 'false');
+      render();
+    },
   };
 }
 
