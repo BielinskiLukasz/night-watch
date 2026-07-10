@@ -23,7 +23,7 @@
 
 ### Platform / Quality (PLAT)
 
-- [ ] **PLAT-12**: Probability-band E2E test rewritten to use a realistic fixture with 30+ days of all four event types (wake, nap-start, nap-end, bedtime), validating fallback rendering in realistic scenarios (TD-3)
+- [x] **PLAT-12**: Probability-band E2E test rewritten to use a realistic fixture with 30+ days of all four event types (wake, nap-start, nap-end, bedtime), validating fallback rendering in realistic scenarios (TD-3)
 - [x] **PLAT-13**: `nw-research-test/` scratch directory removed from the repository root (TD-1)
 
 ## v2 Requirements
@@ -68,7 +68,7 @@
 | UI-08 | Phase 9 | Complete |
 | UI-09 | Phase 9 | Complete |
 | UI-10 | Phase 9 | Complete |
-| PLAT-12 | Phase 9 | Pending |
+| PLAT-12 | Phase 9 | Complete |
 | PLAT-13 | Phase 9 | Complete |
 
 **Coverage:**
