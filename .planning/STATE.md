@@ -6,14 +6,14 @@ current_phase: 09
 current_phase_name: "Phase 9: UX Polish"
 status: planned
 stopped_at: Phase 9 plans created (09-01 through 09-06)
-last_updated: "2026-07-10T10:10:46.532Z"
+last_updated: "2026-07-10T10:28:41.315Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 9 plans written (6 plans, 3 waves)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -98,6 +98,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 08-05]: gsd:allow-storage-local exemption tag added to security-smoke.test.js — mirrors gsd:allow-ui-clock clock-seam pattern for file:// note dismiss state in app.js
 - [Phase ?]: UI-07: editMode local state in mountHistoryScreen resets on each remount; toolbar renders unconditionally; edit controls gated behind editMode param in buildDayRow
 - [Phase ?]: renderPredictionCard: hasProbBand branch collapsed by default with .card-summary + .card-full; event-label moved to else branch (UI-09)
+- [Phase ?]: CFG-10/LOG-10 wire complete
 
 ### Pending Todos
 
@@ -111,7 +112,7 @@ None yet.
 
 **Resume file:** .planning/phases/NW-09-ux-polish/09-01-PLAN.md
 
-Last session: 2026-07-10T10:10:24.018Z
+Last session: 2026-07-10T10:28:27.929Z
 Stopped at: Phase 9 plans created
 Resume: /gsd-execute-phase 9
 
@@ -121,3 +122,4 @@ Resume: /gsd-execute-phase 9
 |-------|------|----------|-------|
 | Phase NW-09 P02 | 15 | - tasks | - files |
 | Phase NW-09 P03 | 7m | 1 tasks | 3 files |
+| Phase NW-09 P04 | 802s | 2 tasks | 7 files |
