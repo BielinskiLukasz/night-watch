@@ -136,9 +136,23 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | — Pending |
 | Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | — Pending |
 
-## Current State (v1.0 — shipped 2026-06-30)
+## Current State (v1.1 — shipped 2026-07-10)
 
-Nightwatch v1.0 is complete and tagged `v1.0.0`. All 51 v1 requirements delivered across 8 phases in 35 days. The app is a functioning offline-first PWA:
+Nightwatch v1.1 is complete and tagged `v1.1.0`. All 9 v1.1 requirements delivered across 1 phase in 10 days. Building on the v1.0 PWA foundation, v1.1 reduced daily logging friction and improved visual clarity:
+
+- **History edit-mode toggle**: Edit/delete/rejected controls hidden by default; "Edit history" button reveals them; state resets on tab switch
+- **Confirm-before-logging**: New toggle in Time & Day settings; when ON, quick-log buttons open the manual-entry dialog pre-filled with current time + event type
+- **Save more button**: Bulk entry — saves event, keeps dialog open, advances type through Wake → Nap start → Nap end → Bedtime → Wake (date increments after Bedtime)
+- **Prediction card collapse**: Probability-band cards collapsed to compact single-line summary by default; tap to expand
+- **Today screen clarity**: "Add event" button above prediction cards; hero card shows "Next Predicted Event" label
+- **Test quality**: 635 tests (531 unit/integration + 104 E2E), 0 failures; probability-band E2E rewritten with 32-day 4-type fixture
+
+**Archive:** `.planning/milestones/v1.1-ROADMAP.md`, `.planning/milestones/v1.1-REQUIREMENTS.md`
+
+<details>
+<summary>v1.0 — shipped 2026-06-30</summary>
+
+Nightwatch v1.0 tagged `v1.0.0`. All 51 v1 requirements delivered across 8 phases in 35 days:
 
 - **Logging**: 4 quick-log buttons, manual entry/edit/delete, 5-min precision, subjective-night grouping
 - **Settings**: subject name, max_delta, min_days, rolling window, stat blend, cutover hour, time format
@@ -149,23 +163,14 @@ Nightwatch v1.0 is complete and tagged `v1.0.0`. All 51 v1 requirements delivere
 - **Charts + Accuracy**: 5 SVG visualizations + 3-metric accuracy dashboard + bottom-nav
 - **PWA**: manifest + SW + offline + file:// support + GitHub Pages deploy + 495-test TDD scaffold
 
-**Pending before GitHub Pages promotion:** Human browser checkpoint (PWA install, SW lifecycle, offline, file:// note, chart animations, settings modal groups).
-
-**Archive:** `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
-
-## Current Milestone: v1.1 UX Polish
-
-**Goal:** Reduce daily logging friction and improve visual clarity on the Today, History, and prediction screens.
-
-**Target features:**
-- B-20: History screen edit-mode toggle — edit/delete/rejected controls hidden by default; "Edit history" button reveals them
-- Confirm-before-logging: New "Confirm before logging" toggle in Time & Day settings group; when ON, quick-log buttons open the full manual-entry dialog pre-filled to current time + event type
-- B-16 (revised): "Add event" button moves to top of Today screen above prediction cards; manual-entry popup gets a "Save more" button that saves the event and advances the type in sequence (Wake → Nap start → Nap end → Bedtime → Wake next day, retaining same date until bedtime wraps to next day)
-- Prediction card collapse: each prediction card in probability-band fallback (high uncertainty) renders as a compact single line showing label + window + chevron; tap to expand to full card
+Archive: `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
+</details>
 
 ## Requirements
 
-v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`. Fresh requirements for v1.1 defined via `/gsd-new-milestone`.
+v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`.  
+v1.1 requirements archived to `.planning/milestones/v1.1-REQUIREMENTS.md`.  
+Next milestone requirements defined via `/gsd-new-milestone`.
 
 ## Evolution
 
@@ -185,4 +190,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-09 — v1.1 milestone started*
+*Last updated: 2026-07-10 — v1.1 milestone archived*
