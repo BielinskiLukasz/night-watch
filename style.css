@@ -221,6 +221,7 @@ button[data-log]:hover {
 .addEventBtn {
   display: block;
   margin-top: 1rem;
+  margin-bottom: 1rem;
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
   background: transparent;
