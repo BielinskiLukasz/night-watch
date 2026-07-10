@@ -18,7 +18,7 @@
 
 - [x] **UI-07**: History table renders without edit/delete/rejected controls by default; an "Edit history" toggle button in the history toolbar shows/hides all controls; toggle state resets when navigating away from the History tab
 - [x] **UI-08**: "Add event" button is positioned at the top of the Today screen, above the prediction cards and hero card
-- [ ] **UI-09**: Prediction cards in probability-band fallback (±delta > max_delta) render as a compact collapsed single line showing event label, time window, and an expand chevron [↓]; tapping a collapsed card expands it to the full card; tapping an expanded uncertain card collapses it
+- [x] **UI-09**: Prediction cards in probability-band fallback (±delta > max_delta) render as a compact collapsed single line showing event label, time window, and an expand chevron [↓]; tapping a collapsed card expands it to the full card; tapping an expanded uncertain card collapses it
 - [x] **UI-10**: Hero card on the Today screen shows an explicit "Next Predicted Event" label above the predicted time and event type (TD-2)
 
 ### Platform / Quality (PLAT)
@@ -66,7 +66,7 @@
 | CFG-10 | Phase 9 | Pending |
 | UI-07 | Phase 9 | Complete |
 | UI-08 | Phase 9 | Complete |
-| UI-09 | Phase 9 | Pending |
+| UI-09 | Phase 9 | Complete |
 | UI-10 | Phase 9 | Complete |
 | PLAT-12 | Phase 9 | Pending |
 | PLAT-13 | Phase 9 | Complete |
