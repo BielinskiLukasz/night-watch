@@ -120,6 +120,12 @@ function renderNextEventCard(prediction, timeFormat) {
   const heroClass = prediction.isMissed ? 'next-event-hero missed' : 'next-event-hero';
   const card = el('div', { className: heroClass });
 
+  // UI-10 / D9-17: "Next Predicted Event" label above event type for visual hierarchy.
+  card.appendChild(el('p', {
+    className: 'hero-label',
+    textContent: 'Next Predicted Event',
+  }));
+
   // Event type label (e.g., "WAKE", "BEDTIME")
   card.appendChild(el('p', {
     className: 'event-type',
@@ -489,9 +495,10 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     textContent: '+ Add event',
   });
 
-  // D3-07 layout: quickLog → stageSelector → nextEventCard → coldStartMsg → forecastCards → toggle → dayList → addBtn
-  // Plan 06-03: stageSelectorContainer inserted between quickLog and nextEventCard (D6-09).
-  root.replaceChildren(quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList, addEventBtn);
+  // D9-16 layout: quickLog → stageSelector → addEventBtn → nextEventCard → coldStartMsg → forecastCards → toggle → dayList
+  // Per UI-08/D9-16: addEventBtn moved from tail to position 2 (before nextEventCard).
+  // Plan 06-03: stageSelectorContainer inserted between quickLog and addEventBtn (D6-09).
+  root.replaceChildren(quickLog, stageSelectorContainer, addEventBtn, nextEventCard, coldStartMsg, forecastCards, toggle, dayList);
 
   // Grouping toggle click — commit-on-click via settings.update (D2-16).
   // No-op when clicking the already-active button to avoid spurious
