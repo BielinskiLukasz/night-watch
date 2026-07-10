@@ -97,7 +97,7 @@ mountHeader({
 // updates). The forecast function and selectNextEvent are imported internally
 // by today-screen.js — D3-13 (derived state), D3-12 (reactive on data change).
 // The composition root only provides eventLog + settings (the two data sources).
-mountTodayScreen({ root: todayScreenEl, eventLog, settings });
+mountTodayScreen({ root: todayScreenEl, eventLog, settings, clock });
 
 // Plan 04-02 wiring: History screen — read-only day-column table (Wave 2).
 // Plan 05-03 wiring: onExport callback injects downloadJSON so the Export JSON
