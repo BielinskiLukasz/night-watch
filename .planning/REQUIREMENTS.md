@@ -7,12 +7,12 @@
 
 ### Logging (LOG)
 
-- [ ] **LOG-10**: When "Confirm before logging" is ON, tapping a quick-log button opens the full manual-entry dialog pre-filled with the current time and that event type; user can adjust any field before saving
+- [x] **LOG-10**: When "Confirm before logging" is ON, tapping a quick-log button opens the full manual-entry dialog pre-filled with the current time and that event type; user can adjust any field before saving
 - [ ] **LOG-11**: Manual-entry popup includes a "Save more" button that saves the current event, keeps the popup open, and pre-fills the form for the next event type in sequence (Wake → Nap start → Nap end → Bedtime → Wake); after saving Bedtime, the date advances by one day and the type resets to Wake
 
 ### Configuration (CFG)
 
-- [ ] **CFG-10**: Settings modal Time & Day group includes a "Confirm before logging" toggle; when OFF (default), quick-log buttons log instantly at the current time; when ON, they open the pre-filled manual-entry dialog
+- [x] **CFG-10**: Settings modal Time & Day group includes a "Confirm before logging" toggle; when OFF (default), quick-log buttons log instantly at the current time; when ON, they open the pre-filled manual-entry dialog
 
 ### UI (UI)
 
@@ -61,9 +61,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOG-10 | Phase 9 | Pending |
+| LOG-10 | Phase 9 | Complete |
 | LOG-11 | Phase 9 | Pending |
-| CFG-10 | Phase 9 | Pending |
+| CFG-10 | Phase 9 | Complete |
 | UI-07 | Phase 9 | Complete |
 | UI-08 | Phase 9 | Complete |
 | UI-09 | Phase 9 | Complete |
