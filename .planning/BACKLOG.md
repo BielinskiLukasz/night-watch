@@ -737,6 +737,60 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
+B‑28 · Reorder event-type list in Add Event (bedtime last)
+
+Source: user input (2026‑07‑10)  
+Status: captured · not scheduled  
+Earliest sensible slot: post‑Phase 4 (history edit/delete lands) — or bundled with B‑01/B‑02 in UX‑polish milestone
+
+What:  
+Change the order of event types shown in the Add event popup so that bedtime appears last. Current order places bedtime earlier, which is unintuitive during rapid logging — bedtime is typically the final event of the day and should be visually last in the list.
+
+Why:  
+Parents logging events in real time expect bedtime to be the final option. Placing it last reduces cognitive friction and aligns with natural daily flow. This is especially helpful during one‑handed, in‑the‑dark logging.
+
+Open questions when this gets planned:
+
+- Should the new order be static or configurable in Settings?  
+- Should the order adapt dynamically based on recent history?  
+- Interaction with B‑01 (default times): does reordering affect which default time is preselected?
+
+Implementation notes:
+
+- Update event-type list in manual-entry.js and quick-log.js.  
+- If event types are generated from a shared constant, reorder the array or introduce a sortOrder field.  
+- Ensure Playwright tests referencing event-type order are updated or made order‑agnostic.  
+- No data model changes.
+
+---
+
+B‑29 · Reorder prediction cards (bedtime last)
+
+Source: user input (2026‑07‑10)  
+Status: captured · not scheduled  
+Earliest sensible slot: Phase 7 (UX review & polish) — or paired with B‑09 (hero card labeling)
+
+What:  
+Change the order of the four prediction cards so that bedtime prediction appears last. Current order mixes wake/nap/bedtime in a way that doesn’t match user mental model — bedtime is the final event of the day and should be visually last.
+
+Why:  
+Prediction cards are scanned quickly. Users expect bedtime to be the final card, mirroring the natural daily sequence. This improves readability and reduces misinterpretation.
+
+Open questions when this gets planned:
+
+- Should the order be strictly chronological (wake → nap-start → nap-end → bedtime)?  
+- Should the hero card remain independent of this order?  
+- Interaction with B‑10 (on-demand toggle): does reordering affect reveal order?
+
+Implementation notes:
+
+- Update card rendering order in renderForecastSection().  
+- If predictions are keyed by event type, introduce a stable sort order (e.g., sortOrder: { wake: 1, napStart: 2, napEnd: 3, bedtime: 4 }).  
+- Ensure probability-band colors and labels remain consistent after reordering.  
+- No changes to prediction algorithm — purely presentation-layer.
+
+---
+
 ## How to use this file
 
 - **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
