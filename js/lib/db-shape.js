@@ -32,6 +32,7 @@
  *   statBlend: string,
  *   stages: Array<{id: string, name: string, startDate: string, endDate: string|null}>,
  *   activeStageId: string|null,
+ *   confirmBeforeLogging: boolean,
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   statBlend:    'median',    // CFG-07
   stages:        [],          // D6-01: array of {id, name, startDate, endDate} stage objects
   activeStageId: null,        // D6-02: currently selected stage id, or null = "All data"
+  confirmBeforeLogging: false, // CFG-10 / D9-13: when true, quick-log opens confirm dialog
 });
 
 /**
@@ -97,6 +99,10 @@ export function migrateV1ToV2(blob, defaultSettings) {
     }
     if (blob.settings && !('activeStageId' in blob.settings)) {
       blob.settings.activeStageId = null;
+    }
+    // Phase 9 forward-compat: inject confirmBeforeLogging for v2 blobs predating Phase 9
+    if (blob.settings && !('confirmBeforeLogging' in blob.settings)) {
+      blob.settings.confirmBeforeLogging = false;
     }
     return blob;
   }

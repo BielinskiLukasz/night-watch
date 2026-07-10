@@ -32,8 +32,8 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 12 keys (10 original + stages + activeStageId)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 12);
+  it('has exactly 13 keys (10 original + stages + activeStageId + confirmBeforeLogging)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 13);
   });
 
   it('has stages: [] default', () => {
@@ -42,6 +42,14 @@ describe('DEFAULT_SETTINGS', () => {
 
   it('has activeStageId: null default', () => {
     assert.strictEqual(DEFAULT_SETTINGS.activeStageId, null);
+  });
+
+  // -------------------------------------------------------------------------
+  // confirmBeforeLogging — CFG-10 / D9-13 added in Phase 9 Plan 04
+  // -------------------------------------------------------------------------
+
+  it('has confirmBeforeLogging: false default (D9-13)', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.confirmBeforeLogging, false);
   });
 
   // -------------------------------------------------------------------------
@@ -354,6 +362,59 @@ describe('migrateV1ToV2 — stages/activeStageId injection', () => {
     const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
     assert.deepStrictEqual(result.settings.stages, []);
     assert.strictEqual(result.settings.activeStageId, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// migrateV1ToV2 — confirmBeforeLogging injection (CFG-10 / D9-13, Phase 9 Plan 04)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — confirmBeforeLogging injection', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('fresh install: confirmBeforeLogging is false', () => {
+    const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
+    assert.strictEqual(result.settings.confirmBeforeLogging, false);
+  });
+
+  it('v1 migration: confirmBeforeLogging is present in migrated settings', () => {
+    infoSpy.mock.resetCalls();
+    const result = migrateV1ToV2({ version: 1, events: [] }, DEFAULT_SETTINGS);
+    assert.strictEqual(result.settings.confirmBeforeLogging, false);
+  });
+
+  it('v2 blob without confirmBeforeLogging: migrateV1ToV2 injects false', () => {
+    const blob = {
+      version: 2,
+      settings: { subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.confirmBeforeLogging, false,
+      'confirmBeforeLogging must be injected as false for v2 blob missing it');
+  });
+
+  it('v2 blob with confirmBeforeLogging: true — migrateV1ToV2 does not clobber it', () => {
+    const blob = {
+      version: 2,
+      settings: { subjectName: 'Test', stages: [], activeStageId: null, confirmBeforeLogging: true },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.confirmBeforeLogging, true,
+      'existing confirmBeforeLogging: true must not be clobbered');
   });
 });
 
