@@ -17,14 +17,14 @@
 ### UI (UI)
 
 - [ ] **UI-07**: History table renders without edit/delete/rejected controls by default; an "Edit history" toggle button in the history toolbar shows/hides all controls; toggle state resets when navigating away from the History tab
-- [ ] **UI-08**: "Add event" button is positioned at the top of the Today screen, above the prediction cards and hero card
+- [x] **UI-08**: "Add event" button is positioned at the top of the Today screen, above the prediction cards and hero card
 - [ ] **UI-09**: Prediction cards in probability-band fallback (±delta > max_delta) render as a compact collapsed single line showing event label, time window, and an expand chevron [↓]; tapping a collapsed card expands it to the full card; tapping an expanded uncertain card collapses it
-- [ ] **UI-10**: Hero card on the Today screen shows an explicit "Next Predicted Event" label above the predicted time and event type (TD-2)
+- [x] **UI-10**: Hero card on the Today screen shows an explicit "Next Predicted Event" label above the predicted time and event type (TD-2)
 
 ### Platform / Quality (PLAT)
 
 - [ ] **PLAT-12**: Probability-band E2E test rewritten to use a realistic fixture with 30+ days of all four event types (wake, nap-start, nap-end, bedtime), validating fallback rendering in realistic scenarios (TD-3)
-- [ ] **PLAT-13**: `nw-research-test/` scratch directory removed from the repository root (TD-1)
+- [x] **PLAT-13**: `nw-research-test/` scratch directory removed from the repository root (TD-1)
 
 ## v2 Requirements
 
@@ -65,13 +65,14 @@
 | LOG-11 | Phase 9 | Pending |
 | CFG-10 | Phase 9 | Pending |
 | UI-07 | Phase 9 | Pending |
-| UI-08 | Phase 9 | Pending |
+| UI-08 | Phase 9 | Complete |
 | UI-09 | Phase 9 | Pending |
-| UI-10 | Phase 9 | Pending |
+| UI-10 | Phase 9 | Complete |
 | PLAT-12 | Phase 9 | Pending |
-| PLAT-13 | Phase 9 | Pending |
+| PLAT-13 | Phase 9 | Complete |
 
 **Coverage:**
+
 - v1.1 requirements: 9 total
 - Mapped to phases: 9 (Phase 9)
 - Unmapped: 0 ✓
