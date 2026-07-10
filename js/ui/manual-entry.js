@@ -310,15 +310,16 @@ export function openManualEntry({ mode, existing, onSave, clock, settings, saveM
     dateInput.max = todayYMD;
   }
 
-  if (mode === 'edit' && existing) {
+  if (existing) {
     // Pre-fill from canonical 'YYYY-MM-DDTHH:MM' via string slicing.
+    // Covers edit mode AND the confirm-before-logging add path (mode='add', existing set).
     // All assignments use the .value property (V5 / T-07 — never innerHTML).
     dateInput.value = existing.at.slice(0, 10);
     hourInput.value = String(parseInt(existing.at.slice(11, 13), 10));
     minuteInput.value = String(parseInt(existing.at.slice(14, 16), 10));
     typeInput.value = existing.type;
   } else {
-    // Add mode: default the date input to today if empty.
+    // Add mode (no existing): default the date input to today if empty.
     if (!dateInput.value) {
       dateInput.value = todayYMD;
     }
