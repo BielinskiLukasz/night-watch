@@ -56,12 +56,12 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.ok(precacheList.includes('./manifest.json'), 'Missing ./manifest.json');
   });
 
-  test('contains ./icons/icon-192.png', () => {
-    assert.ok(precacheList.includes('./icons/icon-192.png'), 'Missing ./icons/icon-192.png');
+  test('contains ./icons/moon-192.jpeg', () => {
+    assert.ok(precacheList.includes('./icons/moon-192.jpeg'), 'Missing ./icons/moon-192.jpeg');
   });
 
-  test('contains ./icons/icon-512.png', () => {
-    assert.ok(precacheList.includes('./icons/icon-512.png'), 'Missing ./icons/icon-512.png');
+  test('contains ./icons/moon-512.jpeg', () => {
+    assert.ok(precacheList.includes('./icons/moon-512.jpeg'), 'Missing ./icons/moon-512.jpeg');
   });
 
   test('contains ./js/app.js', () => {
