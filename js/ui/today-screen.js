@@ -208,14 +208,30 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
 
   const card = el('div', { className: cardClass });
 
-  // Event type label
-  card.appendChild(el('p', {
-    className: 'event-label',
-    textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
-  }));
-
   if (hasProbBand) {
-    // High-uncertainty: probability table (D3-04)
+    // UI-09 / D9-05: probability-band cards render collapsed by default.
+    // D9-06: collapsed state resets on every re-render (replaceChildren rebuilds DOM).
+    card.classList.add('collapsed');
+
+    // Compact summary row: "EventLabel • startTime–endTime ↓"
+    const firstTime = prediction.probabilityBand[0]?.time;
+    const lastTime = prediction.probabilityBand[prediction.probabilityBand.length - 1]?.time;
+    const rangeText = (firstTime && lastTime)
+      ? `${formatHHMM(firstTime, timeFormat)}–${formatHHMM(lastTime, timeFormat)}`
+      : '—';
+    const labelText = `${EVENT_TYPE_LABEL[eventType] ?? eventType} • ${rangeText}`;
+
+    const summary = el('span', { className: 'card-summary' });
+    summary.appendChild(el('span', { className: 'card-summary-label', textContent: labelText }));
+    summary.appendChild(el('span', { className: 'card-chevron', textContent: '↓' }));
+    card.appendChild(summary);
+
+    // Full card content (hidden when .collapsed CSS rule is active)
+    const fullContent = el('div', { className: 'card-full' });
+    fullContent.appendChild(el('p', {
+      className: 'event-label',
+      textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
+    }));
     const ul = el('ul', { className: 'prob-list' });
     for (const entry of prediction.probabilityBand) {
       const li = el('li', {});
@@ -225,9 +241,21 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
       li.appendChild(el('span', { textContent: `${entry.prob}%` }));
       ul.appendChild(li);
     }
-    card.appendChild(ul);
+    fullContent.appendChild(ul);
+    card.appendChild(fullContent);
+
+    // Click handler: toggle collapsed/expanded state and flip chevron.
+    card.addEventListener('click', () => {
+      const isNowCollapsed = card.classList.toggle('collapsed');
+      const chevron = card.querySelector('.card-chevron');
+      if (chevron) chevron.textContent = isNowCollapsed ? '↓' : '↑';
+    });
   } else {
-    // Normal: central time + band
+    // Normal: event label + central time + band
+    card.appendChild(el('p', {
+      className: 'event-label',
+      textContent: EVENT_TYPE_LABEL[eventType] ?? eventType,
+    }));
     card.appendChild(el('p', {
       className: 'time-central',
       textContent: prediction.central ? formatHHMM(prediction.central, timeFormat) : '—',
