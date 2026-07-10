@@ -6,14 +6,14 @@ current_phase: 09
 current_phase_name: "Phase 9: UX Polish"
 status: planned
 stopped_at: Phase 9 plans created (09-01 through 09-06)
-last_updated: "2026-07-10T09:40:09.078Z"
+last_updated: "2026-07-10T09:59:55.192Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 9 plans written (6 plans, 3 waves)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -96,6 +96,7 @@ Key decisions logged in PROJECT.md. Recent phase-specific decisions:
 - [Phase 08-03]: SW guard uses 'serviceWorker' in navigator AND location.protocol !== 'file:' — prevents SecurityError on file:// (T-08-03-02)
 - [Phase 08-03]: body.has-update-banner on <body> by showUpdateBanner() — 40px padding-top prevents fixed banner overlapping header
 - [Phase 08-05]: gsd:allow-storage-local exemption tag added to security-smoke.test.js — mirrors gsd:allow-ui-clock clock-seam pattern for file:// note dismiss state in app.js
+- [Phase ?]: UI-07: editMode local state in mountHistoryScreen resets on each remount; toolbar renders unconditionally; edit controls gated behind editMode param in buildDayRow
 
 ### Pending Todos
 
@@ -109,6 +110,12 @@ None yet.
 
 **Resume file:** .planning/phases/NW-09-ux-polish/09-01-PLAN.md
 
-Last session: 2026-07-10T09:40:09.064Z
+Last session: 2026-07-10T09:58:20.570Z
 Stopped at: Phase 9 plans created
 Resume: /gsd-execute-phase 9
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase NW-09 P02 | 15 | - tasks | - files |
