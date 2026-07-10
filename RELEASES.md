@@ -1,5 +1,42 @@
 # Release Notes
 
+## 🟩 **v1.1.0**
+*Release date: 2026‑07‑10*
+
+Single-phase UX polish milestone — all 9 requirements satisfied, 13/13 UAT passed, no regressions.
+
+### Features
+
+- **History edit-mode toggle** (UI-07): Edit controls hidden by default behind an "Edit history" button. State resets automatically when switching to another tab.
+- **"+ Add event" button repositioned** (UI-08): Moved above the prediction cards on the Today screen so it is always in reach without scrolling past forecasts.
+- **"Next Predicted Event" hero label** (UI-10): The hero forecast card now displays a clear label so the primary prediction is immediately identifiable.
+- **Probability-band cards collapsed by default** (UI-09): Uncertainty bands no longer dominate the screen; each card expands on tap and can be re-collapsed.
+- **"Confirm before logging" toggle** (CFG-10 / LOG-10): New toggle in the Time & Day settings group. When ON, quick-log buttons open a pre-filled dialog instead of saving immediately — type and time are pre-populated from the button tapped.
+- **"Save more" button for bulk entry** (LOG-11): Available on the manual-entry dialog; saves the current event, advances the type sequence (wake → sleep → nap start → nap end), and reopens the dialog. Absent on the confirm-before-logging quick-log path.
+
+### Infrastructure
+
+- **Forecast E2E spec rewritten** (PLAT-12): `forecast.spec.js` now uses a 32-day / 4-type fixture (128 events via `makeBaselineDb()`) so tests exercise the real forecast algorithm rather than a trivial seed.
+- **Remove `nw-research-test/`** (PLAT-13): Scratch test directory removed from the repository root; no production imports affected.
+
+### Fixes
+
+- **Edit mode not resetting on tab switch** (UI-07): The `editMode` local variable in `mountHistoryScreen` was never reset because the tab system uses CSS show/hide, not DOM remounting. Fixed by returning `resetEditMode()` from the mount function and calling it from `app.js` `onTabChange`. (commit `3866bac`)
+- **Confirm-before-logging dialog not pre-filling type or time** (LOG-10): Pre-fill was gated on `mode === 'edit' && existing`; the confirm-before-logging path uses `mode: 'add'` with `existing` set, so the condition was never true. Broadened to `if (existing)`. (commit `cbd225f`)
+- **Missing spacing below "+ Add event" button** (UI-08): Added `margin-bottom: 1rem` to `.addEventBtn` so there is a visual gap between the button and the hero card. (commit `0997b24`)
+
+### Test suite
+
+| Layer | v1.0 baseline | v1.1 | Delta |
+|---|---|---|---|
+| Unit + Integration | 495 | 531 | +36 |
+| E2E (Playwright / Chromium) | ~97 | 104 | +7 |
+| **Total** | **~592** | **635** | **+43** |
+
+All 635 tests pass; 0 regressions.
+
+---
+
 ## 🟩 **v1.0.1**
 *Release date: 2026‑07‑03*
 
