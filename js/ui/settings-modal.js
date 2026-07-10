@@ -73,6 +73,9 @@ export function openSettings({ settings, eventLog, storage, id }) {
   form.elements.namedItem('minDays').value = String(snap.minDays);
   form.elements.namedItem('windowDays').value = String(snap.windowDays);
   form.elements.namedItem('statBlend').value = snap.statBlend;
+  // CFG-10 / D9-12: confirm-before-logging toggle in Time & Day group.
+  const confirmEl = form.elements.namedItem('confirmBeforeLogging');
+  if (confirmEl) confirmEl.checked = Boolean(snap.confirmBeforeLogging);
 
   // Stale errors from a prior open get cleared (D2-14: each open is fresh).
   if (errorsEl) clear(errorsEl);
@@ -102,6 +105,7 @@ export function openSettings({ settings, eventLog, storage, id }) {
         statBlend: String(data.get('statBlend') ?? ''),
         stages: settings.get().stages || [],
         activeStageId: settings.get().activeStageId ?? null,
+        confirmBeforeLogging: data.get('confirmBeforeLogging') === 'on',
       };
 
       const result = validateSettings(raw, { mode: 'save' });

@@ -40,7 +40,7 @@
 
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
-import { formatTime, to12h } from '../lib/time.js';
+import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
 import { forecast, selectNextEvent } from '../lib/forecast.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -461,9 +461,10 @@ function renderStageSelector(container, stages, activeStageId, settingsStore) {
  *     update: (patch: object) => object,
  *     subscribe: (fn: (snap: object) => void) => () => void,
  *   },
+ *   clock?: { now: () => Date },
  * }} deps
  */
-export function mountTodayScreen({ root, eventLog, settings }) {
+export function mountTodayScreen({ root, eventLog, settings, clock }) {
   // Per-mount debounce ledger. NOTE: this is the ONE place outside the clock
   // adapter that reads a wall-clock-like value, and it deliberately uses
   // performance.now() (monotonic, non-domain) so the grep gate forbidding
@@ -577,10 +578,27 @@ export function mountTodayScreen({ root, eventLog, settings }) {
     }
     lastClickAt[type] = now;
 
-    eventLog.addEvent(type);
-    // render() will be called by the eventLog subscriber above (D3-12).
-    // Avoid double-render by relying on the subscriber rather than calling render() here.
-    // NOTE: addEvent fires the subscriber synchronously, so the forecast updates inline.
+    const snap = settings.get();
+    if (snap.confirmBeforeLogging && clock) {
+      // CFG-10 / LOG-10 / D9-15: open confirm dialog pre-filled with type + current time.
+      // clock.now() preserves the clock-adapter seam (D-07) — the Date constructor is
+      // never called directly here; domain time flows through the injected clock only.
+      // D9-08: saveMore is NOT passed (confirm path never shows Save more button).
+      const nowDate = clock.now();
+      const nowISO = typeof nowDate === 'string' ? nowDate : formatLocalISO(nowDate);
+      openManualEntry({
+        mode: 'add',
+        existing: { type, at: nowISO },
+        settings,
+        clock,
+        onSave: ({ type: t, at }) => {
+          eventLog.addEventAt(t, at);
+        },
+      });
+    } else {
+      eventLog.addEvent(type);
+      // render() called by eventLog subscriber (D3-12). No double-render.
+    }
   });
 
   // Delegated click listener for per-row affordances (D-12).

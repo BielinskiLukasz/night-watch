@@ -211,9 +211,9 @@
         </label>
       </fieldset>
 
-      <!-- Group 2: Day Structure — CFG-08 -->
+      <!-- Group 2: Time & Day — CFG-08, CFG-10 -->
       <fieldset>
-        <legend>Day Structure</legend>
+        <legend>Time &amp; Day</legend>
         <label>
           Day cutover hour
           <input type="number" name="cutoverHour" min="0" max="23">
@@ -224,6 +224,10 @@
             <option value="calendar">Calendar day</option>
             <option value="sleepCycle">Sleep cycle</option>
           </select>
+        </label>
+        <label class="checkboxRow">
+          <input type="checkbox" name="confirmBeforeLogging">
+          Confirm before logging
         </label>
       </fieldset>
 
