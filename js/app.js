@@ -97,20 +97,20 @@ mountHeader({
 // updates). The forecast function and selectNextEvent are imported internally
 // by today-screen.js — D3-13 (derived state), D3-12 (reactive on data change).
 // The composition root only provides eventLog + settings (the two data sources).
-mountTodayScreen({ root: todayScreenEl, eventLog, settings });
+mountTodayScreen({ root: todayScreenEl, eventLog, settings, clock });
 
 // Plan 04-02 wiring: History screen — read-only day-column table (Wave 2).
 // Plan 05-03 wiring: onExport callback injects downloadJSON so the Export JSON
 // button on the History toolbar can trigger a download without importing
 // storage/clock into history-screen.js directly (composition-root pattern).
-if (historyTableRootEl) {
-  mountHistoryScreen({
-    root: historyTableRootEl,
-    eventLog,
-    settings,
-    onExport: () => downloadJSON(storage, clock),
-  });
-}
+const historyScreen = historyTableRootEl
+  ? mountHistoryScreen({
+      root: historyTableRootEl,
+      eventLog,
+      settings,
+      onExport: () => downloadJSON(storage, clock),
+    })
+  : null;
 
 // Plan 07-04 wiring: Bottom navigation bar (D7-01..D7-04).
 // Wires the four-tab bottom nav; onTabChange updates activeTab and calls
@@ -119,18 +119,20 @@ if (bottomNavEl) {
   mountBottomNav({
     root: bottomNavEl,
     onTabChange: (tabId) => {
+      // D9-04: reset History edit mode whenever the user leaves the History tab.
+      if (activeTab === 'history' && tabId !== 'history') {
+        historyScreen?.resetEditMode();
+      }
       activeTab = tabId;
       applyTabVisibility();
     },
   });
 }
 
-// Plan 07-04 wiring: Charts screen (stub — full implementation in 07-05).
 if (chartsScreenEl) {
   mountChartsScreen({ root: chartsScreenEl, eventLog, settings });
 }
 
-// Plan 07-04 wiring: Accuracy screen (stub — full implementation in 07-06).
 if (accuracyScreenEl) {
   mountAccuracyScreen({ root: accuracyScreenEl, eventLog, settings });
 }

@@ -33,16 +33,16 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 12 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId)', () => {
+  it('has entries for all 13 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId + CFG-10 confirmBeforeLogging)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
-      'stages', 'activeStageId',
+      'stages', 'activeStageId', 'confirmBeforeLogging',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 12);
+    assert.equal(Object.keys(RULES).length, 13);
   });
 });
 
@@ -58,10 +58,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 12 keys (10 original + stages + activeStageId)', () => {
+  it('normalized contains all 13 keys (10 original + stages + activeStageId + confirmBeforeLogging)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 12);
+    assert.equal(keys.length, 13);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -409,12 +409,12 @@ describe('validateSettings mode:\'load\' — lenient resets with warn', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
-  // validFields includes the two new Phase 6 fields for complete valid input
+  // validFields includes all current fields for complete valid input
   const validFields = {
     subjectName: 'Baby', cutoverHour: 4, groupingMode: 'calendar',
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
-    stages: [], activeStageId: null,
+    stages: [], activeStageId: null, confirmBeforeLogging: false,
   };
 
   it('accepts empty stages array', () => {
@@ -481,7 +481,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     subjectName: 'Baby', cutoverHour: 4, groupingMode: 'calendar',
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
-    stages: [], activeStageId: null,
+    stages: [], activeStageId: null, confirmBeforeLogging: false,
   };
 
   it('accepts null activeStageId', () => {
@@ -504,6 +504,51 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     const result = validateSettings({ ...validFields, activeStageId: undefined }, { mode: 'load' });
     assert.equal(result.ok, true);
     assert.strictEqual(result.normalized.activeStageId, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — confirmBeforeLogging validation (CFG-10 / D9-13, Phase 9 Plan 04)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — confirmBeforeLogging (CFG-10)', () => {
+  it('DEFAULT_SETTINGS.confirmBeforeLogging is false', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.confirmBeforeLogging, false);
+  });
+
+  it('accepts true', () => {
+    const result = validateSettings(valid({ confirmBeforeLogging: true }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.strictEqual(result.normalized.confirmBeforeLogging, true);
+  });
+
+  it('accepts false', () => {
+    const result = validateSettings(valid({ confirmBeforeLogging: false }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.strictEqual(result.normalized.confirmBeforeLogging, false);
+  });
+
+  it('rejects string \'yes\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ confirmBeforeLogging: 'yes' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'confirmBeforeLogging'),
+      'Expected error for confirmBeforeLogging field');
+  });
+
+  it('resets to false for string \'yes\' in mode:\'load\' (lenient) and emits console.warn', () => {
+    const warnSpy = mock.method(console, 'warn', () => {});
+    try {
+      warnSpy.mock.resetCalls();
+      const result = validateSettings(valid({ confirmBeforeLogging: 'yes' }), { mode: 'load' });
+      assert.equal(result.ok, true);
+      assert.strictEqual(result.normalized.confirmBeforeLogging, false,
+        'invalid value must reset to default false in lenient mode');
+      assert.ok(warnSpy.mock.calls.length >= 1, 'Expected at least one console.warn call');
+      const msg = warnSpy.mock.calls[0].arguments[0];
+      assert.ok(msg.includes('confirmBeforeLogging'), `Expected 'confirmBeforeLogging' in warn: ${msg}`);
+    } finally {
+      warnSpy.mock.restore();
+    }
   });
 });
 

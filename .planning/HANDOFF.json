@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-09T22:58:04.075Z",
+  "phase": "09",
+  "phase_name": "ux-polish",
+  "phase_dir": ".planning/phases/NW-09-ux-polish",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 6,
+  "status": "paused",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "09-01: Add event button reposition (UI-08) + hero label (UI-10) + scratch dir removal (PLAT-13)", "status": "not_started", "wave": 1},
+    {"id": 2, "name": "09-02: History edit-mode toggle (UI-07)", "status": "not_started", "wave": 2},
+    {"id": 3, "name": "09-03: Probability-band card collapse (UI-09)", "status": "not_started", "wave": 2},
+    {"id": 4, "name": "09-04: Confirm before logging toggle (CFG-10 / LOG-10)", "status": "not_started", "wave": 2},
+    {"id": 5, "name": "09-05: Save more button (LOG-11) — depends on 09-04", "status": "not_started", "wave": 3},
+    {"id": 6, "name": "09-06: E2E forecast.spec.js rewrite (PLAT-12) — depends on 09-01, 09-03", "status": "not_started", "wave": 3}
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Wave structure: 09-01 first (Wave 1), then 09-02/03/04 in parallel (Wave 2), then 09-05/06 in parallel (Wave 3)", "rationale": "09-05 depends on 09-04 (confirmBeforeLogging in db-shape); 09-06 depends on 09-01 (UI-10 hero label) and 09-03 (collapsed card CSS)", "phase": "09"},
+    {"decision": "09-06-PLAN.md wave corrected from 1 to 3, depends_on updated", "rationale": "Plan was initially generated with incorrect wave metadata; corrected before execution", "phase": "09"}
+  ],
+  "uncommitted_files": [
+    ".planning/phases/NW-09-ux-polish/09-06-PLAN.md"
+  ],
+  "next_action": "Stage and commit the 09-06-PLAN.md metadata fix, then execute Phase 9 via /gsd-execute-phase starting with Wave 1 (Plan 09-01)",
+  "context_notes": "All 6 phase plans are complete and verified (09-01 through 09-06). UI-SPEC is finalized with 4 canonical type sizes and spacing exceptions documented. The only outstanding item before execution begins is committing the 09-06-PLAN.md wave/depends_on metadata correction."
+}

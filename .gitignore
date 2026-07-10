@@ -1,6 +1,8 @@
-# sen.xlsx — local source spreadsheet (one-time CSV-converted in Phase 5)
-sen.xlsx
-sen.csv
+# Local data files — development/import seeds only (not shipped).
+# - sen.xlsx: original Polish spreadsheet source (one-time CSV conversion in Phase 5)
+# - sen.csv: translated CSV export from sen.xlsx
+# - test-*.csv: test fixtures for import testing
+data/
 
 # Dev-only test tooling output (D-20: package.json is dev-only, never shipped).
 # These directories are produced by `npm install` / Playwright runs and must

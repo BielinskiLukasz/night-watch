@@ -57,11 +57,29 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
   // Clear root once at mount, then build permanent structure.
   root.replaceChildren();
 
-  // Toolbar (D5-02): only when caller provides onExport.
-  if (onExport) {
-    const toolbarEl = document.createElement('div');
-    toolbarEl.className = 'historyToolbar';
+  // UI-07 / D9-04: edit mode starts off; resets to off on each remount (tab re-visit).
+  let editMode = false;
 
+  // UI-07 / D9-01/D9-02: toolbar always present — edit toggle leads, export follows.
+  const toolbarEl = document.createElement('div');
+  toolbarEl.className = 'historyToolbar';
+
+  // Edit-history toggle button (UI-07 / D9-01).
+  const btnEditToggle = document.createElement('button');
+  btnEditToggle.type = 'button';
+  btnEditToggle.className = 'btnEditToggle';
+  btnEditToggle.textContent = 'Edit history';
+  btnEditToggle.setAttribute('aria-pressed', 'false');
+  btnEditToggle.addEventListener('click', () => {
+    editMode = !editMode;
+    btnEditToggle.textContent = editMode ? 'Done editing' : 'Edit history';
+    btnEditToggle.setAttribute('aria-pressed', String(editMode));
+    render(); // Rebuild table with new editMode (buildDayRow guards apply).
+  });
+  toolbarEl.appendChild(btnEditToggle);
+
+  // Export button (D5-02): only when caller provides onExport.
+  if (onExport) {
     const exportBtn = document.createElement('button');
     exportBtn.type = 'button';
     exportBtn.id = 'exportJsonBtn';
@@ -69,10 +87,10 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
     exportBtn.setAttribute('aria-label', 'Export sleep data as JSON');
     exportBtn.textContent = 'Export JSON';
     exportBtn.addEventListener('click', () => onExport());
-
     toolbarEl.appendChild(exportBtn);
-    root.appendChild(toolbarEl);
   }
+
+  root.appendChild(toolbarEl);
 
   // Dedicated table mount point — render() only touches this element.
   const tableRootEl = document.createElement('div');
@@ -97,7 +115,7 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
 
     // Days are already newest-first from daysByCalendar (D4-02).
     // Pass eventLog and settings so buildTable can wire edit/delete handlers.
-    const table = buildTable(dayRecords, snap.timeFormat, eventLog, settings);
+    const table = buildTable(dayRecords, snap.timeFormat, eventLog, settings, editMode);
     tableRootEl.appendChild(table);
 
     // D4-08: scroll to top on every render (covers tab re-visit case).
@@ -113,6 +131,15 @@ export function mountHistoryScreen({ root, eventLog, settings, onExport }) {
     unsubscribe() {
       unsubEventLog();
       unsubSettings();
+    },
+    // D9-04: called by app.js onTabChange when user leaves the History tab,
+    // so editMode resets even though the screen is shown/hidden (not remounted).
+    resetEditMode() {
+      if (!editMode) return;
+      editMode = false;
+      btnEditToggle.textContent = 'Edit history';
+      btnEditToggle.setAttribute('aria-pressed', 'false');
+      render();
     },
   };
 }
@@ -145,7 +172,7 @@ function renderEmptyState(root) {
  * @param {object} settings  settings store (for modal time format)
  * @returns {HTMLTableElement}
  */
-function buildTable(dayRecords, timeFormat, eventLog, settings) {
+function buildTable(dayRecords, timeFormat, eventLog, settings, editMode = false) {
   const table = document.createElement('table');
   table.className = 'historyTable';
 
@@ -165,7 +192,7 @@ function buildTable(dayRecords, timeFormat, eventLog, settings) {
   // Body rows
   const tbody = document.createElement('tbody');
   for (const day of dayRecords) {
-    tbody.appendChild(buildDayRow(day, timeFormat, eventLog, settings));
+    tbody.appendChild(buildDayRow(day, timeFormat, eventLog, settings, editMode));
   }
   table.appendChild(tbody);
 
@@ -188,7 +215,7 @@ function buildTable(dayRecords, timeFormat, eventLog, settings) {
  * @param {object} settings  settings store (for modal time format)
  * @returns {HTMLTableRowElement}
  */
-function buildDayRow(day, timeFormat, eventLog, settings) {
+function buildDayRow(day, timeFormat, eventLog, settings, editMode = false) {
   const tr = document.createElement('tr');
   tr.className = day.rejected ? 'day-row rejected' : 'day-row';
   // Store the date for edit/delete wiring.
@@ -208,8 +235,8 @@ function buildDayRow(day, timeFormat, eventLog, settings) {
     // T-04-04: textContent only.
     td.textContent = text;
 
-    // D4-04: per-event [edit] button — only when the event slot has data.
-    if (evt && eventLog) {
+    // D4-04: per-event [edit] button — only in edit mode (UI-07 / D9).
+    if (editMode && evt && eventLog) {
       const editEventBtn = document.createElement('button');
       editEventBtn.type = 'button';
       editEventBtn.className = 'rowEdit';
@@ -251,83 +278,93 @@ function buildDayRow(day, timeFormat, eventLog, settings) {
   // Rejected cell — D4-05: interactive checkbox wired to settings.update().
   // T-04-04: checkbox uses .checked and .value DOM properties (not innerHTML).
   // D4-14: no validation; toggle freely.
+  // UI-07: checkbox only rendered in edit mode; cell always appended.
   const rejectedTd = document.createElement('td');
   rejectedTd.className = 'day-rejected';
 
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.className = 'rejected-toggle';
-  checkbox.checked = day.rejected;
-  checkbox.setAttribute('aria-label', `Mark ${day.date} as rejected`);
-  checkbox.setAttribute('data-date', day.date);
+  // UI-07: only render the rejected toggle in edit mode.
+  if (editMode) {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'rejected-toggle';
+    checkbox.checked = day.rejected;
+    checkbox.setAttribute('aria-label', `Mark ${day.date} as rejected`);
+    checkbox.setAttribute('data-date', day.date);
 
-  if (settings) {
-    checkbox.addEventListener('change', (e) => {
-      const dayDate = e.target.getAttribute('data-date');
-      const isNowRejected = e.target.checked;
+    if (settings) {
+      checkbox.addEventListener('change', (e) => {
+        const dayDate = e.target.getAttribute('data-date');
+        const isNowRejected = e.target.checked;
 
-      // Get current rejectedDays from settings (immutable snapshot).
-      const currentRejected = settings.get().rejectedDays || [];
-      let newRejected = [...currentRejected];
+        // Get current rejectedDays from settings (immutable snapshot).
+        const currentRejected = settings.get().rejectedDays || [];
+        let newRejected = [...currentRejected];
 
-      if (isNowRejected) {
-        // Add date if not already present — Set deduplication guards duplicates.
-        if (!newRejected.includes(dayDate)) {
-          newRejected.push(dayDate);
+        if (isNowRejected) {
+          // Add date if not already present — Set deduplication guards duplicates.
+          if (!newRejected.includes(dayDate)) {
+            newRejected.push(dayDate);
+          }
+        } else {
+          // Remove date from list.
+          newRejected = newRejected.filter((d) => d !== dayDate);
         }
-      } else {
-        // Remove date from list.
-        newRejected = newRejected.filter((d) => d !== dayDate);
-      }
 
-      // Defensive dedup (D4-14: no validation, but prevent duplicates).
-      const uniqueRejected = [...new Set(newRejected)];
+        // Defensive dedup (D4-14: no validation, but prevent duplicates).
+        const uniqueRejected = [...new Set(newRejected)];
 
-      // Persist to settings. Subscriber fires synchronously (D3-12):
-      //   - mountHistoryScreen re-renders table with updated day.rejected values.
-      //   - Today screen forecast re-computes with downweighting applied (PRED-07).
-      settings.update({ rejectedDays: uniqueRejected });
-    });
+        // Persist to settings. Subscriber fires synchronously (D3-12):
+        //   - mountHistoryScreen re-renders table with updated day.rejected values.
+        //   - Today screen forecast re-computes with downweighting applied (PRED-07).
+        settings.update({ rejectedDays: uniqueRejected });
+      });
+    }
+
+    rejectedTd.appendChild(checkbox);
   }
 
-  rejectedTd.appendChild(checkbox);
   tr.appendChild(rejectedTd);
 
   // Actions cell — D4-06: per-row [delete] button.
+  // UI-07: delete button only rendered in edit mode.
   const actionsTd = document.createElement('td');
   actionsTd.className = 'day-actions';
 
-  // D4-06: delete button — removes all events for this calendar date.
-  const delBtn = document.createElement('button');
-  delBtn.type = 'button';
-  delBtn.className = 'rowDel';
-  delBtn.setAttribute('data-date', day.date);
-  delBtn.setAttribute('aria-label', `Delete all events for ${day.date}`);
-  delBtn.textContent = '[Delete]';
+  // UI-07: only render delete button in edit mode.
+  if (editMode) {
+    // D4-06: delete button — removes all events for this calendar date.
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'rowDel';
+    delBtn.setAttribute('data-date', day.date);
+    delBtn.setAttribute('aria-label', `Delete all events for ${day.date}`);
+    delBtn.textContent = '[Delete]';
 
-  if (eventLog) {
-    delBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      // T-04-08: window.confirm() is synchronous; if cancelled, loop does not run.
-      const confirmed = window.confirm(
-        `Delete all events for ${day.date}? This cannot be undone.`,
-      );
-      if (!confirmed) return;
+    if (eventLog) {
+      delBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // T-04-08: window.confirm() is synchronous; if cancelled, loop does not run.
+        const confirmed = window.confirm(
+          `Delete all events for ${day.date}? This cannot be undone.`,
+        );
+        if (!confirmed) return;
 
-      // Delete using IDs from day.allEvents — correct for subjective-night grouping
-      // where an event's at-date may differ from day.date (e.g. bedtime at 00:10
-      // on June 17 belongs to the June 16 subjective night).
-      // deleteEvent is idempotent: returns false for missing ids (no throw).
-      for (const evt of day.allEvents) {
-        eventLog.deleteEvent(evt.id);
-      }
-      // notifySubscribers() fires after each deleteEvent() (D3-12):
-      //   - History table re-renders (row disappears or shows empty state).
-      //   - Today screen forecast re-computes (D4-09).
-    });
+        // Delete using IDs from day.allEvents — correct for subjective-night grouping
+        // where an event's at-date may differ from day.date (e.g. bedtime at 00:10
+        // on June 17 belongs to the June 16 subjective night).
+        // deleteEvent is idempotent: returns false for missing ids (no throw).
+        for (const evt of day.allEvents) {
+          eventLog.deleteEvent(evt.id);
+        }
+        // notifySubscribers() fires after each deleteEvent() (D3-12):
+        //   - History table re-renders (row disappears or shows empty state).
+        //   - Today screen forecast re-computes (D4-09).
+      });
+    }
+
+    actionsTd.appendChild(delBtn);
   }
 
-  actionsTd.appendChild(delBtn);
   tr.appendChild(actionsTd);
 
   return tr;
