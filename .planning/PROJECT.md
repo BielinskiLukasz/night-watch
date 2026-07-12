@@ -136,6 +136,15 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | — Pending |
 | Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | — Pending |
 
+## Current Milestone: v1.2 Prediction & Metrics
+
+**Goal:** Upgrade the forecast engine with the Trimmed Intersection Forecast algorithm and add a dedicated Metrics screen surfacing daily, ratio, and historical sleep/activity statistics.
+
+**Target features:**
+- TIF algorithm (B-21) — opt-in `forecastAlgorithm: 'classic' | 'tif'` toggle in Settings; new `js/lib/forecast-tif.js` implementing percentile trim, multi-source window intersection, and precision scoring
+- Metrics screen (B-26) — new 5th bottom-nav tab with daily per-day metrics, ratio/factor metrics, historical aggregates, and stage-scoped filtering
+- Shared `js/lib/metrics.js` module — duration and ratio calculations consumed by both TIF and the Metrics screen
+
 ## Current State (v1.1 — shipped 2026-07-10)
 
 Nightwatch v1.1 is complete and tagged `v1.1.0`. All 9 v1.1 requirements delivered across 1 phase in 10 days. Building on the v1.0 PWA foundation, v1.1 reduced daily logging friction and improved visual clarity:
@@ -190,4 +199,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 — v1.1 milestone archived*
+*Last updated: 2026-07-13 — v1.2 milestone started*

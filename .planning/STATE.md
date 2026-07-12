@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: UX Polish
-status: archived
-last_updated: "2026-07-10"
-last_activity: 2026-07-10
-last_activity_desc: v1.1 milestone archived — tag v1.1.0 created
+milestone: v1.2
+milestone_name: Prediction & Metrics
+status: planning
+last_updated: "2026-07-12T23:51:09.639Z"
+last_activity: 2026-07-12
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,9 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Current Position
 
-Phase: —  
-Status: **Milestone v1.1 archived** — v1.1.0 tagged  
-Last activity: 2026-07-10 — v1.1 milestone archived (9/9 requirements, 635 tests, 13/13 UAT)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-12 — Milestone v1.2 started
 
 ## Shipped
 
