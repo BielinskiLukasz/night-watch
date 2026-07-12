@@ -25,8 +25,8 @@ const PRECACHE_LIST = Object.freeze([
   './index.html',
   './style.css',
   './manifest.json',
-  './icons/moon-192.jpeg',
-  './icons/moon-512.jpeg',
+  './icons/favicon.jpeg',
+  './icons/app-start.jpeg',
   // App composition root
   './js/app.js',
   // Adapters (runtime only — test-only adapters clock-fixed.js and storage-memory.js excluded)

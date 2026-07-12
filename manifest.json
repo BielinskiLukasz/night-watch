@@ -9,12 +9,12 @@
   "scope": "./",
   "icons": [
     {
-      "src": "icons/moon-512.jpeg",
+      "src": "icons/app-start.jpeg",
       "sizes": "512x512",
       "type": "image/jpeg"
     },
     {
-      "src": "icons/moon-192.jpeg",
+      "src": "icons/favicon.jpeg",
       "sizes": "192x192",
       "type": "image/jpeg"
     }
