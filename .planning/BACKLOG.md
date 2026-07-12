@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-03 (B-25, B-26, B-27 added)
+Last updated: 2026-07-12 (cleanup: removed B-09, B-16, B-23, B-24 — shipped or stale; fixed B-28/B-29/B-30 formatting; B-21 fully specified as TIF algorithm; B-26 expanded with ratio metrics)
 
 ---
 
@@ -233,23 +233,6 @@ These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execut
 
 ---
 
-### B-09 · Hero card explicit "Next Predicted Event" label
-
-**Source:** Phase 03-05 user verification checkpoint (2026-06-05)
-**Status:** captured · not scheduled
-**Earliest sensible slot:** Phase 7 (UX review & polish) — when all screens are in place
-
-**What:** The hero "next event" card above the four prediction cards currently relies on visual treatment (size, color, position) to communicate its role. Add an explicit label like "Next Predicted Event" or similar.
-
-**Why:** First-time users may not immediately understand that the prominent card is a prediction, not a logged event. Explicit labeling removes ambiguity.
-
-**Implementation notes:**
-
-- Add a label text or small header to `renderNextEventCard()` in today-screen.js.
-- CSS: ensure label is discoverable (not buried in small print) but not visually dominant over the prediction itself.
-
----
-
 ### B-10 · Prediction cards on-demand toggle (optional UX)
 
 **Source:** Phase 03-05 design decision (2026-06-05)
@@ -402,40 +385,6 @@ These two items improve the Today screen and introduce a new Events screen for b
 
 ---
 
-### B-16 · Today: Add event button repositioned; Events: "Save more" batch-add workflow
-
-**Source:** user input (2026-06-06)
-**Status:** captured · not scheduled
-**Earliest sensible slot:** paired with B-15 (both restructure the logging UX) — or folded into Phase 5 (Data Import/Export) when users are bulk-adding historical data
-
-**What:**
-1. **Today tab:** Move the "Add event" button from its current position (typically below predictions or in a footer) to the **top of the screen, above the next-event prediction card**. Rationale: adding a log entry is the primary action; predictions are derived output that the user glances at but doesn't directly interact with.
-2. **Events tab:** Place "Add event" button at the top of the screen (only action button in the header).
-3. **Add-event popup redesign:** Add a third footer button to the existing popup flow:
-   - **Cancel:** discard and close (current behavior)
-   - **Save:** save the current event and close the popup (current behavior)
-   - **Save more:** save the current event, **keep the popup open**, and **disable the "Save more" button for ~1 second** to prevent accidental double-saves. After re-enable:
-     - The form retains previously entered field values (event type, notes, and optionally other metadata) so the user can rapidly add multiple events to the same day without re-selecting.
-     - Time input resets to the current time (or, if B-01 lands first, to the event-type default time) so the user can enter events in chronological order.
-
-**Why:** Batch-adding historical sleep data (migrating from the spreadsheet, filling in a week of prior data) is the primary data-entry pain point in the logging workflow. Currently, each event requires open → select day → enter time → save → close. "Save more" eliminates the close + reopen cycle, allowing the user to enter 10 historical events in ~30 seconds instead of 3 minutes. This is critical for the Spreadsheet → App migration (Phase 5 Data Import context).
-
-**Open questions when this gets planned:**
-
-- Should "Save more" be hidden by default and revealed as an advanced option, or always visible?
-- What form values should be retained across "Save more" cycles? Just day, or also event-type, notes, metadata (if B-06 "intense day" flag lands)?
-- Should time auto-increment after save (e.g., if the user enters a wake at 08:00 and clicks "Save more", does the next entry default to 08:05 for a nap-start)? Or always reset to current time?
-- Interaction with B-01 (per-event-type defaults): should "Save more" retain the custom-entered time, or reset to the default for the next event's type?
-
-**Implementation notes:**
-
-- UI: update `js/ui/manual-entry.js` popup footer to render three buttons instead of two. Bind "Save more" to a separate handler that saves the event, disables the button, waits ~1 second, re-enables, clears the time input, and leaves other fields intact.
-- Time input: reset to `new Date()` (current time) or, if B-01 defaults are available, to the next event-type's default.
-- Debounce logic: use a simple flag + `setTimeout(fn, 1000)` to re-enable the button. Prevent form submission while debounce is active.
-- No data shape changes — this is a UX workflow refinement.
-
----
-
 ## Charts & UX refinements (captured 2026-06-30)
 
 These four items were surfaced during Phase 7 UAT and post-launch review.
@@ -537,78 +486,117 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-## Prediction algorithm (captured 2026-06-30)
+## Prediction algorithm (specified 2026-07-12)
 
-### B-21 · Own prediction algorithm based on Excel model
+### B-21 · Trimmed Intersection Forecast (TIF) algorithm
 
-**Source:** user input (2026-06-30)
-**Status:** captured · not scheduled — details to be provided later
-**Earliest sensible slot:** post-Phase 7; likely replaces or extends the Phase 3 forecaster
+**Source:** user input (2026-06-30, fully specified 2026-07-12)
+**Status:** captured · not scheduled — **target: v1.2**
+**Earliest sensible slot:** v1.2 milestone — replaces or runs alongside the Phase 3 forecaster
 
-**What:** Replace or supplement the current forecasting algorithm with a custom algorithm modeled after the existing Excel spreadsheet workflow. Full specification to be provided by the user in a future session.
+**Algorithm name:** Trimmed Intersection Forecast (TIF). Suggested module: `js/lib/forecast-tif.js`, same return shape as `js/lib/forecast.js` so it slots in as an alternate strategy.
 
-**Why:** The spreadsheet has accumulated domain-specific heuristics and rules that the current Phase 3 forecaster does not replicate. Capturing those rules in code would make predictions match the user's established mental model.
+---
+
+**Step 1 — Percentile trim (configurable)**
+
+User configures a trim percentage `trimPct` in Settings (e.g. 10 means "remove 10% of extreme values"). For each event type independently:
+
+- Count total events in history: `N`
+- Count manually excluded events already removed: `manualExcluded`
+- Remaining auto-trim budget = `floor(N × trimPct / 100) − manualExcluded` (minimum 0)
+- Split budget symmetrically: remove the earliest `floor(budget / 2)` and latest `ceil(budget / 2)` events
+- This trim is applied **per event type**, not per day — a day is only fully excluded if all its event types are trimmed away
+
+Example: 10% of 500 events = 50 to trim. 20 already manually excluded → auto-trim 30 more (15 earliest, 15 latest).
+
+---
+
+**Step 2 — Multi-source windows and intersection**
+
+For each event type, the algorithm computes several independent **windows** (a min and a max time, in minutes-from-midnight). Then it combines them into one final range:
+
+- **Final start** = `max` of all window starts (latest of the lower bounds)
+- **Final end** = `min` of all window ends (earliest of the upper bounds)
+
+This is the intersection: the region where **all** windows agree the event could occur.
+
+If intersection is empty (start > end), fall back to the union (min of starts, max of ends) and flag a "low confidence" state.
+
+Excluded events (manual + auto-trim) are not included in any window calculation.
+
+---
+
+**Step 3 — Windows per event type**
+
+For each window that derives from a duration metric (sleep length, nap length, etc.), that metric is also subject to the same percentile trim independently before its min/max is computed.
+
+**Anchor rule:** when computing a derived window, the algorithm needs an anchor time (the "other endpoint"):
+- If the anchoring event **is** the latest logged observation → use its actual logged time
+- If the anchoring event **has not been logged yet** → use the midpoint (average) of that event's own TIF prediction
+
+**Wake-up windows:**
+1. **Historic wake-up band** — min and max of trimmed historic wake times
+2. **Sleep-length band** — trimmed min/max of night-sleep duration; project onto wake time using `bedtime_anchor + [minSleep, maxSleep]` where `bedtime_anchor` follows the anchor rule above
+3. **Sleep + same-day nap combined band** — trimmed min/max of (night-sleep + nap duration for that day); project onto wake time using the same `bedtime_anchor`
+
+**Nap-start windows:**
+1. **Historic nap-start band** — min and max of trimmed historic nap-start times
+2. **Activity-before-nap band** — trimmed min/max of (nap-start − wake) durations; project onto nap time using `wake_anchor + [minActivity, maxActivity]` where `wake_anchor` follows the anchor rule
+
+**Nap-end windows:**
+1. **Historic nap-end band** — min and max of trimmed historic nap-end times
+2. **Nap-length band** — trimmed min/max of nap durations; project onto nap-end using `napStart_anchor + [minNap, maxNap]` where `napStart_anchor` follows the anchor rule
+
+**Bedtime windows:**
+1. **Historic bedtime band** — min and max of trimmed historic bedtime times
+2. **Day-length band** — trimmed min/max of day length (wake → bedtime); project onto bedtime using `napEnd_anchor + [minDay − napDuration, maxDay − napDuration]` — or more simply: `wake_anchor + [minDayLength, maxDayLength]`
+3. **Activity-after-nap band** — trimmed min/max of (bedtime − nap-end) durations; project onto bedtime using `napEnd_anchor + [minActivityAfterNap, maxActivityAfterNap]`
+
+**Additional windows to consider (suggested for planning):**
+- **Wake-up**: activity-after-sleep factor band — trimmed min/max of `activityTime / sleepDuration`; if this ratio is stable, it can constrain wake time given a known bedtime
+- **All event types**: stage-scoped window — compute the same historic min/max but filtered to only events within the current active stage; useful when behaviour changed significantly at stage transitions
+- **All event types**: rolling-window variant — last 14 or 30 days only, weighted against the all-time window (gives the algorithm recency bias as the child grows)
+- **Bedtime**: combined sleep+nap band — trimmed min/max of `sleepDuration + napDuration` per day; project onto bedtime from wake anchor (complements day-length band with nap context)
+
+---
+
+**Step 4 — Precision scoring and display**
+
+User configures a `precisionTarget` in minutes (e.g. 60 = ±30 min window, or explicitly a window width).
+
+Let `algRange = finalEnd − finalStart` (in minutes).
+
+**Metric (confidence score):**
+- If `algRange ≤ precisionTarget` → score = 100%
+- If `algRange > precisionTarget` → score = `precisionTarget / algRange × 100%`
+
+**Display window:**
+- If `algRange ≤ precisionTarget` → show the algorithm's window as-is
+- If `algRange > precisionTarget` → compute center = `(finalStart + finalEnd) / 2`; display `center − precisionTarget/2` to `center + precisionTarget/2`; show the confidence score alongside
+
+---
+
+**Why:** The spreadsheet workflow applies systematic exclusion of outliers and uses multiple independent timing anchors (sleep length, activity time, nap length) to triangulate predictions rather than relying on a single hour-of-day distribution. The TIF algorithm codifies these heuristics explicitly, makes them configurable, and adds a precision metric so users can see how confident the algorithm is in its own output.
 
 **Open questions when this gets planned:**
 
-- What are the specific formulas and rules in the Excel model?
-- Is this a replacement for the current forecaster or an additional prediction mode?
-- Should the old algorithm remain available as a fallback or toggle?
+- Should TIF **replace** the Phase 3 forecaster or run alongside it as an opt-in mode? Opt-in toggle in Settings is the safer v1.2 path.
+- Empty intersection fallback: union with a "low confidence" flag, or show all individual windows separately?
+- Should `trimPct` be a single global setting or per-event-type?
+- Should `precisionTarget` be expressed as a window width (minutes) or a ±half-width (minutes each side)?
+- Stage-scoped and rolling-window variants: build in from the start or add in a later iteration?
+- How should the algorithm behave on cold-start (fewer than N days of data)? Disable trim? Use wider precision band?
+- Should the confidence score appear on the prediction cards, the hero card, or both?
 
 **Implementation notes:**
 
-- Details pending user input. Reference the Phase 3 `js/lib/forecast.js` as the integration point — new algorithm slots in at the same return shape.
-
----
-
-## Add-event popup UX (captured 2026-07-03)
-
-### B-23 · Wrong event-type order in add-event popup dropdown
-
-**Source:** user observation (2026-07-03)
-**Status:** captured · not scheduled
-**Earliest sensible slot:** any phase — isolated one-liner fix to the event-type `<select>` option order
-
-**What:** The event-type dropdown in the add-event popup lists "bedtime" in a position other than last. The correct order should be: wake → nap-start → nap-end → **bedtime** (bedtime last, reflecting chronological event sequence within a day).
-
-**Why:** Chronological ordering matches the mental model of a day: child wakes, takes a nap (start then end), and finally goes to bed. Placing bedtime anywhere other than last breaks the natural reading order and causes unnecessary UI confusion.
-
-**Implementation notes:**
-
-- Locate the `<select>` (or equivalent option array) in the add-event popup — likely in `js/ui/manual-entry.js` or `index.html`.
-- Reorder the `<option>` elements so "bedtime" is the last entry.
-- No data model or logic changes — display order only.
-
----
-
-## PWA browser verification (pending, 2026-07-03)
-
-### B-24 · Human browser checkpoint — PWA install and SW lifecycle
-
-**Source:** Phase NW-08-05 phase gate (2026-06-30); milestone audit (2026-07-03)
-**Status:** pending · not yet executed
-**Earliest sensible slot:** before pushing to GitHub Pages for end-user access
-
-**What:** Walk through the following checklist in a real browser (Chrome/Edge recommended for PWA install):
-
-1. Open app from GitHub Pages URL → confirm PWA install prompt appears
-2. Install the app → open from home screen / app launcher, confirm it loads offline
-3. With DevTools → Application → Service Workers: confirm `nightwatch-v1` SW is active and controlling the page
-4. Go offline (DevTools → Network → Offline) → reload → confirm app loads fully from SW cache
-5. Trigger a SW update (bump cache key or re-deploy) → confirm update banner appears at the top of the app
-6. Dismiss the file:// note (if opening from `file://`) → confirm it hides and stays dismissed after reload
-7. Confirm tab-switch fade animation plays when switching between Today / History / Charts / Accuracy
-8. Open Charts → confirm SVG draw-in animation plays on sleep-length line
-9. Open Settings → confirm modal shows exactly 5 groups: Subject, Forecast Tuning, Outlier Rules, Time & Day, Stages
-10. Confirm all four quick-log buttons, History table, and Accuracy grid render correctly
-
-**Why:** PLAT-03 (PWA manifest + SW + offline + file:// guard) automated checks passed in Plan NW-08-05, but visual/functional verification of install flow, SW lifecycle, animations, and modal layout requires a human with a browser. This is the only remaining unautomated gate before v1.0 is considered fully verified.
-
-**Implementation notes:**
-
-- No code changes expected. This is a verification-only task.
-- If any item fails, open a targeted bug fix (likely a one-plan patch). Most likely candidates: SW scope path, PRECACHE_LIST omission, or CSS animation timing.
-- After all 10 items pass, this item can be closed and the milestone pushed to GitHub Pages.
+- New module `js/lib/forecast-tif.js` — pure function `tifForecast(eventLog, settings)` → same return shape as `forecast.js`
+- Settings additions: `trimPct: number` (0–40, step 1, default 10), `precisionTarget: number` (minutes, default 60), `forecastAlgorithm: 'classic' | 'tif'` toggle
+- Depends on `js/lib/metrics.js` (B-26) for duration calculations (sleepDuration, napDuration, activityBeforeNap, activityAfterNap, dayLength, combined)
+- Percentile trim helper: `trimmedMinMax(values, trimPct, manualExcludedCount)` → `{ min, max }`; reusable across all window types
+- Anchor resolution helper: `resolveAnchor(eventType, eventLog, tifPredictions)` → actual logged time or midpoint of TIF prediction for that type
+- Unit-test each window builder independently; integration-test the intersection logic with known fixtures; E2E-test that TIF prediction cards render when the toggle is enabled
 
 ---
 
@@ -650,52 +638,59 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ### B-26 · Calculated sleep & activity metrics dashboard
 
-**Source:** user input (2026-07-03)
-**Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js and/or history-screen.js
+**Source:** user input (2026-07-03, extended 2026-07-12)
+**Status:** captured · not scheduled — **target: v1.2**
+**Earliest sensible slot:** v1.2 milestone — dedicated Metrics phase
 
 **What:** Add a new metrics display section (cards, table, or dedicated screen) that shows calculated daily and historical sleep/activity statistics:
 
 **Daily metrics (per day):**
 - Sleep duration (night sleep: bedtime → wake, in hours:minutes)
 - Nap duration (nap-end − nap-start, in hours:minutes)
-- Sleep + nap combined duration (total rest time)
-- Activity time between wake and bedtime (time spent awake)
-- Activity before nap (wake time → nap-start, time from last event to nap)
-- Activity after nap (nap-end → bedtime, time from nap end to next sleep)
+- Day length (wake → next bedtime — total waking window, in hours:minutes)
+- Activity time = day length − nap duration (non-sleep, non-nap awake time)
+- Activity before nap (wake → nap-start)
+- Activity after nap (nap-end → bedtime)
+- Sleep + nap combined for current day (total rest: night sleep + nap)
+- Sleep + nap combined for previous day (carry-forward for same-day context)
+
+**Ratio / factor metrics:**
+- Activity-after-sleep factor = activity time ÷ sleep duration (how much activity relative to the preceding night's sleep)
+- Sleep-after-activity factor = sleep duration ÷ previous day's activity time (how much night sleep relative to prior activity)
 
 **Historical aggregates (weekly, monthly, or full history):**
-- Average sleep duration
-- Average nap duration
-- Average combined duration
-- Average activity time
+- Average sleep duration, nap duration, combined duration, activity time
 - Min/max sleep and nap durations (with dates)
-- Longest activity gap (to spot atypical days)
+- Average before-nap and after-nap activity windows
+- Average and range of ratio metrics
 
 **Why:** These metrics are derived from the existing event log but not currently surfaced in the app. Parents need these values to:
 - Track whether a child's sleep quantity is improving/regressing
 - Understand the balance between night sleep and naps
 - Detect when activity periods extend beyond normal
 - Validate stage transitions (e.g., "when nap duration dropped below 30 min, we switched to single-nap stage")
+- Spot correlations between previous-day activity and next-night sleep quality
 
 Today these calculations are done mentally or in the spreadsheet; exposing them as real-time values removes friction from decision-making.
 
 **Open questions when this gets planned:**
 
 - Should metrics appear on the History screen (as totals per row), the Charts screen (as a summary card), or a new dedicated Metrics tab?
-- Which metrics are highest priority — all of the above, or a curated subset?
+- Which metrics are highest priority — full set or a curated subset?
 - Should metrics be filterable by date range or stage?
-- For activity gaps: should the app highlight anomalies (e.g., "activity time 2× normal today")?
+- For ratio metrics: should the app highlight anomalies (e.g., "activity factor 2× your average today")?
 - Should metrics include percentiles (e.g., "nap 45 min today; typical range is 40–60 min based on stage history")?
+- Should the previous-day carry-forward metrics (sleep + prev-day nap, sleep-after-activity factor) reference calendar-day boundaries or sleep-cycle boundaries (cutoverHour)?
 
 **Implementation notes:**
 
 - Data transforms: add calculation functions to `js/lib/day-bucket.js` or a new `js/lib/metrics.js`:
-  - `dayMetrics(day)` → returns object with sleep, nap, combined, activity, activityBeforeNap, activityAfterNap durations
+  - `dayMetrics(day, prevDay?)` → returns object with all duration and ratio fields above
   - `aggregateMetrics(days)` → returns averages, min/max, percentiles
 - UI: render as a card grid (each metric = one card with value + trend arrow/color) or a summary table
+- Ratio metrics need `prevDay` passed to `dayMetrics` — requires looking back one record in the sorted day list
 - Interaction with stages: pass `activeStageId` to metric functions so aggregates reflect only the current stage's data when requested
-- No data shape changes — all computed from existing events.
+- No data shape changes — all computed from existing events
 
 ---
 
@@ -737,88 +732,78 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
-B‑28 · Reorder event-type list in Add Event (bedtime last)
+### B-28 · Reorder event-type list in Add Event (bedtime last)
 
-Source: user input (2026‑07‑10)  
-Status: captured · not scheduled  
-Earliest sensible slot: post‑Phase 4 (history edit/delete lands) — or bundled with B‑01/B‑02 in UX‑polish milestone
+**Source:** user input (2026-07-10)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-01/B-02 in UX-polish milestone
 
-What:  
-Change the order of event types shown in the Add event popup so that bedtime appears last. Current order places bedtime earlier, which is unintuitive during rapid logging — bedtime is typically the final event of the day and should be visually last in the list.
+**What:** Change the order of event types shown in the Add event popup so that bedtime appears last. Current order places bedtime earlier, which is unintuitive during rapid logging — bedtime is typically the final event of the day and should be visually last in the list.
 
-Why:  
-Parents logging events in real time expect bedtime to be the final option. Placing it last reduces cognitive friction and aligns with natural daily flow. This is especially helpful during one‑handed, in‑the‑dark logging.
+**Why:** Parents logging events in real time expect bedtime to be the final option. Placing it last reduces cognitive friction and aligns with natural daily flow. This is especially helpful during one-handed, in-the-dark logging.
 
-Open questions when this gets planned:
+**Open questions when this gets planned:**
 
-- Should the new order be static or configurable in Settings?  
-- Should the order adapt dynamically based on recent history?  
-- Interaction with B‑01 (default times): does reordering affect which default time is preselected?
+- Should the new order be static or configurable in Settings?
+- Should the order adapt dynamically based on recent history?
+- Interaction with B-01 (default times): does reordering affect which default time is preselected?
 
-Implementation notes:
+**Implementation notes:**
 
-- Update event-type list in manual-entry.js and quick-log.js.  
-- If event types are generated from a shared constant, reorder the array or introduce a sortOrder field.  
-- Ensure Playwright tests referencing event-type order are updated or made order‑agnostic.  
+- Update event-type list in `manual-entry.js` and `quick-log.js`.
+- If event types are generated from a shared constant, reorder the array or introduce a `sortOrder` field.
+- Ensure Playwright tests referencing event-type order are updated or made order-agnostic.
 - No data model changes.
 
 ---
 
-B‑29 · Reorder prediction cards (bedtime last)
+### B-29 · Reorder prediction cards (bedtime last)
 
-Source: user input (2026‑07‑10)  
-Status: captured · not scheduled  
-Earliest sensible slot: Phase 7 (UX review & polish) — or paired with B‑09 (hero card labeling)
+**Source:** user input (2026-07-10)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** UX polish milestone — or paired with B-30 (hero card missed-time flag)
 
-What:  
-Change the order of the four prediction cards so that bedtime prediction appears last. Current order mixes wake/nap/bedtime in a way that doesn’t match user mental model — bedtime is the final event of the day and should be visually last.
+**What:** Change the order of the four prediction cards so that bedtime prediction appears last. Current order mixes wake/nap/bedtime in a way that doesn’t match the user’s mental model — bedtime is the final event of the day and should be visually last.
 
-Why:  
-Prediction cards are scanned quickly. Users expect bedtime to be the final card, mirroring the natural daily sequence. This improves readability and reduces misinterpretation.
+**Why:** Prediction cards are scanned quickly. Users expect bedtime to be the final card, mirroring the natural daily sequence. This improves readability and reduces misinterpretation.
 
-Open questions when this gets planned:
+**Open questions when this gets planned:**
 
-- Should the order be strictly chronological (wake → nap-start → nap-end → bedtime)?  
-- Should the hero card remain independent of this order?  
-- Interaction with B‑10 (on-demand toggle): does reordering affect reveal order?
+- Should the order be strictly chronological (wake → nap-start → nap-end → bedtime)?
+- Should the hero card remain independent of this order?
+- Interaction with B-10 (on-demand toggle): does reordering affect reveal order?
 
-Implementation notes:
+**Implementation notes:**
 
-- Update card rendering order in renderForecastSection().  
-- If predictions are keyed by event type, introduce a stable sort order (e.g., sortOrder: { wake: 1, napStart: 2, napEnd: 3, bedtime: 4 }).  
-- Ensure probability-band colors and labels remain consistent after reordering.  
+- Update card rendering order in `renderForecastSection()`.
+- If predictions are keyed by event type, introduce a stable sort order (e.g., `sortOrder: { wake: 1, napStart: 2, napEnd: 3, bedtime: 4 }`).
+- Ensure probability-band colors and labels remain consistent after reordering.
 - No changes to prediction algorithm — purely presentation-layer.
 
 ---
 
-B‑30 · Show “missed time” indicator only in hero prediction card
+### B-30 · Show “missed time” indicator only in hero prediction card
 
-Source: user input (2026‑07‑10)  
-Status: captured · not scheduled  
-Earliest sensible slot: Phase 7 (UX review & polish) — or bundled with B‑07 (missing nap impact)
+**Source:** user input (2026-07-10)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** UX polish milestone — or bundled with B-07 (missing nap impact on bedtime)
 
-What:  
-Restrict the “missed time” indicator so that it appears only in the hero prediction card (the main “Next Predicted Event” card).  
-The indicator should not appear on the four secondary prediction cards.  
-Hero card = single source of truth for contextual flags.
+**What:** Restrict the “missed time” indicator so that it appears only in the hero prediction card (the main “Next Predicted Event” card). The indicator should not appear on the four secondary prediction cards. Hero card = single source of truth for contextual flags.
 
-Why:  
-Users scan the hero card first and rely on it as the authoritative summary of what’s happening today.  
-Showing “missed time” on all prediction cards creates noise and dilutes the meaning of the flag.  
-Keeping it exclusively in the hero card improves clarity and reduces cognitive load.
+**Why:** Users scan the hero card first and rely on it as the authoritative summary of what’s happening today. Showing “missed time” on all prediction cards creates noise and dilutes the meaning of the flag. Keeping it exclusively in the hero card improves clarity and reduces cognitive load.
 
-Open questions when this gets planned:
+**Open questions when this gets planned:**
 
-- Should the hero card show a short text (“Missed time today”) or an icon/badge?  
-- Should the indicator affect the hero card’s color scheme or only appear as metadata?  
-- Interaction with B‑09 (explicit hero label): should the missed-time flag appear next to the label or inside the card body?  
+- Should the hero card show a short text (“Missed time today”) or an icon/badge?
+- Should the indicator affect the hero card’s color scheme or only appear as metadata?
+- Interaction with B-07 (missing nap detection): should the missed-time flag appear next to the label or inside the card body?
 - Should the missed-time flag also appear in the Today tab header (optional)?
 
-Implementation notes:
+**Implementation notes:**
 
-- Add conditional rendering inside renderNextEventCard() only.  
-- Remove missed-time flag from the prediction-card renderer (renderForecastSection() or equivalent).  
-- Ensure the forecaster still computes the missed-time condition (B‑07), but presentation-layer decides where it is shown.  
+- Add conditional rendering inside `renderNextEventCard()` only.
+- Remove missed-time flag from the prediction-card renderer (`renderForecastSection()` or equivalent).
+- Ensure the forecaster still computes the missed-time condition (B-07), but presentation-layer decides where it is shown.
 - No changes to prediction algorithm or data shape — purely UI logic.
 
 ---
