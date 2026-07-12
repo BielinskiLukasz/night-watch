@@ -3,6 +3,7 @@
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
 Last updated: 2026-07-12 (cleanup: removed B-09, B-16, B-23, B-24 — shipped or stale; fixed B-28/B-29/B-30 formatting; B-21 fully specified as TIF algorithm; B-26 expanded with ratio metrics)
+Last assigned ID: **B-30** — next new item must be **B-31**
 
 ---
 
@@ -810,7 +811,7 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ## How to use this file
 
-- **Adding an item:** drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. Keep IDs monotonic (`B-01`, `B-02`, ...).
+- **Adding an item:** increment the "Last assigned ID" counter at the top, then drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. IDs are monotonic and never reused — even if the previous entry was promoted or removed.
 - **Promoting an item:** `/gsd-review-backlog` (interactive) — moves a chosen item into the active milestone roadmap. Or manually run `/gsd-phase add` and reference the backlog ID in the phase description.
 - **Removing an item:** delete the block or move it under a `## Rejected` heading with a one-line rationale (decisions cost; keep the rationale).
 - **Memory ↔ backlog:** memory captures "this idea exists and here's the context"; this file is the project-level decision queue. Memory is the source for cross-session continuity; this file is the source for milestone planning. Update both when an item lands.
