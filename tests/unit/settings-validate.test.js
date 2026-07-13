@@ -33,16 +33,17 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 13 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId + CFG-10 confirmBeforeLogging)', () => {
+  it('has entries for all 16 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId + CFG-10 confirmBeforeLogging + TIF-01/02/03)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
+      'forecastAlgorithm', 'trimPct', 'precisionTarget',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 13);
+    assert.equal(Object.keys(RULES).length, 16);
   });
 });
 
@@ -58,10 +59,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 13 keys (10 original + stages + activeStageId + confirmBeforeLogging)', () => {
+  it('normalized contains all 16 keys (10 original + stages + activeStageId + confirmBeforeLogging + TIF forecastAlgorithm/trimPct/precisionTarget)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 13);
+    assert.equal(keys.length, 16);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -415,6 +416,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
+    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
   };
 
   it('accepts empty stages array', () => {
@@ -482,6 +484,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
+    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
   };
 
   it('accepts null activeStageId', () => {
@@ -549,6 +552,134 @@ describe('validateSettings — confirmBeforeLogging (CFG-10)', () => {
     } finally {
       warnSpy.mock.restore();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — forecastAlgorithm validation (TIF-01 / D10-11, Phase 10 Plan 03)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — forecastAlgorithm (TIF-01)', () => {
+  it('DEFAULT_SETTINGS.forecastAlgorithm is \'classic\'', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.forecastAlgorithm, 'classic');
+  });
+
+  it('accepts \'classic\'', () => {
+    const result = validateSettings(valid({ forecastAlgorithm: 'classic' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'forecastAlgorithm'), 'Unexpected error for forecastAlgorithm');
+  });
+
+  it('accepts \'tif\'', () => {
+    const result = validateSettings(valid({ forecastAlgorithm: 'tif' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'forecastAlgorithm'), 'Unexpected error for forecastAlgorithm');
+  });
+
+  it('rejects \'invalid\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ forecastAlgorithm: 'invalid' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'forecastAlgorithm'),
+      'Expected error for forecastAlgorithm field');
+  });
+
+  it('resets to default \'classic\' for \'invalid\' in mode:\'load\' (lenient)', () => {
+    const warnSpy = mock.method(console, 'warn', () => {});
+    try {
+      warnSpy.mock.resetCalls();
+      const result = validateSettings(valid({ forecastAlgorithm: 'invalid' }), { mode: 'load' });
+      assert.equal(result.ok, true);
+      assert.strictEqual(result.normalized.forecastAlgorithm, 'classic',
+        'invalid value must reset to default \'classic\' in lenient mode');
+    } finally {
+      warnSpy.mock.restore();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — trimPct validation (TIF-02 / D10-13, Phase 10 Plan 03)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — trimPct (TIF-02)', () => {
+  it('DEFAULT_SETTINGS.trimPct is 10', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.trimPct, 10);
+  });
+
+  it('accepts boundary value 0', () => {
+    const result = validateSettings(valid({ trimPct: 0 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'trimPct'), 'Unexpected error for trimPct');
+  });
+
+  it('accepts boundary value 40', () => {
+    const result = validateSettings(valid({ trimPct: 40 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'trimPct'), 'Unexpected error for trimPct');
+  });
+
+  it('accepts midrange value 10', () => {
+    const result = validateSettings(valid({ trimPct: 10 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'trimPct'), 'Unexpected error for trimPct');
+  });
+
+  it('rejects -1 (below min) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ trimPct: -1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'trimPct'), 'Expected error for trimPct field');
+  });
+
+  it('rejects 41 (above max) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ trimPct: 41 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'trimPct'), 'Expected error for trimPct field');
+  });
+
+  it('rejects non-numeric string \'ten\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ trimPct: 'ten' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'trimPct'), 'Expected error for trimPct field');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — precisionTarget validation (TIF-03 / D10-13, Phase 10 Plan 03)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — precisionTarget (TIF-03)', () => {
+  it('DEFAULT_SETTINGS.precisionTarget is 60', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.precisionTarget, 60);
+  });
+
+  it('accepts boundary value 1', () => {
+    const result = validateSettings(valid({ precisionTarget: 1 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'precisionTarget'), 'Unexpected error for precisionTarget');
+  });
+
+  it('accepts midrange value 60', () => {
+    const result = validateSettings(valid({ precisionTarget: 60 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'precisionTarget'), 'Unexpected error for precisionTarget');
+  });
+
+  it('accepts boundary value 300', () => {
+    const result = validateSettings(valid({ precisionTarget: 300 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'precisionTarget'), 'Unexpected error for precisionTarget');
+  });
+
+  it('rejects 0 (below min) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ precisionTarget: 0 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'precisionTarget'), 'Expected error for precisionTarget field');
+  });
+
+  it('rejects 301 (above max) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ precisionTarget: 301 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'precisionTarget'), 'Expected error for precisionTarget field');
   });
 });
 

@@ -113,4 +113,12 @@ describe('sw.js PRECACHE_LIST', () => {
   test('has at least 31 entries (full app file inventory)', () => {
     assert.ok(precacheList.length >= 31, `Expected >= 31 entries, got ${precacheList.length}`);
   });
+
+  test('contains forecast-tif.js (TIF algorithm module)', () => {
+    assert.ok(precacheList.includes('./js/lib/forecast-tif.js'), 'forecast-tif.js missing from PRECACHE_LIST');
+  });
+
+  test('contains metrics.js (TIF metrics helpers module)', () => {
+    assert.ok(precacheList.includes('./js/lib/metrics.js'), 'metrics.js missing from PRECACHE_LIST');
+  });
 });
