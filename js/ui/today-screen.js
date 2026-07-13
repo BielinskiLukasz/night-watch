@@ -42,6 +42,7 @@ import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
 import { forecast, selectNextEvent } from '../lib/forecast.js';
+import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
 /** Single source of truth for the 4 quick-log button definitions (D-10).
@@ -153,6 +154,13 @@ function renderNextEventCard(prediction, timeFormat) {
       card.appendChild(el('p', {
         className: 'time-band',
         textContent: `${formatHHMM(prediction.min, timeFormat)} – ${formatHHMM(prediction.max, timeFormat)}`,
+      }));
+    }
+    // TIF-09 / D10-07: precision score badge on hero card when TIF is active
+    if (prediction.precisionScore != null) {
+      card.appendChild(el('span', {
+        className: 'tif-score-badge',
+        textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
       }));
     }
   }
@@ -288,6 +296,113 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
 }
 
 /**
+ * Render one TIF prediction card (normal, non-collapsible) for a single event type (D10-06, D10-09).
+ *
+ * @param {object} prediction  TIF prediction with precisionScore, algRange, algMin, algMax
+ * @param {string} eventType   'wake' | 'bedtime' | 'napStart' | 'napEnd'
+ * @param {'24h'|'12h'} timeFormat
+ * @param {number} precisionTarget  from settings.precisionTarget (minutes)
+ * @returns {HTMLElement}
+ */
+function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget) {
+  const card = el('div', { className: 'prediction-card tif-card' });
+
+  card.appendChild(el('p', {
+    className: 'event-label',
+    textContent: (EVENT_TYPE_LABEL[eventType] ?? eventType).toUpperCase(),
+  }));
+
+  card.appendChild(el('p', {
+    className: 'time-central',
+    textContent: prediction.central ? formatHHMM(prediction.central, timeFormat) : '—',
+  }));
+
+  if (prediction.min && prediction.max) {
+    card.appendChild(el('p', {
+      className: 'time-band',
+      textContent: `${formatHHMM(prediction.min, timeFormat)}–${formatHHMM(prediction.max, timeFormat)}`,
+    }));
+  }
+
+  if (prediction.algRange != null && prediction.algRange > precisionTarget && prediction.algMin && prediction.algMax) {
+    card.appendChild(el('p', {
+      className: 'tif-alg-range',
+      textContent: `${formatHHMM(prediction.algMin, timeFormat)}–${formatHHMM(prediction.algMax, timeFormat)}`,
+    }));
+  }
+
+  if (prediction.precisionScore != null) {
+    card.appendChild(el('span', {
+      className: 'tif-score-badge',
+      textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
+    }));
+  }
+
+  return card;
+}
+
+/**
+ * Render one TIF low-confidence card (collapsible, reuses Phase 9 mechanism) (D10-08, D10-09).
+ *
+ * @param {object} prediction  TIF prediction with isLowConfidence, sourceWindows, precisionScore
+ * @param {string} eventType   'wake' | 'bedtime' | 'napStart' | 'napEnd'
+ * @param {'24h'|'12h'} timeFormat
+ * @returns {HTMLElement}
+ */
+function renderTifLowConfidenceCard(prediction, eventType, timeFormat) {
+  const card = el('div', {
+    className: 'prediction-card probability-band tif-low-confidence collapsed',
+  });
+
+  const rangeText = (prediction.min && prediction.max)
+    ? `${formatHHMM(prediction.min, timeFormat)}–${formatHHMM(prediction.max, timeFormat)}`
+    : '—';
+  const label = EVENT_TYPE_LABEL[eventType] ?? eventType;
+  const summaryText = `${label} — Low confidence — ${rangeText}`;
+
+  const summary = el('span', { className: 'card-summary' });
+  summary.appendChild(el('span', { className: 'card-summary-label', textContent: summaryText }));
+  summary.appendChild(el('span', { className: 'card-chevron', textContent: '↓' }));
+  card.appendChild(summary);
+
+  const fullContent = el('div', { className: 'card-full' });
+  fullContent.appendChild(el('p', {
+    className: 'event-label',
+    textContent: (EVENT_TYPE_LABEL[eventType] ?? eventType).toUpperCase(),
+  }));
+
+  if (Array.isArray(prediction.sourceWindows) && prediction.sourceWindows.length > 0) {
+    const ul = el('ul', { className: 'tif-source-list' });
+    for (const win of prediction.sourceWindows) {
+      const li = el('li', {});
+      li.appendChild(el('span', { textContent: win.label }));
+      li.appendChild(el('span', {
+        textContent: `${formatHHMM(win.min, timeFormat)}–${formatHHMM(win.max, timeFormat)}`,
+      }));
+      ul.appendChild(li);
+    }
+    fullContent.appendChild(ul);
+  }
+
+  if (prediction.precisionScore != null) {
+    fullContent.appendChild(el('span', {
+      className: 'tif-score-badge',
+      textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
+    }));
+  }
+
+  card.appendChild(fullContent);
+
+  card.addEventListener('click', () => {
+    const isNowCollapsed = card.classList.toggle('collapsed');
+    const chevron = card.querySelector('.card-chevron');
+    if (chevron) chevron.textContent = isNowCollapsed ? '↓' : '↑';
+  });
+
+  return card;
+}
+
+/**
  * Render the cold-start message replacing forecast cards (D3-09 / D3-06).
  *
  * @param {number} minDaysRemaining  how many more valid days needed
@@ -361,7 +476,17 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
   const EVENT_TYPES = ['wake', 'bedtime', 'napStart', 'napEnd'];
   for (const type of EVENT_TYPES) {
     const pred = predictions[type];
-    if (pred) {
+    if (!pred) continue;
+
+    if (pred.precisionScore != null || pred.isLowConfidence != null) {
+      // TIF rendering path
+      if (pred.isLowConfidence) {
+        forecastCards.appendChild(renderTifLowConfidenceCard(pred, type, timeFormat));
+      } else {
+        forecastCards.appendChild(renderTifNormalCard(pred, type, timeFormat, settingsSnap.precisionTarget ?? 60));
+      }
+    } else {
+      // Classic rendering path (unchanged)
       forecastCards.appendChild(renderPredictionCard(pred, type, timeFormat));
     }
   }
@@ -708,7 +833,9 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
       }
     }
 
-    const predictions = forecast(forecastDays, snap);
+    const predictions = snap.forecastAlgorithm === 'tif'
+      ? tifForecast(forecastDays, snap)
+      : forecast(forecastDays, snap);
     renderForecastSection(predictions, snap, forecastDays, nextEventCard, coldStartMsg, forecastCards);
   }
 }

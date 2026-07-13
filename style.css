@@ -1530,3 +1530,59 @@ button[data-log] {
   margin: 0 0 0.35rem 0;
 }
 
+/* ==========================================================================
+ * Phase 10 — TIF Algorithm rendering (Plan 10-05)
+ * TIF-09 (precision score badge), TIF-10 (original range line),
+ * TIF-08 (low-confidence source windows), D10-06/D10-07/D10-09
+ * ==========================================================================
+ */
+
+/* Precision score badge — indigo pill, on TIF prediction cards */
+.tif-score-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  align-self: flex-start;
+}
+
+/* Hero card variant: white-on-accent */
+.next-event-hero .tif-score-badge {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Original algorithm range — subdued, shown only when algRange > precisionTarget */
+.prediction-card .tif-alg-range {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* Source windows list in expanded low-confidence TIF card */
+.tif-source-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tif-source-list li {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
