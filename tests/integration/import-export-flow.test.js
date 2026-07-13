@@ -191,6 +191,102 @@ describe('cross-store replace()', () => {
 });
 
 // ---------------------------------------------------------------------------
+// settings.replace() — TIF field preservation
+// ---------------------------------------------------------------------------
+
+describe('settings.replace() — TIF settings', () => {
+
+  const tifBlob = Object.freeze({
+    version: 2,
+    settings: {
+      subjectName: 'TIF-Test',
+      cutoverHour: 4,
+      groupingMode: 'calendar',
+      rejectedDays: [],
+      timeFormat: '24h',
+      autoOutlier: false,
+      maxDelta: 30,
+      minDays: 7,
+      windowDays: 14,
+      statBlend: 'median',
+      forecastAlgorithm: 'tif',
+      trimPct: 25,
+      precisionTarget: 90,
+    },
+    events: [],
+    activityLog: {},
+  });
+
+  it('replace() with TIF fields → settings.get() returns imported forecastAlgorithm/trimPct/precisionTarget', () => {
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    settingsStore.replace({ ...tifBlob });
+
+    const s = settingsStore.get();
+    assert.equal(s.forecastAlgorithm, 'tif', 'forecastAlgorithm must come from blob');
+    assert.equal(s.trimPct, 25, 'trimPct must come from blob');
+    assert.equal(s.precisionTarget, 90, 'precisionTarget must come from blob');
+  });
+
+  it('replace() with TIF fields → persisted storage blob contains the imported TIF values', () => {
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    settingsStore.replace({ ...tifBlob });
+
+    const persisted = storage.load();
+    assert.equal(persisted.settings.forecastAlgorithm, 'tif', 'persisted forecastAlgorithm must be tif');
+    assert.equal(persisted.settings.trimPct, 25, 'persisted trimPct must be 25');
+    assert.equal(persisted.settings.precisionTarget, 90, 'persisted precisionTarget must be 90');
+  });
+
+  it('replace() without TIF fields → defaults are injected (forecastAlgorithm classic, trimPct 10, precisionTarget 60)', () => {
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    // v2Blob has no TIF fields
+    settingsStore.replace({ ...v2Blob, events: [...v2Blob.events], activityLog: { ...v2Blob.activityLog } });
+
+    const s = settingsStore.get();
+    assert.equal(s.forecastAlgorithm, 'classic', 'missing forecastAlgorithm must default to classic');
+    assert.equal(s.trimPct, 10, 'missing trimPct must default to 10');
+    assert.equal(s.precisionTarget, 60, 'missing precisionTarget must default to 60');
+  });
+
+  it('replace() with invalid TIF values → falls back to defaults', () => {
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    const badBlob = {
+      ...tifBlob,
+      settings: { ...tifBlob.settings, forecastAlgorithm: 'unknown', trimPct: 999, precisionTarget: -1 },
+    };
+    settingsStore.replace(badBlob);
+
+    const s = settingsStore.get();
+    assert.equal(s.forecastAlgorithm, 'classic', 'invalid forecastAlgorithm must fall back to classic');
+    assert.equal(s.trimPct, 10, 'out-of-range trimPct must fall back to default');
+    assert.equal(s.precisionTarget, 60, 'out-of-range precisionTarget must fall back to default');
+  });
+
+  it('replace() then update() does not lose imported TIF settings', () => {
+    const storage = makeStorage();
+    const settingsStore = createSettingsStore({ storage, defaults: DEFAULT_SETTINGS });
+
+    settingsStore.replace({ ...tifBlob });
+    settingsStore.update({ subjectName: 'Changed' });
+
+    const s = settingsStore.get();
+    assert.equal(s.forecastAlgorithm, 'tif', 'forecastAlgorithm must survive update()');
+    assert.equal(s.trimPct, 25, 'trimPct must survive update()');
+    assert.equal(s.precisionTarget, 90, 'precisionTarget must survive update()');
+    assert.equal(s.subjectName, 'Changed', 'update() must still apply');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
 // CSV import etap column → stages → settings.update() (Phase 6, Plan 05)
 // ---------------------------------------------------------------------------
 
