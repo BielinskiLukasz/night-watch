@@ -1,7 +1,7 @@
 ---
 phase: 10
 slug: nw-10-tif-algorithm-settings
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-13
@@ -46,6 +46,11 @@ Exceptions (v1.x inherited baselines — do NOT change to grid values):
 - 0.3rem (4.8px) vertical padding — matches v1.0 toolbar button baseline
 - 0.45rem (7.2px) vertical padding — matches v1.0 modal button baseline
 
+**Phase 10 micro-spacing exceptions (match existing v1.x internal component patterns):**
+- 0.35rem (5.6px) — `.tif-source-list` top margin, `.tif-subsection-label` bottom margin
+- 0.15rem (2.4px) — `.tif-source-list` gap between list items
+- 0.1rem (1.6px) — `.tif-score-badge` vertical padding (pill badge)
+
 ---
 
 ## Typography
@@ -59,11 +64,14 @@ Font weights are strictly limited to 400 (regular) and 600 (semibold) per Phase 
 | Heading | 1.15rem (18px) | 600 | 1.4 | Modal titles, section headings |
 | Display | 2.25rem (36px) | 600 | 1.1 | Hero card time display |
 
-**Phase 10 fine-tuning sizes (match existing card sub-elements):**
-- Precision score badge text: 0.75rem, weight 400 — matches `.event-type` badge tier
-- Original algorithm range text: 0.75rem, weight 400 — further subdued than `.time-band` (0.8rem)
-- TIF sub-section label: 0.75rem, weight 600 — matches legend micro-label pattern
-- Source window list rows: 0.78rem, weight 400 — matches existing `.prob-list li` font size
+**Phase 10 fine-tuning sizes (match existing card sub-elements — add to type scale):**
+
+| Role | Size | Weight | Usage |
+|------|------|--------|-------|
+| Badge / micro | 0.75rem | 400 or 600 | Precision score badge text, original range text, TIF sub-section label |
+| Sub-list | 0.78rem | 400 | Source window list rows (matches existing `.prob-list li`) |
+
+Both sizes match pre-existing patterns in the codebase. Weights remain strictly 400 and 600.
 
 ---
 
@@ -82,6 +90,15 @@ Inherits v1.x calm palette established in Phases 1–9.
 | Text muted | #64748b | Tertiary labels, band ranges, helper text, TIF sub-section label |
 | Border | #cbd5e1 | Input borders, light dividers |
 | Border light | #e2e8f0 | Table borders, TIF sub-section top separator |
+
+**Phase 10 palette additions (all derived from existing indigo/slate families):**
+
+| Role | Value | Usage |
+|------|-------|-------|
+| Badge bg (accent tint) | #eef2ff | `.tif-score-badge` background on prediction cards |
+| Badge border (accent tint) | #c7d2fe | `.tif-score-badge` border on prediction cards |
+| Range text (muted slate) | #94a3b8 | `.tif-alg-range` — already present in codebase (`.missed-label`, `.historyTable td:empty::before`) |
+| List text (slate) | #334155 | `.tif-source-list li` — already present in codebase (`#settings label`) |
 
 **Accent (#4f46e5) reserved for (Phase 10 additions in bold):**
 - "Add event" button (Phase 9)
@@ -549,14 +566,14 @@ The following v1.x components remain visually unchanged in Phase 10:
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS — All 20 strings specific, no placeholder copy, consistent v1.x tone
+- [x] Dimension 2 Visuals: PASS — All 4 components specified with collapsed/expanded states
+- [x] Dimension 3 Color: FLAG → RESOLVED — `#eef2ff`, `#c7d2fe`, `#94a3b8`, `#334155` documented in palette additions table
+- [x] Dimension 4 Typography: FLAG → RESOLVED — `0.75rem` and `0.78rem` added to Phase 10 fine-tuning type scale
+- [x] Dimension 5 Spacing: FLAG → RESOLVED — `0.35rem`, `0.15rem`, `0.1rem` documented as Phase 10 micro-spacing exceptions
+- [x] Dimension 6 Registry Safety: PASS — Pure vanilla CSS, no third-party dependencies
 
-**Approval:** pending
+**Approval:** APPROVED — 2026-07-13
 
 ---
 
