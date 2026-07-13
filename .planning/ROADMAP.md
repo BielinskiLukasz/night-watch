@@ -25,7 +25,8 @@
   3. When TIF is active, each predicted event on Today screen shows a prediction window derived from the intersection of its defined source windows, with a precision score displayed alongside
   4. When a TIF window intersection is empty for an event, Today screen shows the union range instead and marks the prediction "low confidence"
   5. When the algorithm range exceeds the precision target, the displayed window is narrowed to precision-target width centered on the midpoint; the original range remains visible alongside
-**Plans**: TBD
+**Plans**: 10-01 (metrics.js), 10-02 (forecast-tif.js algorithm), 10-03 (settings data model), 10-04 (settings UI), 10-05 (today screen + app wiring + E2E)
+**Waves**: Wave 1: 10-01 + 10-03 (parallel) → Wave 2: 10-02 + 10-04 (parallel) → Wave 3: 10-05
 **UI hint**: yes
 
 ### Phase 11: Metrics Screen
@@ -45,7 +46,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. TIF Algorithm & Settings | 0/TBD | Not started | - |
+| 10. TIF Algorithm & Settings | 0/5 | Not started | - |
 | 11. Metrics Screen | 0/TBD | Not started | - |
 
 ## Backlog
