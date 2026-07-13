@@ -1,7 +1,7 @@
 # Local data files
 data/
 
-# Dev-only test tooling output (D-20: package.json is dev-only, never shipped).
+# Dev-only test tooling output
 # These directories are produced by `npm install` / Playwright runs and must
 # not enter version control.
 node_modules/
