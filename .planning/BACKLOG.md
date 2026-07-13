@@ -7,6 +7,22 @@ Last assigned ID: **B-30** — next new item must be **B-31**
 
 ---
 
+## How to use this file
+
+- **Adding an item:** increment the "Last assigned ID" counter at the top, then drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. IDs are monotonic and never reused — even if the previous entry was promoted or removed.
+- **Promoting an item:** `/gsd-review-backlog` (interactive) — moves a chosen item into the active milestone roadmap. Or manually run `/gsd-phase add` and reference the backlog ID in the phase description.
+- **Removing an item:** delete the block or move it under a `## Rejected` heading with a one-line rationale (decisions cost; keep the rationale).
+- **Memory ↔ backlog:** memory captures "this idea exists and here's the context"; this file is the project-level decision queue. Memory is the source for cross-session continuity; this file is the source for milestone planning. Update both when an item lands.
+
+## Related
+
+- `ROADMAP.md` — active milestone phases
+- `milestones/v1.0-REQUIREMENTS.md` — v1.0 archived requirements (all 51 complete)
+- `PROJECT.md` — core constraints (single subject v1, no build step, no frameworks)
+- `CLAUDE.md` — v1/v2 split rules
+
+---
+
 ## UX-polish bundle (captured during Phase 2 UAT, 2026-05-28)
 
 These three items are complementary friction-reduction wins for one-handed, in-the-dark logging. They should probably ship together in a dedicated UX-polish phase between Phases 4 and 8, or folded into Phase 8 (PWA & Platform Hardening) since theming and mobile-first picker UX are presentation-layer work.
@@ -806,20 +822,3 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 - Remove missed-time flag from the prediction-card renderer (`renderForecastSection()` or equivalent).
 - Ensure the forecaster still computes the missed-time condition (B-07), but presentation-layer decides where it is shown.
 - No changes to prediction algorithm or data shape — purely UI logic.
-
----
-
-## How to use this file
-
-- **Adding an item:** increment the "Last assigned ID" counter at the top, then drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. IDs are monotonic and never reused — even if the previous entry was promoted or removed.
-- **Promoting an item:** `/gsd-review-backlog` (interactive) — moves a chosen item into the active milestone roadmap. Or manually run `/gsd-phase add` and reference the backlog ID in the phase description.
-- **Removing an item:** delete the block or move it under a `## Rejected` heading with a one-line rationale (decisions cost; keep the rationale).
-- **Memory ↔ backlog:** memory captures "this idea exists and here's the context"; this file is the project-level decision queue. Memory is the source for cross-session continuity; this file is the source for milestone planning. Update both when an item lands.
-
-## Related
-
-- `ROADMAP.md` — active milestone phases
-- `milestones/v1.0-REQUIREMENTS.md` — v1.0 archived requirements (all 51 complete)
-- `PROJECT.md` — core constraints (single subject v1, no build step, no frameworks)
-- `CLAUDE.md` — v1/v2 split rules
-
