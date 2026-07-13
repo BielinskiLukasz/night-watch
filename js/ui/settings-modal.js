@@ -38,6 +38,7 @@ let _jsonClickHandler = null;
 let _jsonChangeHandler = null;
 let _stagesCrudHandler = null;
 let _addStageBtnHandler = null;
+let _forecastAlgorithmChangeHandler = null;
 
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
@@ -77,6 +78,31 @@ export function openSettings({ settings, eventLog, storage, id }) {
   const confirmEl = form.elements.namedItem('confirmBeforeLogging');
   if (confirmEl) confirmEl.checked = Boolean(snap.confirmBeforeLogging);
 
+  // TIF-01..03 / D10-11..13: populate TIF algorithm sub-section
+  const forecastAlgorithmEl = form.elements.namedItem('forecastAlgorithm');
+  if (forecastAlgorithmEl) forecastAlgorithmEl.value = snap.forecastAlgorithm ?? 'classic';
+  const trimPctEl = form.elements.namedItem('trimPct');
+  if (trimPctEl) trimPctEl.value = String(snap.trimPct ?? 10);
+  const precisionTargetEl = form.elements.namedItem('precisionTarget');
+  if (precisionTargetEl) precisionTargetEl.value = String(snap.precisionTarget ?? 60);
+
+  // D10-12: show/hide #tifOptions based on current algorithm selection
+  const tifOptionsEl = document.getElementById('tifOptions');
+  if (tifOptionsEl) {
+    tifOptionsEl.hidden = (snap.forecastAlgorithm !== 'tif');
+  }
+
+  // Wire change handler — prevent handler accumulation on repeated modal opens
+  if (forecastAlgorithmEl && tifOptionsEl) {
+    if (_forecastAlgorithmChangeHandler) {
+      forecastAlgorithmEl.removeEventListener('change', _forecastAlgorithmChangeHandler);
+    }
+    _forecastAlgorithmChangeHandler = () => {
+      tifOptionsEl.hidden = (forecastAlgorithmEl.value !== 'tif');
+    };
+    forecastAlgorithmEl.addEventListener('change', _forecastAlgorithmChangeHandler);
+  }
+
   // Stale errors from a prior open get cleared (D2-14: each open is fresh).
   if (errorsEl) clear(errorsEl);
 
@@ -106,6 +132,9 @@ export function openSettings({ settings, eventLog, storage, id }) {
         stages: settings.get().stages || [],
         activeStageId: settings.get().activeStageId ?? null,
         confirmBeforeLogging: data.get('confirmBeforeLogging') === 'on',
+        forecastAlgorithm: String(data.get('forecastAlgorithm') ?? 'classic'),
+        trimPct:          Number(data.get('trimPct') ?? 10),
+        precisionTarget:  Number(data.get('precisionTarget') ?? 60),
       };
 
       const result = validateSettings(raw, { mode: 'save' });

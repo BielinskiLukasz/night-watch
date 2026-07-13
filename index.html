@@ -261,6 +261,26 @@
             <option value="blend">Blend</option>
           </select>
         </label>
+        <div class="tif-subsection">
+          <p class="tif-subsection-label">TIF Algorithm</p>
+          <label>
+            Forecast algorithm
+            <select name="forecastAlgorithm">
+              <option value="classic">Classic</option>
+              <option value="tif">TIF</option>
+            </select>
+          </label>
+          <div id="tifOptions" hidden>
+            <label>
+              Auto-trim percentage (0–40)
+              <input type="number" name="trimPct" min="0" max="40" step="1">
+            </label>
+            <label>
+              Precision target (minutes)
+              <input type="number" name="precisionTarget" min="1">
+            </label>
+          </div>
+        </div>
       </fieldset>
 
       <output id="settingsErrors" class="settingsErrors" aria-live="polite"></output>

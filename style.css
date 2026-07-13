@@ -1505,3 +1505,28 @@ button[data-log] {
 .prediction-card .time-central {
   font-weight: 600;
 }
+
+/* ==========================================================================
+ * Phase 10 — TIF Algorithm Settings UI (Plan 10-04)
+ * TIF-01 (algorithm toggle), TIF-02 (trim %), TIF-03 (precision target)
+ * D10-10 (TIF sub-section in Forecast & Prediction fieldset)
+ * ==========================================================================
+ */
+
+/* TIF sub-section container inside Forecast & Prediction fieldset */
+.tif-subsection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* "TIF Algorithm" sub-heading — micro-label tier */
+.tif-subsection-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.35rem 0;
+}
+
