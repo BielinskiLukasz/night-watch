@@ -171,6 +171,9 @@ function buildHistoricBand(times, trimPct, manualExcluded) {
  * Build a min/max band by projecting trimmed duration statistics onto an anchor time.
  * Result: { min: anchorMinutes + durMin, max: anchorMinutes + durMax }.
  *
+ * Note: result is NOT wrapped mod 1440. Callers that anchor to bedtime (producing
+ * times that cross midnight) must wrap themselves — see wrapToDay().
+ *
  * @param {number[]} durations      raw duration values (unsorted, minutes)
  * @param {number}   anchorMinutes  anchor event time in minutes
  * @param {number}   trimPct
@@ -186,6 +189,62 @@ function buildDurationBand(durations, anchorMinutes, trimPct, manualExcluded) {
     min: anchorMinutes + result.min,
     max: anchorMinutes + result.max,
   };
+}
+
+// ---------------------------------------------------------------------------
+// wrapToDay — internal
+// ---------------------------------------------------------------------------
+
+const DAY = 24 * 60;
+
+/**
+ * Wrap a raw-minutes value back into [0, DAY).
+ * Needed for overnight duration bands (bedtime + sleep/combined) whose raw
+ * values exceed 1440 because they cross midnight.
+ */
+function wrapToDay(m) {
+  return ((m % DAY) + DAY) % DAY;
+}
+
+// ---------------------------------------------------------------------------
+// resolveTodayNapDuration — internal
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve today's nap duration (minutes) for the combined-band correction.
+ *
+ * Priority:
+ *   1. Both napStart and napEnd are logged → actual duration.
+ *   2. Only napStart logged → actual start + napEndPred.central.
+ *   3. Neither logged → napStartPred.central + napEndPred.central.
+ *
+ * Returns null when insufficient data is available.
+ *
+ * @param {object[]} dayRecords   all pre-bucketed day records
+ * @param {object}   napStartPred TIF prediction for napStart
+ * @param {object}   napEndPred   TIF prediction for napEnd
+ * @returns {number|null}
+ */
+function resolveTodayNapDuration(dayRecords, napStartPred, napEndPred) {
+  const today = dayRecords[dayRecords.length - 1];
+  if (!today) return null;
+
+  const actualStart = extractTime(today.napStart);
+  const actualEnd   = extractTime(today.napEnd);
+
+  if (actualStart !== null && actualEnd !== null) {
+    return timeToMinutes(actualEnd) - timeToMinutes(actualStart);
+  }
+
+  if (actualStart !== null && napEndPred?.central) {
+    return timeToMinutes(napEndPred.central) - timeToMinutes(actualStart);
+  }
+
+  if (napStartPred?.central && napEndPred?.central) {
+    return timeToMinutes(napEndPred.central) - timeToMinutes(napStartPred.central);
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -378,46 +437,28 @@ export function tifForecast(dayRecords, settings) {
   const manualExBedtime  = manualExcludedCount(d => extractTime(d.bedtime));
 
   // -------------------------------------------------------------------------
-  // Predictions are built in dependency order: wake → napStart → napEnd → bedtime
+  // Predictions are built in dependency order:
+  //   napStart → napEnd → wake → bedtime
+  //
+  // napStart and napEnd are computed first so their predictions are available
+  // for resolveTodayNapDuration(), which feeds the wake combined-band correction.
+  // When wake hasn't been logged yet, wakeAnchor is null for the napStart
+  // step and the activity-before-nap band is skipped (acceptable degradation).
   // -------------------------------------------------------------------------
 
-  // ---- Wake prediction ----
   const tifPredictions = {};
 
-  // Anchor for sleep-length / combined band: bedtime (if it is the latest event)
-  const bedtimeAnchor = resolveAnchor('bedtime', dayRecords, tifPredictions);
-
-  const wakeLabelledWindows = [];
-
-  // Window 1: historic wake-up band
-  const histWake = buildHistoricBand(wakeMinutes, trimPct, manualExWake);
-  if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
-
-  // Window 2: sleep-length band (only if bedtime anchor is available)
-  if (bedtimeAnchor !== null) {
-    const sleepBand = buildDurationBand(sleepDurations, bedtimeAnchor, trimPct, 0);
-    if (sleepBand) wakeLabelledWindows.push({ label: 'Sleep-length band', ...sleepBand });
-  }
-
-  // Window 3: sleep + same-day nap combined band
-  if (bedtimeAnchor !== null) {
-    const combinedBand = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
-    if (combinedBand) wakeLabelledWindows.push({ label: 'Sleep + nap combined band', ...combinedBand });
-  }
-
-  const wakePred = buildPrediction(wakeLabelledWindows, precisionTarget);
-  tifPredictions.wake = wakePred;
-
   // ---- Nap-start prediction ----
-  const wakeAnchor = resolveAnchor('wake', dayRecords, tifPredictions);
+  // wakeAnchor may be null if wake hasn't happened yet (tifPredictions is empty here).
+  const wakeAnchorForNap = resolveAnchor('wake', dayRecords, tifPredictions);
 
   const napStartLabelledWindows = [];
 
   const histNapStart = buildHistoricBand(napStartMinutes, trimPct, manualExNapStart);
   if (histNapStart) napStartLabelledWindows.push({ label: 'Historic nap-start band', ...histNapStart });
 
-  if (wakeAnchor !== null) {
-    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchor, trimPct, 0);
+  if (wakeAnchorForNap !== null) {
+    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, 0);
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
   }
 
@@ -425,7 +466,7 @@ export function tifForecast(dayRecords, settings) {
   tifPredictions.napStart = napStartPred;
 
   // ---- Nap-end prediction ----
-  const napStartAnchor = resolveAnchor('napStart', dayRecords, { ...tifPredictions });
+  const napStartAnchor = resolveAnchor('napStart', dayRecords, tifPredictions);
 
   const napEndLabelledWindows = [];
 
@@ -439,6 +480,48 @@ export function tifForecast(dayRecords, settings) {
 
   const napEndPred = buildPrediction(napEndLabelledWindows, precisionTarget);
   tifPredictions.napEnd = napEndPred;
+
+  // ---- Wake prediction ----
+  const bedtimeAnchor    = resolveAnchor('bedtime', dayRecords, tifPredictions);
+  const todayNapDuration = resolveTodayNapDuration(dayRecords, napStartPred, napEndPred);
+
+  const wakeLabelledWindows = [];
+
+  // Window 1: historic wake-up band
+  const histWake = buildHistoricBand(wakeMinutes, trimPct, manualExWake);
+  if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
+
+  // Window 2: sleep-length band (bedtime + sleep).
+  // Raw result exceeds 1440 (crosses midnight) — wrap to same reference frame
+  // as the historic wake band so computeIntersection works correctly.
+  if (bedtimeAnchor !== null) {
+    const sleepBandRaw = buildDurationBand(sleepDurations, bedtimeAnchor, trimPct, 0);
+    if (sleepBandRaw) {
+      wakeLabelledWindows.push({
+        label: 'Sleep-length band',
+        min: wrapToDay(sleepBandRaw.min),
+        max: wrapToDay(sleepBandRaw.max),
+      });
+    }
+  }
+
+  // Window 3: combined (sleep + nap) band, with today's nap subtracted so the
+  // band represents the expected night-sleep duration anchored to bedtime.
+  // Formula: bedtime + historical_combined − today_nap = expected_wake.
+  // Uses actual nap when logged; predicted nap otherwise (resolveTodayNapDuration).
+  if (bedtimeAnchor !== null && todayNapDuration !== null) {
+    const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
+    if (combinedBandRaw) {
+      wakeLabelledWindows.push({
+        label: 'Sleep + nap combined band',
+        min: wrapToDay(combinedBandRaw.min - todayNapDuration),
+        max: wrapToDay(combinedBandRaw.max - todayNapDuration),
+      });
+    }
+  }
+
+  const wakePred = buildPrediction(wakeLabelledWindows, precisionTarget);
+  tifPredictions.wake = wakePred;
 
   // ---- Bedtime prediction ----
   const wakeAnchor2   = resolveAnchor('wake',   dayRecords, tifPredictions);

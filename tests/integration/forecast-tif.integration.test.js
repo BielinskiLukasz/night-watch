@@ -176,6 +176,60 @@ describe('tifForecast() integration', () => {
     }
   });
 
+  // 10. Combined band subtracts today's actual nap from historical combined duration.
+  //
+  // Fixture: 9 historical days (nap=90 min, sleep=630 min, combined=720 min).
+  // Current day (day 10): nap=120 min (longer than usual), bedtime logged as
+  // the globally latest event, no wake yet.
+  //
+  // Expected combined band:
+  //   bedtime(21:00=1260) + combined(720) − today_nap(120) = 1860 → 07:00
+  //   (1860 mod 1440 = 420 = 07:00)
+  // Expected sleep-length band:
+  //   bedtime(1260) + sleep(630) = 1890 → 07:30  (1890 mod 1440 = 450)
+  // Bands disagree → isLowConfidence true.
+  it('wake combined band subtracts today\'s actual nap, differs from sleep-length band → low confidence', () => {
+    function makeEventDay(dateStr, wake, napStart, napEnd, bedtime) {
+      const evs = [];
+      function field(t, type) {
+        if (!t) return null;
+        const at = `${dateStr}T${t}`;
+        evs.push({ at, type });
+        return { at };
+      }
+      return {
+        wake:     field(wake,     'wake'),
+        napStart: field(napStart, 'napStart'),
+        napEnd:   field(napEnd,   'napEnd'),
+        bedtime:  field(bedtime,  'bedtime'),
+        rejected: false,
+        allEvents: evs,
+      };
+    }
+
+    const days = [];
+    for (let i = 1; i <= 9; i++) {
+      const date = `2026-01-${String(i).padStart(2, '0')}`;
+      days.push(makeEventDay(date, '07:30', '13:00', '14:30', '21:00'));
+    }
+    // Current day: longer nap (120 min), no wake, bedtime is the latest event.
+    days.push(makeEventDay('2026-01-10', null, '13:00', '15:00', '21:00'));
+
+    const result = tifForecast(days, { ...defaultSettings, trimPct: 0, precisionTarget: 600 });
+
+    // Combined band source window must be present with the nap-corrected value.
+    const combinedWindow = result.wake.sourceWindows.find(
+      w => w.label === 'Sleep + nap combined band',
+    );
+    assert.ok(combinedWindow, 'wake should have a Sleep + nap combined band source window');
+    assert.strictEqual(combinedWindow.min, '07:00', 'combined band min should equal bedtime+combined−today_nap');
+    assert.strictEqual(combinedWindow.max, '07:00', 'combined band max should equal bedtime+combined−today_nap');
+
+    // The combined band (07:00) disagrees with sleep-length band (07:30) → low confidence.
+    assert.strictEqual(result.wake.isLowConfidence, true,
+      'wake should be low-confidence when combined band disagrees with sleep-length band');
+  });
+
   // 9. precisionTarget narrows window: small precisionTarget → displayed window ≤ precisionTarget wide
   it('displayed window respects precisionTarget when algRange exceeds it', () => {
     // Build fixture with wider spread to force algRange > precisionTarget
