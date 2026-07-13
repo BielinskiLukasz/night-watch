@@ -296,47 +296,87 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
 }
 
 /**
- * Render one TIF prediction card (normal, non-collapsible) for a single event type (D10-06, D10-09).
+ * Render one TIF prediction card (collapsible) for a single event type (D10-06, D10-09).
+ * Collapsed: shows summary row with label, central time, and range.
+ * Expanded: full details including source evidence windows.
  *
- * @param {object} prediction  TIF prediction with precisionScore, algRange, algMin, algMax
+ * @param {object} prediction  TIF prediction with precisionScore, algRange, algMin, algMax, sourceWindows
  * @param {string} eventType   'wake' | 'bedtime' | 'napStart' | 'napEnd'
  * @param {'24h'|'12h'} timeFormat
  * @param {number} precisionTarget  from settings.precisionTarget (minutes)
  * @returns {HTMLElement}
  */
 function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget) {
-  const card = el('div', { className: 'prediction-card tif-card' });
+  const card = el('div', { className: 'prediction-card tif-card collapsed' });
 
-  card.appendChild(el('p', {
+  const label = EVENT_TYPE_LABEL[eventType] ?? eventType;
+  const centralText = prediction.central ? formatHHMM(prediction.central, timeFormat) : '—';
+  const rangeText = (prediction.min && prediction.max)
+    ? `${formatHHMM(prediction.min, timeFormat)}–${formatHHMM(prediction.max, timeFormat)}`
+    : null;
+
+  // Collapsed summary row
+  const summaryParts = [label, centralText];
+  if (rangeText) summaryParts.push(rangeText);
+  const summary = el('span', { className: 'card-summary' });
+  summary.appendChild(el('span', { className: 'card-summary-label', textContent: summaryParts.join(' — ') }));
+  summary.appendChild(el('span', { className: 'card-chevron', textContent: '↓' }));
+  card.appendChild(summary);
+
+  // Expanded full content
+  const fullContent = el('div', { className: 'card-full' });
+
+  fullContent.appendChild(el('p', {
     className: 'event-label',
-    textContent: (EVENT_TYPE_LABEL[eventType] ?? eventType).toUpperCase(),
+    textContent: label.toUpperCase(),
   }));
 
-  card.appendChild(el('p', {
+  fullContent.appendChild(el('p', {
     className: 'time-central',
-    textContent: prediction.central ? formatHHMM(prediction.central, timeFormat) : '—',
+    textContent: centralText,
   }));
 
   if (prediction.min && prediction.max) {
-    card.appendChild(el('p', {
+    fullContent.appendChild(el('p', {
       className: 'time-band',
       textContent: `${formatHHMM(prediction.min, timeFormat)}–${formatHHMM(prediction.max, timeFormat)}`,
     }));
   }
 
   if (prediction.algRange != null && prediction.algRange > precisionTarget && prediction.algMin && prediction.algMax) {
-    card.appendChild(el('p', {
+    fullContent.appendChild(el('p', {
       className: 'tif-alg-range',
       textContent: `${formatHHMM(prediction.algMin, timeFormat)}–${formatHHMM(prediction.algMax, timeFormat)}`,
     }));
   }
 
+  if (Array.isArray(prediction.sourceWindows) && prediction.sourceWindows.length > 0) {
+    const ul = el('ul', { className: 'tif-source-list' });
+    for (const win of prediction.sourceWindows) {
+      const li = el('li', {});
+      li.appendChild(el('span', { textContent: win.label }));
+      li.appendChild(el('span', {
+        textContent: `${formatHHMM(win.min, timeFormat)}–${formatHHMM(win.max, timeFormat)}`,
+      }));
+      ul.appendChild(li);
+    }
+    fullContent.appendChild(ul);
+  }
+
   if (prediction.precisionScore != null) {
-    card.appendChild(el('span', {
+    fullContent.appendChild(el('span', {
       className: 'tif-score-badge',
       textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
     }));
   }
+
+  card.appendChild(fullContent);
+
+  card.addEventListener('click', () => {
+    const isNowCollapsed = card.classList.toggle('collapsed');
+    const chevron = card.querySelector('.card-chevron');
+    if (chevron) chevron.textContent = isNowCollapsed ? '↓' : '↑';
+  });
 
   return card;
 }

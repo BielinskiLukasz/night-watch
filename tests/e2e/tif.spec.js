@@ -134,21 +134,18 @@ test('TIF prediction cards (.tif-card, .tif-score-badge) render after switching 
   const tifCards = page.locator('#forecast-cards .tif-card');
   await expect(tifCards.first()).toBeVisible();
 
-  // The wake .tif-card should have a .tif-score-badge with precision score
+  // Normal TIF cards start collapsed (expandable to show evidence windows)
   const wakeCard = tifCards.first();
+  await expect(wakeCard).toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.card-summary')).toBeVisible();
+  await expect(wakeCard.locator('.card-full')).not.toBeVisible();
+
+  // Expanding the card reveals the .tif-score-badge and source windows
+  await wakeCard.click();
+  await expect(wakeCard).not.toHaveClass(/collapsed/);
   await expect(wakeCard.locator('.tif-score-badge')).toBeVisible();
   await expect(wakeCard.locator('.tif-score-badge')).toContainText('Precision:');
-
-  // Normal TIF cards must NOT have the 'collapsed' class (D10-09)
-  const tifCardCount = await tifCards.count();
-  for (let i = 0; i < tifCardCount; i++) {
-    const card = tifCards.nth(i);
-    // Only check non-low-confidence cards (those without 'tif-low-confidence')
-    const isLowConf = await card.evaluate((el) => el.classList.contains('tif-low-confidence'));
-    if (!isLowConf) {
-      await expect(card).not.toHaveClass(/collapsed/);
-    }
-  }
+  await expect(wakeCard.locator('.tif-source-list')).toBeVisible();
 });
 
 // ── Test 3: Switching to Classic removes TIF cards ────────────────────────────
