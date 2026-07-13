@@ -780,7 +780,7 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 **Status:** captured · not scheduled
 **Earliest sensible slot:** UX polish milestone — or paired with B-030 (hero card missed-time flag)
 
-**What:** Change the order of the four prediction cards so that bedtime prediction appears last. Current order mixes wake/nap/bedtime in a way that doesn’t match the user’s mental model — bedtime is the final event of the day and should be visually last.
+**What:** Change the order of the four prediction cards so that bedtime prediction appears last (in the vertical view, don't change the horizontal one). Current order mixes wake/nap/bedtime in a way that doesn’t match the user’s mental model — bedtime is the final event of the day and should be visually last.
 
 **Why:** Prediction cards are scanned quickly. Users expect bedtime to be the final card, mirroring the natural daily sequence. This improves readability and reduces misinterpretation.
 
