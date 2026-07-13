@@ -254,10 +254,13 @@ function resolveTodayNapDuration(dayRecords, napStartPred, napEndPred) {
 /**
  * Resolve anchor time in minutes for a given event type.
  *
- * Anchor rule (B-021 Step 3):
- *   - Find the event with the latest `.at` timestamp across ALL dayRecords.
- *   - If that event's type === eventType → use its actual logged time in minutes.
+ * Anchor rule:
+ *   - Find the MOST RECENTLY LOGGED event of the requested type across all dayRecords.
+ *   - If found → use its actual logged time in minutes.
  *   - Otherwise → use the central time from tifPredictions[eventType] (if available).
+ *
+ * Searching by requested type (not globally-latest event) ensures that earlier
+ * same-day events (e.g. wake when last logged event is napEnd) are found as anchors.
  *
  * Falls back to null when neither is available.
  *
@@ -267,46 +270,39 @@ function resolveTodayNapDuration(dayRecords, napStartPred, napEndPred) {
  * @returns {number|null}            anchor time in minutes, or null
  */
 function resolveAnchor(eventType, dayRecords, tifPredictions) {
-  // 1. Find the latest logged event across all day records.
-  let latestAt  = null;
-  let latestType = null;
+  // 1. Find the latest logged event OF THE REQUESTED TYPE across all day records.
+  let latestAt   = null;
   let latestTime = null;
 
   for (const day of dayRecords) {
     // Prefer scanning the allEvents array (actual store data)
     if (Array.isArray(day.allEvents) && day.allEvents.length > 0) {
       for (const ev of day.allEvents) {
-        if (ev.at && (latestAt === null || ev.at > latestAt)) {
+        if (ev.type === eventType && ev.at && (latestAt === null || ev.at > latestAt)) {
           latestAt   = ev.at;
-          latestType = ev.type;
           // ev.at format: 'YYYY-MM-DDTHH:MM' → slice(11) = 'HH:MM'
           latestTime = ev.at.slice(11);
         }
       }
     } else {
-      // Synthetic/sparse day records: scan four named fields
-      const slots = [
-        { type: 'bedtime',  slot: day.bedtime  },
-        { type: 'napEnd',   slot: day.napEnd   },
-        { type: 'napStart', slot: day.napStart },
-        { type: 'wake',     slot: day.wake     },
-      ];
-      for (const { type, slot } of slots) {
-        if (slot == null) continue;
-        // Extract the raw timestamp for ordering; bare 'HH:MM' strings get a
-        // synthetic prefix so earlier days compare correctly.
-        const atStr = (typeof slot === 'object' && slot.at) ? slot.at : null;
-        if (atStr && (latestAt === null || atStr > latestAt)) {
+      // Synthetic/sparse day records: look up the named field for this type only.
+      const slot = day[eventType];
+      if (slot == null) continue;
+      const atStr = (typeof slot === 'object' && slot.at) ? slot.at : null;
+      if (atStr) {
+        if (latestAt === null || atStr > latestAt) {
           latestAt   = atStr;
-          latestType = type;
           latestTime = extractTime(slot);
         }
+      } else {
+        // Bare 'HH:MM' string — no cross-day ordering possible; last day wins.
+        latestTime = extractTime(slot);
       }
     }
   }
 
-  // 2. If the latest event IS the requested type, return its actual time.
-  if (latestType === eventType && latestTime !== null) {
+  // 2. If we found a logged event of this type, return its actual time.
+  if (latestTime !== null) {
     return timeToMinutes(latestTime);
   }
 
