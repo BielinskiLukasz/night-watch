@@ -74,29 +74,27 @@ Items in the backlog not promoted to this milestone:
 
 ## Traceability
 
-*(Filled by `/gsd-plan-phase` and `/gsd-roadmapper`)*
-
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| TIF-01 | — | — | ⬜ Planned |
-| TIF-02 | — | — | ⬜ Planned |
-| TIF-03 | — | — | ⬜ Planned |
-| TIF-04 | — | — | ⬜ Planned |
-| TIF-05 | — | — | ⬜ Planned |
-| TIF-06 | — | — | ⬜ Planned |
-| TIF-07 | — | — | ⬜ Planned |
-| TIF-08 | — | — | ⬜ Planned |
-| TIF-09 | — | — | ⬜ Planned |
-| TIF-10 | — | — | ⬜ Planned |
-| TIF-11 | — | — | ⬜ Planned |
-| MET-01 | — | — | ⬜ Planned |
-| MET-02 | — | — | ⬜ Planned |
-| MET-03 | — | — | ⬜ Planned |
-| MET-04 | — | — | ⬜ Planned |
-| MET-05 | — | — | ⬜ Planned |
-| MET-06 | — | — | ⬜ Planned |
+| TIF-01 | Phase 10 | — | ⬜ Planned |
+| TIF-02 | Phase 10 | — | ⬜ Planned |
+| TIF-03 | Phase 10 | — | ⬜ Planned |
+| TIF-04 | Phase 10 | — | ⬜ Planned |
+| TIF-05 | Phase 10 | — | ⬜ Planned |
+| TIF-06 | Phase 10 | — | ⬜ Planned |
+| TIF-07 | Phase 10 | — | ⬜ Planned |
+| TIF-08 | Phase 10 | — | ⬜ Planned |
+| TIF-09 | Phase 10 | — | ⬜ Planned |
+| TIF-10 | Phase 10 | — | ⬜ Planned |
+| TIF-11 | Phase 10 | — | ⬜ Planned |
+| MET-01 | Phase 11 | — | ⬜ Planned |
+| MET-02 | Phase 11 | — | ⬜ Planned |
+| MET-03 | Phase 11 | — | ⬜ Planned |
+| MET-04 | Phase 11 | — | ⬜ Planned |
+| MET-05 | Phase 11 | — | ⬜ Planned |
+| MET-06 | Phase 11 | — | ⬜ Planned |
 
-**Coverage:** 0/17 (0%) — not yet started
+**Coverage:** 17/17 (100%) — roadmap complete, planning in progress
 
 ---
 

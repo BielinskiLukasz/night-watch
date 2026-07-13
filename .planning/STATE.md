@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Prediction & Metrics
 status: planning
-last_updated: "2026-07-12T23:51:09.639Z"
-last_activity: 2026-07-12
+last_updated: "2026-07-13T00:00:00.000Z"
+last_activity: 2026-07-13
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,28 +17,55 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-10)
+See: .planning/PROJECT.md (updated 2026-07-13)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Milestone v1.1 archived. Ready for `/gsd-new-milestone` to start v1.2.
+**Current focus:** Phase 10 — TIF Algorithm & Settings (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 10 of 11 (TIF Algorithm & Settings)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-12 — Milestone v1.2 started
+Status: Ready to plan
+Last activity: 2026-07-13 — Roadmap created for v1.2 (2 phases, 17 requirements)
 
-## Shipped
+Progress: [░░░░░░░░░░] 0%
 
-| Milestone | Tag | Requirements | Tests | Shipped |
-|-----------|-----|-------------|-------|---------|
-| v1.0 | v1.0.0 | 51/51 | ~592 | 2026-06-30 |
-| v1.1 | v1.1.0 | 9/9 | 635 | 2026-07-10 |
+## Phases
 
-## Next Steps
+| Phase | Name | Requirements | Status |
+|-------|------|-------------|--------|
+| 10 | TIF Algorithm & Settings | TIF-01..11 (11) | Not started |
+| 11 | Metrics Screen | MET-01..06 (6) | Not started |
 
-Run `/gsd-new-milestone` to start the next milestone (requirements, roadmap, and scope definition).
+## Performance Metrics
 
-Backlog items for consideration: see `.planning/BACKLOG.md`
+**Velocity:**
+- Total plans completed: 0 (this milestone)
+- Average duration: —
+- Total execution time: —
+
+*Updated after each plan completion*
+
+## Accumulated Context
+
+### Decisions
+
+- Phase 10: metrics.js is a shared dependency — build it as the first plan in Phase 10; Phase 11 reuses it
+- Phase 10: TIF is additive only; classic forecast.js remains untouched and is the default
+- Phase 11: Metrics screen is a new 5th bottom-nav tab (Today / History / Charts / Accuracy / Metrics)
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+None yet.
+
+## Session Continuity
+
+Last session: 2026-07-13
+Stopped at: Roadmap written; ready to run `/gsd-plan-phase 10`
+Resume file: None
