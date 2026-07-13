@@ -2,14 +2,14 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-12 (cleanup: removed B-09, B-16, B-23, B-24 — shipped or stale; fixed B-28/B-29/B-30 formatting; B-21 fully specified as TIF algorithm; B-26 expanded with ratio metrics)
-Last assigned ID: **B-30** — next new item must be **B-31**
+Last updated: 2026-07-12 (cleanup: removed B-009, B-016, B-023, B-024 — shipped or stale; fixed B-028/B-029/B-030 formatting; B-021 fully specified as TIF algorithm; B-026 expanded with ratio metrics)
+Last assigned ID: **B-030** — next new item must be **B-031**
 
 ---
 
 ## How to use this file
 
-- **Adding an item:** increment the "Last assigned ID" counter at the top, then drop a new `### B-NN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. IDs are monotonic and never reused — even if the previous entry was promoted or removed.
+- **Adding an item:** increment the "Last assigned ID" counter at the top, then drop a new `### B-NNN` block with Source / Status / Earliest slot / What / Why / Open questions / Implementation notes. IDs are monotonic and never reused — even if the previous entry was promoted or removed.
 - **Promoting an item:** `/gsd-review-backlog` (interactive) — moves a chosen item into the active milestone roadmap. Or manually run `/gsd-phase add` and reference the backlog ID in the phase description.
 - **Removing an item:** delete the block or move it under a `## Rejected` heading with a one-line rationale (decisions cost; keep the rationale).
 - **Memory ↔ backlog:** memory captures "this idea exists and here's the context"; this file is the project-level decision queue. Memory is the source for cross-session continuity; this file is the source for milestone planning. Update both when an item lands.
@@ -27,11 +27,11 @@ Last assigned ID: **B-30** — next new item must be **B-31**
 
 These three items are complementary friction-reduction wins for one-handed, in-the-dark logging. They should probably ship together in a dedicated UX-polish phase between Phases 4 and 8, or folded into Phase 8 (PWA & Platform Hardening) since theming and mobile-first picker UX are presentation-layer work.
 
-### B-01 · Per-event-type default times in manual-entry
+### B-001 · Per-event-type default times in manual-entry
 
 **Source:** memory `project_idea_event_type_default_times.md` (Phase 2 UAT)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 4 (history edit/delete lands first) — or as a Phase 8 sub-plan
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands first) — or as a Phase 8 suB-0plan
 
 **What:** When the manual-entry pop-up opens for a specific event type, prefill hour + minute with a sensible default (e.g., wake → 07:00, bedtime → 19:00, nap-start → 13:00). User can still override before saving. Defaults are configurable via a new "Default times" fieldset in the Settings modal.
 
@@ -51,20 +51,20 @@ These three items are complementary friction-reduction wins for one-handed, in-t
 
 ---
 
-### B-02 · Friendly hour picker (clock-face / wheel / tap-grid)
+### B-002 · Friendly hour picker (clock-face / wheel / tap-grid)
 
 **Source:** memory `project_idea_friendly_hour_picker.md` (Phase 2 UAT)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** UX-polish milestone, paired with B-01
+**Earliest sensible slot:** UX-polish milestone, paired with B-001
 
 **What:** Replace the manual-entry HH/MM number inputs (and the 12h AM/PM select from Plan 02-06) with a visual picker — analog clock-face, wheel/scroll, or tap-grid of common times. One tap per axis, works one-handed in the dark.
 
-**Why:** Number inputs open the numeric keyboard but still require focus → tap → tab. A clock-face / wheel / grid is one tap per axis. Same "minimize friction" rationale as B-01 — they're complementary.
+**Why:** Number inputs open the numeric keyboard but still require focus → tap → tab. A clock-face / wheel / grid is one tap per axis. Same "minimize friction" rationale as B-001 — they're complementary.
 
 **Open questions when this gets planned:**
 
 - Analog clock-face vs. wheel/scroll vs. tap-grid — which wins one-handed in the dark?
-- Should the picker show B-01's smart default preselected, or always start at current time?
+- Should the picker show B-001's smart default preselected, or always start at current time?
 - A11y: a clock-face is hard for screen readers. Keep a number-input fallback behind a feature flag or "advanced" toggle.
 - Mobile-first vs. desktop parity — the spreadsheet workflow this replaces was desktop; the PWA install target is mobile.
 
@@ -78,7 +78,7 @@ These three items are complementary friction-reduction wins for one-handed, in-t
 
 ---
 
-### B-03 · Dark mode with manual + hour-based auto-switch
+### B-003 · Dark mode with manual + hour-based auto-switch
 
 **Source:** memory `project_idea_dark_mode.md` (Phase 2 UAT)
 **Status:** captured · not scheduled
@@ -130,7 +130,7 @@ When v2 milestone opens, lift the bodies of these REQ-IDs out of `REQUIREMENTS.m
 
 These four items improve the accuracy and adaptability of the forecasting engine by incorporating temporal rules, duration patterns, contextual flags, and historical nap-skip behavior. They should be evaluated and possibly grouped into a dedicated prediction-refinement phase post-Phase 3.
 
-### B-04 · Time-based bedtime rule
+### B-004 · Time-based bedtime rule
 
 **Source:** user input (2026-06-04)
 **Status:** captured · not scheduled
@@ -153,11 +153,11 @@ These four items improve the accuracy and adaptability of the forecasting engine
 
 ---
 
-### B-05 · Duration-based prediction
+### B-005 · Duration-based prediction
 
 **Source:** user input (2026-06-04)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 3, paired with B-04 as a refinement bundle
+**Earliest sensible slot:** post-Phase 3, paired with B-004 as a refinement bundle
 
 **What:** Predict wake times not only from hour-of-day patterns, but also from typical sleep-duration patterns. E.g., if the child typically sleeps 10.5–11.5 hours and goes down at 22:00, predict wake at ~08:30–09:30. Calculate predictions separately for both duration and hour patterns, then union them for a robust forecast.
 
@@ -178,11 +178,11 @@ These four items improve the accuracy and adaptability of the forecasting engine
 
 ---
 
-### B-06 · Intense day checkbox
+### B-006 · Intense day checkbox
 
 **Source:** user input (2026-06-04)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-04 & B-05 if kept together
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-004 & B-005 if kept together
 
 **What:** Add a boolean "intense day" flag in the event-entry form (quick-log or manual entry). Store this flag in the history record and include it as contextual metadata in the prediction algorithm. E.g., if the child had an "intense day", expect later bedtime or longer nap.
 
@@ -204,11 +204,11 @@ These four items improve the accuracy and adaptability of the forecasting engine
 
 ---
 
-### B-07 · Missing nap impact on bedtime
+### B-007 · Missing nap impact on bedtime
 
 **Source:** user input (2026-06-04)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 3, with B-04 & B-05 as a prediction-refinement bundle
+**Earliest sensible slot:** post-Phase 3, with B-004 & B-005 as a prediction-refinement bundle
 
 **What:** When predicting bedtime after a wake event (i.e., previous event = "wake"), check the historical record to detect how sleep behavior changes when the child skips their typical nap. Use this pattern to adjust the bedtime prediction (earlier bedtime? longer sleep? earlier nap next day?).
 
@@ -233,7 +233,7 @@ These four items improve the accuracy and adaptability of the forecasting engine
 
 These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execution. The core algorithm and UI are complete and verified; these are UX refinements and test-coverage improvements deferred to future phases.
 
-### B-08 · Cold-start message formatting polish
+### B-008 · Cold-start message formatting polish
 
 **Source:** Phase 03-05 user verification checkpoint (2026-06-05)
 **Status:** captured · not scheduled
@@ -250,7 +250,7 @@ These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execut
 
 ---
 
-### B-10 · Prediction cards on-demand toggle (optional UX)
+### B-010 · Prediction cards on-demand toggle (optional UX)
 
 **Source:** Phase 03-05 design decision (2026-06-05)
 **Status:** captured · not scheduled
@@ -272,7 +272,7 @@ These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execut
 
 ---
 
-### B-11 · Probability-band fallback E2E test with realistic fixture data
+### B-011 · Probability-band fallback E2E test with realistic fixture data
 
 **Source:** Phase 03-05 test coverage gap (2026-06-05)
 **Status:** captured · not scheduled
@@ -294,7 +294,7 @@ These four items surfaced during Phase 3 (Forecast Engine & Today Screen) execut
 
 These three items add core editing capabilities and multi-nap history support to the logging workflow.
 
-### B-12 · History and support for multiple naps per day
+### B-012 · History and support for multiple naps per day
 
 **Source:** user input (2026-06-05)
 **Status:** captured · not scheduled
@@ -319,7 +319,7 @@ These three items add core editing capabilities and multi-nap history support to
 
 ---
 
-### B-13 · Undo edit/delete/add of the last event
+### B-013 · Undo edit/delete/add of the last event
 
 **Source:** user input (2026-06-05)
 **Status:** captured · not scheduled
@@ -345,27 +345,27 @@ These three items add core editing capabilities and multi-nap history support to
 
 ---
 
-### B-14 · Redo undone actions
+### B-014 · Redo undone actions
 
 **Source:** user input (2026-06-05)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** paired with B-13 (undo/redo typically ship together)
+**Earliest sensible slot:** paired with B-013 (undo/redo typically ship together)
 
-**What:** Complement the undo feature (B-13) with a redo button/keystroke to restore the undone change (Ctrl+Y or Cmd+Shift+Z convention).
+**What:** Complement the undo feature (B-013) with a redo button/keystroke to restore the undone change (Ctrl+Y or Cmd+Shift+Z convention).
 
 **Why:** Undo/redo is a pair; users expect both. If they undo a delete by mistake, they need to redo it without re-entering.
 
 **Open questions when this gets planned:**
 
-- Single-step redo or full stack? (Likely same scope as B-13.)
-- Same keyboard shortcut convention as B-13?
+- Single-step redo or full stack? (Likely same scope as B-013.)
+- Same keyboard shortcut convention as B-013?
 - Should redo be greyed out when the undo stack is empty?
 
 **Implementation notes:**
 
-- Pair with B-13's undo stack: store both the current and the reverted state.
+- Pair with B-013's undo stack: store both the current and the reverted state.
 - Restore the most recent undone change on redo.
-- UI: add redo button or shortcut in the same location as undo (B-13).
+- UI: add redo button or shortcut in the same location as undo (B-013).
 
 ---
 
@@ -373,7 +373,7 @@ These three items add core editing capabilities and multi-nap history support to
 
 These two items improve the Today screen and introduce a new Events screen for browsing historical logs with filtering options, plus a batch-add workflow for data import.
 
-### B-15 · Three-tab navigation: Today | Events | History
+### B-015 · Three-tab navigation: Today | Events | History
 
 **Source:** user input (2026-06-06)
 **Status:** captured · not scheduled
@@ -406,7 +406,7 @@ These two items improve the Today screen and introduce a new Events screen for b
 
 These four items were surfaced during Phase 7 UAT and post-launch review.
 
-### B-17 · Nap length chart (like Sleep Length)
+### B-017 · Nap length chart (like Sleep Length)
 
 **Source:** user input (2026-06-30)
 **Status:** captured · not scheduled
@@ -430,7 +430,7 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-### B-18 · Invert time axis in Wake & Bedtime Bands chart
+### B-018 · Invert time axis in Wake & Bedtime Bands chart
 
 **Source:** user input (2026-06-30)
 **Status:** captured · not scheduled
@@ -454,11 +454,11 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-### B-19 · Nap Start and Nap End time-band scatter (Chart 2 extension)
+### B-019 · Nap Start and Nap End time-band scatter (Chart 2 extension)
 
 **Source:** user input (2026-06-30)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** paired with B-18 — both extend the Wake & Bedtime Bands chart
+**Earliest sensible slot:** paired with B-018 — both extend the Wake & Bedtime Bands chart
 
 **What:** Add nap-start and nap-end time dots to the Wake & Bedtime Bands scatter plot (currently only wake and bedtime dots). Show all four event types on the same chart with distinct colors. Extend the legend accordingly.
 
@@ -478,7 +478,7 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-### B-22 · Heatmap cell rich tooltip (custom popover)
+### B-022 · Heatmap cell rich tooltip (custom popover)
 
 **Source:** user input (2026-06-30)
 **Status:** captured · not scheduled
@@ -505,7 +505,7 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ## Prediction algorithm (specified 2026-07-12)
 
-### B-21 · Trimmed Intersection Forecast (TIF) algorithm
+### B-021 · Trimmed Intersection Forecast (TIF) algorithm
 
 **Source:** user input (2026-06-30, fully specified 2026-07-12)
 **Status:** captured · not scheduled — **target: v1.2**
@@ -610,7 +610,7 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 
 - New module `js/lib/forecast-tif.js` — pure function `tifForecast(eventLog, settings)` → same return shape as `forecast.js`
 - Settings additions: `trimPct: number` (0–40, step 1, default 10), `precisionTarget: number` (minutes, default 60), `forecastAlgorithm: 'classic' | 'tif'` toggle
-- Depends on `js/lib/metrics.js` (B-26) for duration calculations (sleepDuration, napDuration, activityBeforeNap, activityAfterNap, dayLength, combined)
+- Depends on `js/lib/metrics.js` (B-026) for duration calculations (sleepDuration, napDuration, activityBeforeNap, activityAfterNap, dayLength, combined)
 - Percentile trim helper: `trimmedMinMax(values, trimPct, manualExcludedCount)` → `{ min, max }`; reusable across all window types
 - Anchor resolution helper: `resolveAnchor(eventType, eventLog, tifPredictions)` → actual logged time or midpoint of TIF prediction for that type
 - Unit-test each window builder independently; integration-test the intersection logic with known fixtures; E2E-test that TIF prediction cards render when the toggle is enabled
@@ -619,7 +619,7 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 
 ## More charts and sleep-length calculation audit (captured 2026-07-03)
 
-### B-25 · More diagrams + verify sleep length calculation
+### B-025 · More diagrams + verify sleep length calculation
 
 **Source:** user input (2026-07-03)
 **Status:** captured · not scheduled
@@ -631,7 +631,7 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 
 2. **Add more chart types** to the Charts screen, building on the existing five visualizations. Candidates (to be prioritised during planning):
    - **Sleep duration histogram** — distribution of night-sleep lengths (binned by 15–30 min intervals); reveals modal and tail behaviour better than the line chart.
-   - **Nap-length line chart** — time series of nap duration (see also B-17); mirrors Sleep Length chart structure.
+   - **Nap-length line chart** — time series of nap duration (see also B-017); mirrors Sleep Length chart structure.
    - **Bedtime vs. wake-time scatter** — cross-axis scatter to see if later bedtimes correlate with later wakes; requires two-axis layout.
    - **Rolling-average overlay** — add a 7-day rolling mean line to the Sleep Length chart so short-term noise is visually separated from the trend.
    - **Stage-boundary annotations** — vertical lines at stage transitions on the Sleep Length and Time Bands charts; users already define stages but cannot see them on charts.
@@ -642,7 +642,7 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 
 - What is the exact formula in `buildSleepLengthSeries`? Does it use `bedtime.at - wake.at` or `wake.at + 24h - bedtime.at` for nights that cross midnight?
 - Does it correctly scope to the stage's data when `activeStageId` is set?
-- For the histogram and rolling-average overlay: should they appear as sub-sections or replace/extend section 1 (Sleep Length)?
+- For the histogram and rolling-average overlay: should they appear as suB-0sections or replace/extend section 1 (Sleep Length)?
 - Which additional charts are highest priority — let user rank before planning begins.
 
 **Implementation notes:**
@@ -653,7 +653,7 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 
 ---
 
-### B-26 · Calculated sleep & activity metrics dashboard
+### B-026 · Calculated sleep & activity metrics dashboard
 
 **Source:** user input (2026-07-03, extended 2026-07-12)
 **Status:** captured · not scheduled — **target: v1.2**
@@ -711,21 +711,21 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
-### B-27 · Additional chart types: sleep & nap combined, activity histograms
+### B-027 · Additional chart types: sleep & nap combined, activity histograms
 
 **Source:** user input (2026-07-03)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js, paired with B-25 and B-26
+**Earliest sensible slot:** post-Phase 7 / v1.1 — extends charts-screen.js, paired with B-025 and B-026
 
 **What:** Expand the Charts screen with visualization types that pair or combine the existing event-duration data:
 
 1. **Sleep + Nap combined duration line chart** — stacked or overlaid line showing total rest time per day (sleep duration + nap duration). Useful for spotting days when total rest drops below normal.
 
-2. **Nap duration distribution histogram** — binned histogram of nap lengths (15–30 min buckets) showing which nap durations are most common; complements the existing Sleep Length histogram (B-25).
+2. **Nap duration distribution histogram** — binned histogram of nap lengths (15–30 min buckets) showing which nap durations are most common; complements the existing Sleep Length histogram (B-025).
 
 3. **Activity time histogram** — distribution of awake time (bedtime → wake) to spot whether activity periods vary widely or cluster.
 
-4. **Before-nap activity scatter** — plot wake-to-nap-start gap (X-axis: date, Y-axis: minutes) to see if pre-nap activity is stable or drifts. Overlaid with rolling average (B-25 concept).
+4. **Before-nap activity scatter** — plot wake-to-nap-start gap (X-axis: date, Y-axis: minutes) to see if pre-nap activity is stable or drifts. Overlaid with rolling average (B-025 concept).
 
 5. **After-nap activity scatter** — plot nap-end-to-bedtime gap, same pattern as before-nap.
 
@@ -749,11 +749,11 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
-### B-28 · Reorder event-type list in Add Event (bedtime last)
+### B-028 · Reorder event-type list in Add Event (bedtime last)
 
 **Source:** user input (2026-07-10)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-01/B-02 in UX-polish milestone
+**Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-001/B-002 in UX-polish milestone
 
 **What:** Change the order of event types shown in the Add event popup so that bedtime appears last. Current order places bedtime earlier, which is unintuitive during rapid logging — bedtime is typically the final event of the day and should be visually last in the list.
 
@@ -763,7 +763,7 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 - Should the new order be static or configurable in Settings?
 - Should the order adapt dynamically based on recent history?
-- Interaction with B-01 (default times): does reordering affect which default time is preselected?
+- Interaction with B-001 (default times): does reordering affect which default time is preselected?
 
 **Implementation notes:**
 
@@ -774,11 +774,11 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
-### B-29 · Reorder prediction cards (bedtime last)
+### B-029 · Reorder prediction cards (bedtime last)
 
 **Source:** user input (2026-07-10)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** UX polish milestone — or paired with B-30 (hero card missed-time flag)
+**Earliest sensible slot:** UX polish milestone — or paired with B-030 (hero card missed-time flag)
 
 **What:** Change the order of the four prediction cards so that bedtime prediction appears last. Current order mixes wake/nap/bedtime in a way that doesn’t match the user’s mental model — bedtime is the final event of the day and should be visually last.
 
@@ -788,7 +788,7 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 - Should the order be strictly chronological (wake → nap-start → nap-end → bedtime)?
 - Should the hero card remain independent of this order?
-- Interaction with B-10 (on-demand toggle): does reordering affect reveal order?
+- Interaction with B-010 (on-demand toggle): does reordering affect reveal order?
 
 **Implementation notes:**
 
@@ -799,11 +799,11 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
-### B-30 · Show “missed time” indicator only in hero prediction card
+### B-030 · Show “missed time” indicator only in hero prediction card
 
 **Source:** user input (2026-07-10)
 **Status:** captured · not scheduled
-**Earliest sensible slot:** UX polish milestone — or bundled with B-07 (missing nap impact on bedtime)
+**Earliest sensible slot:** UX polish milestone — or bundled with B-007 (missing nap impact on bedtime)
 
 **What:** Restrict the “missed time” indicator so that it appears only in the hero prediction card (the main “Next Predicted Event” card). The indicator should not appear on the four secondary prediction cards. Hero card = single source of truth for contextual flags.
 
@@ -813,12 +813,12 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 - Should the hero card show a short text (“Missed time today”) or an icon/badge?
 - Should the indicator affect the hero card’s color scheme or only appear as metadata?
-- Interaction with B-07 (missing nap detection): should the missed-time flag appear next to the label or inside the card body?
+- Interaction with B-007 (missing nap detection): should the missed-time flag appear next to the label or inside the card body?
 - Should the missed-time flag also appear in the Today tab header (optional)?
 
 **Implementation notes:**
 
 - Add conditional rendering inside `renderNextEventCard()` only.
 - Remove missed-time flag from the prediction-card renderer (`renderForecastSection()` or equivalent).
-- Ensure the forecaster still computes the missed-time condition (B-07), but presentation-layer decides where it is shown.
+- Ensure the forecaster still computes the missed-time condition (B-007), but presentation-layer decides where it is shown.
 - No changes to prediction algorithm or data shape — purely UI logic.
