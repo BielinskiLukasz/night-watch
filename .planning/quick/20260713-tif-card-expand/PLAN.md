@@ -23,6 +23,6 @@ The `sourceWindows` list (`[{ label, min, max }]`) was already present in every 
 
 ## Tasks
 
-- [ ] Apply change to `renderTifNormalCard`
-- [ ] Run tests
-- [ ] Commit
+- [x] Apply change to `renderTifNormalCard`
+- [x] Run tests
+- [x] Commit

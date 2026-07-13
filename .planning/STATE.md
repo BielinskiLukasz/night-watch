@@ -61,6 +61,12 @@ Progress: [█████░░░░░] 50%
 - Phase 10: TIF is additive only; classic forecast.js remains untouched and is the default
 - Phase 11: Metrics screen is a new 5th bottom-nav tab (Today / History / Charts / Accuracy / Metrics)
 
+### Quick Tasks Completed
+
+| Date | Slug | Description |
+|------|------|-------------|
+| 2026-07-13 | tif-card-expand | Make TIF normal prediction cards collapsible with evidence windows on expand |
+
 ### Pending Todos
 
 None yet.
