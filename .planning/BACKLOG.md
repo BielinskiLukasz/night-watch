@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-12 (cleanup: removed B-009, B-016, B-023, B-024 — shipped or stale; fixed B-028/B-029/B-030 formatting; B-021 fully specified as TIF algorithm; B-026 expanded with ratio metrics)
-Last assigned ID: **B-030** — next new item must be **B-031**
+Last updated: 2026-07-13 (added B-031 — TIF accuracy on Accuracy screen; B-032 — Settings forecast section UX)
+Last assigned ID: **B-032** — next new item must be **B-033**
 
 ---
 
@@ -799,6 +799,41 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 
 ---
 
+### B-031 · TIF accuracy on the Accuracy screen
+
+**Source:** user input (2026-07-13)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-021 (TIF algorithm) is promoted and shipped — requires TIF to be live and `forecastAlgorithm: 'tif'` toggle active
+
+**What:** Extend the Accuracy screen to display TIF-specific backtesting metrics alongside (or instead of) the existing classic-forecaster accuracy grid. When TIF is the active algorithm, show a TIF accuracy section that measures how often TIF's predicted window contained the actual event time — i.e. “actual event fell inside the TIF window” as the primary hit metric. The section should also show the average window width (precision) per event type so users can see the trade-off between confidence and breadth.
+
+Possible layout options (to decide at planning time):
+- **Option A — Replace:** when `forecastAlgorithm === 'tif'`, swap the classic 4×3 grid for a TIF-specific grid (same 4 rows, different columns: “Inside TIF window”, “Avg window width (min)”, “Confidence score ≥ 80%”).
+- **Option B — Extend:** always show the classic grid, and append a second TIF grid below it when TIF is enabled. Allows side-by-side comparison.
+- **Option C — Tab toggle:** add a small pill toggle (“Classic | TIF”) at the top of the Accuracy screen to switch between the two grids.
+
+**Why:** The existing Accuracy screen measures the classic forecaster only (`computeAccuracy` in `js/lib/accuracy.js`). Once TIF ships, users will switch to TIF and expect the Accuracy screen to reflect TIF's actual prediction quality — not the quality of an algorithm they're no longer using. Without this, the Accuracy screen becomes misleading when TIF is active.
+
+**Open questions when this gets planned:**
+
+- Which layout option (A / B / C) is preferred?
+- What is the primary TIF hit metric? “Actual time fell inside [finalStart, finalEnd]” is the natural choice, but should it also track hits against the display window (which may be clipped to `precisionTarget`)?
+- Should the confidence score column show the TIF confidence score (as defined in B-021 Step 4), or a simpler percentage?
+- Should average window width be shown in minutes, or hours:minutes format?
+- When TIF is in low-confidence fallback (union instead of intersection), should those days be counted differently in the backtesting?
+- Interaction with stage filter: the existing screen already respects `activeStageId` via `filterDayRecordsByStage` — TIF accuracy should do the same.
+- Cold-start threshold: same `minDays` gate as the classic grid, or a separate TIF-specific threshold?
+
+**Implementation notes:**
+
+- New pure function `computeTifAccuracy(days, tifForecastFn, snap)` in `js/lib/accuracy.js` (or a new `js/lib/accuracy-tif.js`). For each day, re-run TIF on the history *before* that day (leave-one-out backtesting, same method as `computeAccuracy`), then check if the actual event time falls inside the predicted `[finalStart, finalEnd]` window.
+- Alternatively, if leave-one-out is too expensive, store the TIF prediction at logging time in the event record and compare retroactively (requires a data-shape change — less clean).
+- Columns: `insideWindow` (boolean hit rate), `avgWindowWidth` (mean of `finalEnd − finalStart`), `highConfidencePct` (% of days where confidence score ≥ 80%).
+- UI: add a second grid element or conditional branch inside `mountAccuracyScreen` gated on `snap.forecastAlgorithm === 'tif'`.
+- No new settings beyond what B-021 already introduces.
+
+---
+
 ### B-030 · Show “missed time” indicator only in hero prediction card
 
 **Source:** user input (2026-07-10)
@@ -822,3 +857,39 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 - Remove missed-time flag from the prediction-card renderer (`renderForecastSection()` or equivalent).
 - Ensure the forecaster still computes the missed-time condition (B-007), but presentation-layer decides where it is shown.
 - No changes to prediction algorithm or data shape — purely UI logic.
+
+---
+
+### B-032 · Settings modal: forecast algorithm selector UX
+
+**Source:** user input (2026-07-13)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-021 (TIF algorithm) ships — requires `forecastAlgorithm` toggle to exist in settings
+
+**What:** Two related UX improvements to the Forecast & Prediction section of the Settings modal:
+
+1. **Move the forecast algorithm selector to the top** of the Forecast & Prediction section, so it is the first control the user sees before any algorithm-specific parameters.
+
+2. **Hide classic-only parameters when TIF is selected.** The following fields are unused by TIF and should be hidden (not disabled — hidden) when `forecastAlgorithm === 'tif'`:
+   - `autoOutlier` (auto outlier detection)
+   - `maxDelta` (max delta)
+   - `statBlend` (statistical blend)
+
+   Conversely, TIF-specific fields (`trimPct`, `precisionTarget`) should remain visible regardless, as they only appear when TIF is active.
+
+**Why:** Currently all parameters are shown regardless of which algorithm is active. When a user switches to TIF, they see three settings that do nothing — this is confusing and makes the settings section feel cluttered. Hiding irrelevant fields based on the selected algorithm reduces cognitive load and prevents users from tuning parameters that have no effect on their predictions.
+
+**Open questions when this gets planned:**
+
+- Should the hiding be animated (smooth collapse) or instant? Instant is simpler and consistent with the project's no-animation-complexity constraint.
+- Should hidden fields be `display: none` or `visibility: hidden`? `display: none` is cleaner — no empty space.
+- When the user switches back from TIF to classic, should the hidden fields reappear with their previously saved values? Yes — hiding is purely presentational; values persist in settings store unchanged.
+- Should TIF-specific fields (`trimPct`, `precisionTarget`) be hidden when classic is selected? Currently they appear in the TIF sub-section (Phase 10) — confirm whether they are already gated.
+
+**Implementation notes:**
+
+- In `js/ui/settings-modal.js`: move the `forecastAlgorithm` fieldset/row to be rendered first within the Forecast & Prediction section.
+- Add a `change` listener on the `forecastAlgorithm` select that toggles `hidden` on the three classic-only field rows: `autoOutlier`, `maxDelta`, `statBlend`.
+- On initial render, apply the same `hidden` state based on the current `snap.forecastAlgorithm` value so the UI is correct on first open.
+- No data model or settings store changes — purely presentational logic in the modal renderer.
+- Update any relevant E2E tests in `tests/e2e/` that assert the visibility of these fields.
