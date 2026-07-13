@@ -9,7 +9,7 @@
 // data), or an event object { at: 'YYYY-MM-DDTHH:MM' } (real store data).
 // Return value: number (minutes) or null when required slots are absent.
 //
-// Pure functions — no DOM, no localStorage, no new Date().
+// Pure functions — no DOM, no browser-storage, no system-clock access.
 
 import { timeToMinutes } from './forecast.js';
 
