@@ -53,8 +53,9 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Feature | Description |
 |---------|-------------|
 | Forecast engine | Predicts the next four sleep events from a configurable rolling window of history using P10/P50/P90 percentiles |
-| Hero card | Cycle-aware "Next Predicted Event" card — shows the single most relevant upcoming event, updated on every log action |
-| Uncertainty-honest cards | Tight band (≤ max_delta): shows `central (min – max)`; wide band (> max_delta): collapses to a compact line with a chevron — tap to expand to the full probability table (e.g. `P(wake by 07:00) = 71%`) |
+| TIF algorithm | Opt-in Trimmed Intersection Forecast — trims outlier days, computes multi-source windows per event type, intersects them, and narrows the result to a precision-target width; displayed as a precision score badge on each card |
+| Hero card | Cycle-aware "Next Predicted Event" card — shows the single most relevant upcoming event, updated on every log action; shows precision badge when TIF is active |
+| Uncertainty-honest cards | Classic: tight band (≤ max_delta) shows `central (min – max)`; wide band (> max_delta) collapses to a compact line with chevron — tap to expand to the full probability table. TIF low-confidence (empty intersection): collapsed single line — tap to expand source windows and precision detail |
 | Cold-start gate | When history is below `min_days`, shows an explicit "N more days needed" message instead of fabricating predictions |
 
 ### History
@@ -166,6 +167,9 @@ All settings are available in the **Settings** panel. Changes take effect immedi
 | Stat blend | Median | How central tendency is calculated (median / mean / blend) |
 | Auto-outlier | Off | Automatically flag days that deviate beyond a statistical threshold |
 | Confirm before logging | Off | When ON, quick-log buttons open the pre-filled manual-entry dialog instead of logging instantly |
+| Forecast algorithm | Classic | Algorithm used for predictions: Classic (rolling-window percentile) or TIF (Trimmed Intersection Forecast) |
+| TIF trim % | 10 | Percentage of outlier days trimmed symmetrically before computing TIF intersection windows (0–40); only shown when TIF is selected |
+| TIF precision target | 60 min | Maximum displayed window width in minutes; intersections wider than this are narrowed, centered on the midpoint; only shown when TIF is selected |
 
 ### Life stages
 
@@ -249,6 +253,8 @@ The app targets current evergreen browsers using only baseline platform APIs (`l
 | v1.0 | 7 | Charts, Heatmap & Accuracy | ✅ Complete |
 | v1.0 | 8 | PWA & Platform Hardening | ✅ Complete |
 | v1.1 | 9 | UX Polish | ✅ Complete |
+| v1.2 | 10 | TIF Algorithm & Settings | ✅ Complete |
+| v1.2 | 11 | Metrics Screen | ⬜ Planned |
 
 Full phase details and backlog in [`.planning/ROADMAP.md`](.planning/ROADMAP.md).
 
