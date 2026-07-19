@@ -179,6 +179,10 @@ function showUpdateBanner(reg) {
     if (reg.waiting) {
       pendingControllerReload = true;
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      // Waiting SW already activated (e.g. DevTools "Skip waiting", another tab closed) —
+      // new SW is already in control, so just reload to pick up the new cached files.
+      location.reload();
     }
   }, { once: true });
 }
