@@ -501,15 +501,15 @@ function buildInlineForm(stage, listEl, settings) {
 
   const inputs = el('div', { className: 'stage-inline-inputs' });
 
-  const nameInput  = el('input', { type: 'text', className: 'stage-name-input',  placeholder: 'Stage name', maxlength: '80' });
+  const nameInput  = el('input', { type: 'text', className: 'stage-name-input',  placeholder: 'Stage name', maxlength: '80', name: 'stage-name', autocomplete: 'off' });
   nameInput.setAttribute('aria-label', 'Stage name');
   if (stage) nameInput.value = stage.name;
 
-  const startInput = el('input', { type: 'date', className: 'stage-start-input' });
+  const startInput = el('input', { type: 'date', className: 'stage-start-input', name: 'stage-start', autocomplete: 'off' });
   startInput.setAttribute('aria-label', 'Start date');
   if (stage) startInput.value = stage.startDate;
 
-  const endInput   = el('input', { type: 'date', className: 'stage-end-input' });
+  const endInput   = el('input', { type: 'date', className: 'stage-end-input', name: 'stage-end', autocomplete: 'off' });
   endInput.setAttribute('aria-label', 'End date (leave blank for ongoing)');
   if (stage && stage.endDate) endInput.value = stage.endDate;
 
