@@ -53,8 +53,7 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     await expect(stageBadge).toHaveAttribute('hidden', '');
 
     // NOTE: Activating a stage requires Settings modal interaction
-    // This is deferred to a more complex test; for now, just verify the badge element exists
-    await expect(stageBadge).toBeVisible(); // Element visible in DOM, but hidden attribute set
+    // This is deferred to a more complex test; for now, just verify the badge element exists with hidden attribute
   });
 
   test('Navigation back from Metrics tab hides metrics screen', async ({ page }) => {
