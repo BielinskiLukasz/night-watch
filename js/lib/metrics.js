@@ -162,6 +162,8 @@ export function aggregateMetrics(dayRecords) {
       dayLength: dayLength(day),
       combinedSleepNap: combinedSleepNap(day),
       totalActivity: totalActivity(day),
+      activityBeforeNap: activityBeforeNap(day),
+      activityAfterNap: activityAfterNap(day),
       // Ratios
       activityAfterSleepFactor: activityAfterSleepFactor(day),
       sleepAfterActivityFactor: sleepAfterActivityFactor(day, prevDay),
@@ -233,6 +235,8 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('dayLength', validRows);
   aggregateMetric('combinedSleepNap', napRows);
   aggregateMetric('totalActivity', napRows);
+  aggregateMetric('activityBeforeNap', napRows);
+  aggregateMetric('activityAfterNap', napRows);
   aggregateMetric('activityAfterSleepFactor', napRows);
 
   // SAA: exclude first row, include only rows with both sleep and prev activity
