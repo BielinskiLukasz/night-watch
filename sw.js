@@ -57,6 +57,7 @@ const PRECACHE_LIST = Object.freeze([
   './js/ui/header.js',
   './js/ui/history-screen.js',
   './js/ui/manual-entry.js',
+  './js/ui/metrics-screen.js',
   './js/ui/settings-modal.js',
   './js/ui/today-screen.js',
 ]);
