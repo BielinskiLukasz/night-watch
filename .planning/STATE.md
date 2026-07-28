@@ -5,16 +5,15 @@ milestone_name: Prediction & Metrics
 current_phase: 10
 current_phase_name: TIF Algorithm & Settings
 status: phase_complete
-stopped_at: Phase 10 all plans executed
-last_updated: "2026-07-13T00:00:00.000Z"
+stopped_at: Phase 11 UI-SPEC approved
+last_updated: "2026-07-28T13:41:44.666Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 10 complete — 5 plans executed (metrics.js, forecast-tif.js, settings schema, settings UI, Today screen TIF wiring)
+last_activity_desc: All 5 plans executed, 590 unit + 107 E2E tests passing
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 50
 ---
 
 # Project State
@@ -77,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-13T00:56:41.484Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/NW-10-tif-algorithm-settings/10-CONTEXT.md
+Last session: 2026-07-28T13:41:44.639Z
+Stopped at: Phase 11 UI-SPEC approved
+Resume file: .planning/phases/NW-11-metrics-screen/11-UI-SPEC.md
