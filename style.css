@@ -1586,3 +1586,112 @@ button[data-log] {
   gap: 0.5rem;
 }
 
+/* ==========================================================================
+ * Plan 11-02 — Metrics Screen (Phase 11, Metrics dashboard)
+ * ==========================================================================
+ *
+ * Metrics table (D11-01..D11-22): 14-column table with sticky header and
+ * first-column, summary rows (Avg, Min, Max), per-day metrics rows,
+ * rejected-day dimming, and responsive overflow.
+ *
+ * All dynamic content uses textContent (T-11-05); these selectors are not
+ * innerHTML-dependent. Classes match metrics-screen.js output.
+ */
+
+/* ── Metrics table scroll container (D11-17) ──────────────────────────── */
+
+.metricsTableScroll {
+  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Metrics table main element (D11-01) ──────────────────────────────── */
+
+.metricsTable {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  background-color: #fff;
+}
+
+/* ── Table header cells (sticky top, D11-18) ──────────────────────────── */
+
+.metricsTable th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f1f5f9;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+}
+
+/* ── Top-left corner (sticky both axes, D11-19) ──────────────────────── */
+
+.metricsTable th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+/* ── Data cells (general) ──────────────────────────────────────────────– */
+
+.metricsTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  color: #1a1a1a;
+}
+
+/* ── First column (sticky left, D11-17) ────────────────────────────────– */
+
+.metricsTable td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #fff;
+  text-align: left;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* ── Summary rows (Avg, Min, Max) (D11-11, D11-12) ──────────────────────– */
+
+.metricsTable tbody.metrics-summary-tbody {
+  border-top: 2px solid #cbd5e1;
+}
+
+.metricsTable tbody.metrics-summary-tbody tr {
+  background-color: #f9fafb;
+}
+
+.metricsTable tbody.metrics-summary-tbody tr.metrics-summary-row td:first-child {
+  font-weight: 700;
+}
+
+/* ── Rejected day rows (dimmed, D11-05) ────────────────────────────────– */
+
+.metricsTable tr.rejected td {
+  opacity: 0.5;
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* ── Optional hover effect for readability ────────────────────────────── */
+
+.metricsTable tbody tr:not(.metrics-summary-row):hover td {
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+/* ── Empty state styling ───────────────────────────────────────────────– */
+
+.emptyState {
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
