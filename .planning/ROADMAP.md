@@ -39,7 +39,8 @@
   3. For each logged day, the Metrics screen shows activity-before-nap, activity-after-nap, total activity time, activity-after-sleep factor, and sleep-after-activity factor
   4. The Metrics screen shows historical aggregates — average, minimum with date, and maximum with date — for every displayed metric
   5. When a stage is active, user can toggle the Metrics screen to show only stage-scoped data
-**Plans**: TBD
+**Plans**: 11-01 (metrics.js TDD), 11-02 (metrics-screen.js UI), 11-03 (wiring + E2E)
+**Waves**: Wave 1: 11-01 → Wave 2: 11-02 → Wave 3: 11-03
 **UI hint**: yes
 
 ## Progress
@@ -47,7 +48,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. TIF Algorithm & Settings | 0/5 | Not started | - |
-| 11. Metrics Screen | 0/TBD | Not started | - |
+| 11. Metrics Screen | 0/3 | Planned | - |
 
 ## Backlog
 
