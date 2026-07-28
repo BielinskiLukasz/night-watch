@@ -182,7 +182,7 @@ describe('combinedSleepNap(day)', () => {
 // ---------------------------------------------------------------------------
 
 describe('totalActivity(day)', () => {
-  it('normal nap day: wake=07:00, napStart=12:00, napEnd=13:00, bedtime=21:00 → 600 (5h before + 8h after)', () => {
+  it('normal nap day: wake=07:00, napStart=12:00, napEnd=13:00, bedtime=21:00 → 780 (5h before + 8h after)', () => {
     // activityBeforeNap = 300, activityAfterNap = 480 → 780
     // Actually: 12:00 - 07:00 = 300, 21:00 - 13:00 = 480 → 780
     assert.strictEqual(
