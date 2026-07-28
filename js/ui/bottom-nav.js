@@ -14,7 +14,7 @@
 //     never derived from user input. setAttribute on path.d is safe for static content.
 //   - No innerHTML assignments in this module.
 
-const VALID_TABS = Object.freeze(new Set(['today', 'history', 'charts', 'accuracy']));
+const VALID_TABS = Object.freeze(new Set(['today', 'history', 'charts', 'accuracy', 'metrics']));
 
 // Static tab definitions — icon paths chosen as clean 24x24 viewBox line-art.
 // Today: crescent moon (sleep icon)
@@ -45,6 +45,12 @@ const TABS = Object.freeze([
     label: 'Accuracy',
     // Target / bullseye icon
     pathD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 2a8 8 0 1 1 0 16A8 8 0 0 1 12 4zm0 2a6 6 0 1 0 0 12A6 6 0 0 0 12 6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  },
+  {
+    id: 'metrics',
+    label: 'Metrics',
+    // Table / grid icon — 2x2 grid line-art style, 24x24 viewBox
+    pathD: 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z',
   },
 ]);
 
