@@ -113,20 +113,84 @@ Exceptions:
 
 ## UI Considerations
 
-Applicable state considerations resolved: **7 covered, 0 backstop, 0 unresolved**
+Applicable state considerations resolved: **31 covered, 0 backstop, 0 unresolved, 14 dismissed**
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| Empty | Event log (zero days logged) | ✅ covered | "No logged days yet. Start logging sleep events to see metrics." rendered in cold-start note; table is hidden. No cold-start gate (D11-07) — render from day 1, but if day 1 is missing, empty state triggers. |
-| No-nap day | Nap-dependent columns (Nap, Combined, Act→Nap, Nap→Bed, Activity, AAS, SAA) | ✅ covered | Em-dash ("—") rendered; nap-dependent rows excluded from Avg/Min/Max aggregates (D11-15). |
-| Rejected day | Per-day row styling | ✅ covered | Dimmed opacity (0.5) + light background tint (rgba(0,0,0,0.025)); row remains visible and selectable (D11-05, D4-10 pattern). Excluded from aggregates (D11-13) but count as "previous day" anchor for SAA. |
-| Stage filter active | Summary + per-day rows | ✅ covered | Both scoped to stage data via filterDayRecordsByStage(allDays, snap.stages \|\| [], snap.activeStageId) — 3-arg form (D11-10, Research Pitfall 1). Aggregates recomputed to stage scope. |
-| Stage filter inactive | Summary + per-day rows | ✅ covered | All logged days included; no stage badge shown. |
-| Sticky header scroll | Column headers remain pinned | ✅ covered | position: sticky; top: 0; z-index: 2; stays fixed during vertical scroll (D11-18). |
-| Sticky first column scroll | Date + row labels remain pinned | ✅ covered | position: sticky; left: 0; z-index: 1; stays fixed during horizontal scroll (D11-17). Top-left corner cell (header or summary) uses z-index: 3 for both-axes stickiness (D11-19). |
-| Long text (metric name) | Column headers | ✅ covered | Headers abbreviated to 3–4 chars (e.g., "Sleep", "Nap", "Comb", "Day Len", "Act", "AAS", "SAA"); monospace body text wraps naturally in cells if needed (rare — values are short durations/ratios). |
-| Overflow (wide table) | Entire table container | ✅ covered | #metrics-screen uses overflow-x: auto (matching #history-screen pattern, D4-01). Horizontal scroll allowed on narrow screens (<640px). Summary rows scroll together with per-day rows (same scroll container, D11-11). |
-| First day (no previous-day context) | SAA (Sleep-After-Activity) column | ✅ covered | Shows "—"; excluded from SAA aggregates (D11-16). First day has no ActivityPrevDay anchor. |
+> Probe run: 2026-07-28. 6 elements × 8 taxonomy categories = 45 raised items. 14 dismissed (see end). 31 covered.
+
+### E1 — Metrics Table
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | Table is hidden; "No logged days yet. Start logging sleep events to see metrics." message shown (→ Copywriting Contract) |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; localStorage failures handled by storage adapter (memory fallback), not UI |
+| populated | ✅ covered | Table renders with sticky header row (z-index: 2), sticky first column (z-index: 1), all 14 columns, per-day rows most-recent-first |
+| partial | ✅ covered | No-nap days: em-dash in nap-dependent columns (Nap, Combined, Act→Nap, Nap→Bed, AAS, SAA) (D11-04) |
+| overflow | ✅ covered | Table container uses overflow-x: auto; sticky headers and first column remain pinned during scroll (D11-17, D11-18, D11-19) |
+| zero-one-many | ✅ covered | 0 days → empty state (E5); 1 day → single data row; many days → vertical scroll with sticky header |
+
+### E2 — Summary Rows (Average / Min / Max)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | All aggregate cells render "—"; summary rows remain in DOM but visually empty when no qualifying days |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; storage failures handled at adapter layer |
+| populated | ✅ covered | Three rows (Average, Min, Max) with computed values in all applicable columns, above per-day rows in same scroll container (D11-11, D11-12) |
+| partial | ✅ covered | Nap-dependent aggregate columns computed over nap-days only; no-nap days excluded from those aggregates (D11-15) |
+| overflow | ✅ covered | Same scroll container as E1; summary rows scroll horizontally with data rows |
+| zero-one-many | ✅ covered | Always exactly 3 summary rows (Average, Min, Max); count is independent of data volume |
+| long-text | ✅ covered | Column headers abbreviated to 3–4 characters ("Sleep", "AAS", "Day Len"); aggregate values are short formatted strings |
+
+### E3 — Per-Day Rows
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | No per-day rows rendered; empty state (E5) takes over the screen |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; storage failures handled at adapter layer |
+| populated | ✅ covered | Per-day rows render with formatted metrics; rejected rows dimmed (opacity: 0.5, rgba(0,0,0,0.025) bg) (D11-05, D4-10) |
+| partial | ✅ covered | No-nap days: em-dash in nap-dependent columns; rejected days: dimmed row but still visible (D11-05) |
+| overflow | ✅ covered | Same scroll container as E1; per-day rows scroll both vertically and horizontally |
+| zero-one-many | ✅ covered | 0 rows → empty state; 1 row → single row (no singular copy needed; row is self-explanatory); many → vertical scroll |
+
+### E4 — Stage Filter Badge
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | Badge not rendered when no active stage (conditional render / display: none) |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; storage failures handled at adapter layer |
+| populated | ✅ covered | "Viewing: {Stage Name}" badge visible above table, using existing .stageChip class (D7-18, D11-09) |
+| partial | ~~dismissed~~ | Stage filter badge is binary: either active (showing a stage name) or hidden; no partial state exists |
+| overflow | ✅ covered | Very long stage names truncated via text-overflow: ellipsis in badge container |
+| zero-one-many | ✅ covered | Exactly 0 or 1 active stage at any time; no "many stages" case |
+| long-text | ✅ covered | Long stage names truncated with text-overflow: ellipsis; badge uses inline-flex |
+
+### E5 — Empty State
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | E5 is the empty-state surface itself; renders "No logged days yet. Start logging sleep events to see metrics." with table hidden (→ Copywriting Contract) |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; storage failures handled at adapter layer |
+| populated | ✅ covered | E5 is hidden when data exists; table (E1) replaces it as the primary surface |
+| partial | ~~dismissed~~ | Empty state is binary: renders when data is absent, hidden when data exists; no partial render state |
+| overflow | ✅ covered | Message text is short and fixed; container uses standard max-width (32rem from app shell); no overflow possible |
+| zero-one-many | ✅ covered | E5 only renders at zero data; irrelevant for one/many (those trigger E1 table) |
+
+### E6 — Min/Max Cells
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | Cells render "—" (em-dash, color #94a3b8) when no qualifying days for that aggregate |
+| loading | ~~dismissed~~ | Offline-first PWA reads localStorage synchronously — no async loading state |
+| error | ~~dismissed~~ | No network calls; storage failures handled at adapter layer |
+| populated | ✅ covered | Dual-line cell: value line 1 (0.9rem, bold) + date line 2 (0.75rem, #64748b) via textContent in separate spans (D11-14) |
+| partial | ✅ covered | Shows "—" if value or date is unavailable for that aggregate cell |
+| overflow | ✅ covered | Values are short formatted strings ("7h 30m", "1.85"); dates are fixed format; white-space: nowrap prevents wrapping |
+| zero-one-many | ✅ covered | Always exactly 3 Min/Max cells (one per summary row); count is fixed |
+| long-text | ✅ covered | Values are short formatted strings; dates are fixed ISO-like format; no long text is possible in this cell type |
 
 ---
 
@@ -307,14 +371,14 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-07-28
 
 ---
 
