@@ -27,6 +27,14 @@ function extractTime(slot) {
   return null;
 }
 
+/** @param {null|string|{at:string}} slot @returns {string|null} 'YYYY-MM-DD' or null */
+function extractDate(slot) {
+  if (slot == null) return null;
+  if (typeof slot === 'object' && slot.at) return slot.at.slice(0, 10);
+  // Synthetic test data has no date
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Duration helpers
 // ---------------------------------------------------------------------------
@@ -151,6 +159,9 @@ export function aggregateMetrics(dayRecords) {
     const prevDay = i > 0 ? dayRecords[i - 1] : null;
 
     rows.push({
+      // Date and index tracking for CR-01/CR-02 fixes
+      date: extractDate(day.wake) || extractDate(day.bedtime) || null,
+      _dayRecordsIdx: i,
       // Raw times
       wake: extractTime(day.wake) || null,
       bedtime: extractTime(day.bedtime) || null,
@@ -210,19 +221,13 @@ export function aggregateMetrics(dayRecords) {
     const minRowIdx = rows.findIndex(r => r[key] === minValue);
     const maxRowIdx = rows.findIndex(r => r[key] === maxValue);
 
-    // Extract date from wake or bedtime
+    // Extract date using the stored index
     const getDate = (rowIdx) => {
       const row = rows[rowIdx];
-      if (!row) return null;
-      // Find the original day record to get the full date
-      const origDay = dayRecords[validRows.indexOf(row)];
+      if (!row || row._dayRecordsIdx === undefined) return null;
+      const origDay = dayRecords[row._dayRecordsIdx];
       if (!origDay) return null;
-      const timeStr = extractTime(origDay.wake) || extractTime(origDay.bedtime);
-      // Return just the date part (YYYY-MM-DD)
-      if (origDay.wake && typeof origDay.wake === 'object' && origDay.wake.at) {
-        return origDay.wake.at.slice(0, 10);
-      }
-      return null; // synthetic test data has no date
+      return row.date; // Use the date already extracted and stored in the row
     };
 
     min[key] = minRowIdx >= 0 ? { value: minValue, date: getDate(minRowIdx) } : null;

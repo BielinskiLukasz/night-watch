@@ -173,11 +173,7 @@ function buildDayRow(dayMetrics, snap) {
   // First cell: date (sticky left)
   const dateCell = document.createElement('td');
   dateCell.classList.add('sticky-col');
-  const dateStr = dayMetrics.wake
-    ? dayMetrics.wake.slice(0, 10) // Extract YYYY-MM-DD from HH:MM
-    : dayMetrics.bedtime?.slice(0, 10)
-    ? dayMetrics.bedtime.slice(0, 10)
-    : '—';
+  const dateStr = dayMetrics.date || '—';
   dateCell.textContent = dateStr;
   tr.appendChild(dateCell);
 
