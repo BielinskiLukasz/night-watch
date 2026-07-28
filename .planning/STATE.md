@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Prediction & Metrics
 current_phase: 11
-current_phase_name: Metrics Screen
-status: plans_ready
+current_phase_name: metrics-screen
+status: executing
 stopped_at: Phase 11 plans written — 3 plans (11-01 TDD, 11-02 UI, 11-03 wiring)
-last_updated: "2026-07-28"
+last_updated: "2026-07-28T19:14:46.425Z"
 last_activity: 2026-07-28
-last_activity_desc: Phase 11 planning complete — 3 plans authored, ROADMAP.md updated
+last_activity_desc: Phase NW-11 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
 
-**Current focus:** Phase 11 — Metrics Screen (next)
+**Current focus:** Phase NW-11 — metrics-screen
 
 ## Current Position
 
-Phase: 11 of 11 (Metrics Screen) — PLANNING COMPLETE
-Plan: 0 of 3 (ready to execute)
-Status: Plans written — execute with `/gsd-execute-phase 11`
-Last activity: 2026-07-28 — 3 plans authored for Phase 11 (TDD → UI → wiring)
+Phase: NW-11 (metrics-screen) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase NW-11
+Last activity: 2026-07-28 — Phase NW-11 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Phases
 
