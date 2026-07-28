@@ -110,8 +110,8 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.deepEqual(bad, [], `Non-relative entries found: ${bad.join(', ')}`);
   });
 
-  test('has at least 31 entries (full app file inventory)', () => {
-    assert.ok(precacheList.length >= 31, `Expected >= 31 entries, got ${precacheList.length}`);
+  test('has at least 32 entries (full app file inventory)', () => {
+    assert.ok(precacheList.length >= 32, `Expected >= 32 entries, got ${precacheList.length}`);
   });
 
   test('contains forecast-tif.js (TIF algorithm module)', () => {
@@ -120,5 +120,9 @@ describe('sw.js PRECACHE_LIST', () => {
 
   test('contains metrics.js (TIF metrics helpers module)', () => {
     assert.ok(precacheList.includes('./js/lib/metrics.js'), 'metrics.js missing from PRECACHE_LIST');
+  });
+
+  test('contains metrics-screen.js (Metrics screen UI module)', () => {
+    assert.ok(precacheList.includes('./js/ui/metrics-screen.js'), 'metrics-screen.js missing from PRECACHE_LIST');
   });
 });
