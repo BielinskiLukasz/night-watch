@@ -219,26 +219,15 @@ describe('totalActivity(day)', () => {
 // ---------------------------------------------------------------------------
 
 describe('activityAfterSleepFactor(day)', () => {
-  it('ratio: totalActivity=600, sleepDuration=450 → 1.333...', () => {
+  it('ratio: totalActivity=780, sleepDuration=600 → 1.3', () => {
     const day = makeDay('07:00', '21:00', '12:00', '13:00');
     const aas = activityAfterSleepFactor(day);
     assert.ok(aas !== null);
-    // totalActivity = 600 (300 before + 300 after), sleepDuration = 840
-    // Recalc: wake=07:00, napStart=12:00 → 300
-    //         napEnd=13:00, bedtime=21:00 → 480
-    //         Total activity = 780
-    //         Sleep = 21:00 - 07:00 = 840
-    //         But wait, this doesn't work. Let me recalculate with sensible times.
-    // wake=06:00, bedtime=24:00 (midnight), napStart=12:00, napEnd=13:00
-    // sleepDuration: 24:00 - 06:00 = 18h = 1080 min
-    // But times wrap. Let me use: wake=06:00, bedtime=22:00, napStart=12:00, napEnd=13:00
-    // sleepDuration = 960 min (22:00 - 06:00)
-    // activityBeforeNap = 360 (12:00 - 06:00)
-    // activityAfterNap = 540 (22:00 - 13:00)
-    // totalActivity = 900
-    // aas = 900 / 960 = 0.9375
-    // Let me just assert it's approximately correct
-    assert.ok(Math.abs(aas - (780 / 840)) < 0.01);
+    // activityBeforeNap = 12:00 - 07:00 = 300 min
+    // activityAfterNap  = 21:00 - 13:00 = 480 min → totalActivity = 780
+    // sleepDuration: midnight-crossing formula → 420 - 1260 = -840 + 1440 = 600 min
+    // aas = 780 / 600 = 1.3
+    assert.ok(Math.abs(aas - (780 / 600)) < 0.001);
   });
 
   it('no nap (totalActivity null) → null', () => {
