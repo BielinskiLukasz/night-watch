@@ -82,3 +82,162 @@ export function combinedSleepNap(day) {
   if (sleep == null || nap == null) return null;
   return sleep + nap;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: Ratio metrics and aggregation (D11-23..D11-26)
+// ---------------------------------------------------------------------------
+
+/**
+ * Total activity time: sum of time before nap and time after nap.
+ * Returns null if nap slots are absent (no-nap days have no activity calculation).
+ * (D11-23)
+ */
+export function totalActivity(day) {
+  const before = activityBeforeNap(day);
+  const after  = activityAfterNap(day);
+  if (before == null || after == null) return null;
+  return before + after;
+}
+
+/**
+ * Activity-after-sleep factor (AAS): totalActivity / sleepDuration.
+ * Returns null if either component is null or if sleepDuration is 0 (avoid division by zero).
+ * (D11-24)
+ */
+export function activityAfterSleepFactor(day) {
+  const activity = totalActivity(day);
+  const sleep    = sleepDuration(day);
+  if (activity == null || sleep == null || sleep === 0) return null;
+  return activity / sleep;
+}
+
+/**
+ * Sleep-after-activity factor (SAA): sleepDuration(day) / totalActivity(prevDay).
+ * Returns null if prevDay is absent, if either component is null, or if prevDay.totalActivity is 0.
+ * First day in an array always returns null (per D11-16).
+ * (D11-25)
+ */
+export function sleepAfterActivityFactor(day, prevDay) {
+  if (prevDay == null) return null;
+  const sleep      = sleepDuration(day);
+  const prevActivity = totalActivity(prevDay);
+  if (sleep == null || prevActivity == null || prevActivity === 0) return null;
+  return sleep / prevActivity;
+}
+
+/**
+ * Aggregate metrics across multiple day records.
+ * Returns { rows, avg, min, max } where:
+ *   - rows: array of per-day records with all metric values + raw times
+ *   - avg: average values per metric (null if no valid data)
+ *   - min: { value, date } for each metric (null if no valid data)
+ *   - max: { value, date } for each metric (null if no valid data)
+ *
+ * Logic:
+ *   - Excluded rejected days (day.rejected === true) from all calculations
+ *   - Excluded no-nap days from nap-dependent aggregates (napDuration, totalActivity, etc.)
+ *   - SAA computed by pairing each day with previous day (oldest to newest); first day null
+ *   - Min/Max: return { value, date } where date is the wake time or bedtime as ISO string
+ *   - Average durations: Math.round to nearest minute
+ *   - Average ratios: compute normally
+ *   - Edge cases: empty array, all rejected, single day
+ * (D11-26)
+ */
+export function aggregateMetrics(dayRecords) {
+  // Build per-day rows with all metrics
+  const rows = [];
+  for (let i = 0; i < dayRecords.length; i++) {
+    const day = dayRecords[i];
+    const prevDay = i > 0 ? dayRecords[i - 1] : null;
+
+    rows.push({
+      // Raw times
+      wake: extractTime(day.wake) || null,
+      bedtime: extractTime(day.bedtime) || null,
+      napStart: extractTime(day.napStart) || null,
+      napEnd: extractTime(day.napEnd) || null,
+      // Durations
+      sleepDuration: sleepDuration(day),
+      napDuration: napDuration(day),
+      dayLength: dayLength(day),
+      combinedSleepNap: combinedSleepNap(day),
+      totalActivity: totalActivity(day),
+      // Ratios
+      activityAfterSleepFactor: activityAfterSleepFactor(day),
+      sleepAfterActivityFactor: sleepAfterActivityFactor(day, prevDay),
+      // Metadata
+      rejected: day.rejected || false,
+    });
+  }
+
+  // Compute aggregates (excluding rejected days)
+  const validRows = rows.filter(r => !r.rejected);
+  const napRows = validRows.filter(r => r.napDuration !== null);
+
+  const avg = {};
+  const min = {};
+  const max = {};
+
+  // Helper: compute average, min, max for a metric
+  function aggregateMetric(key, rows, { includeDateField = false } = {}) {
+    const values = rows
+      .map(r => r[key])
+      .filter(v => v !== null && v !== undefined);
+
+    if (values.length === 0) {
+      avg[key] = null;
+      min[key] = null;
+      max[key] = null;
+      return;
+    }
+
+    // Average
+    if (key === 'sleepDuration' || key === 'napDuration' || key === 'dayLength' ||
+        key === 'combinedSleepNap' || key === 'totalActivity') {
+      // Durations: round to nearest minute
+      avg[key] = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+    } else {
+      // Ratios
+      avg[key] = values.reduce((sum, v) => sum + v, 0) / values.length;
+    }
+
+    // Min and Max with date
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    const minRowIdx = rows.findIndex(r => r[key] === minValue);
+    const maxRowIdx = rows.findIndex(r => r[key] === maxValue);
+
+    // Extract date from wake or bedtime
+    const getDate = (rowIdx) => {
+      const row = rows[rowIdx];
+      if (!row) return null;
+      // Find the original day record to get the full date
+      const origDay = dayRecords[validRows.indexOf(row)];
+      if (!origDay) return null;
+      const timeStr = extractTime(origDay.wake) || extractTime(origDay.bedtime);
+      // Return just the date part (YYYY-MM-DD)
+      if (origDay.wake && typeof origDay.wake === 'object' && origDay.wake.at) {
+        return origDay.wake.at.slice(0, 10);
+      }
+      return null; // synthetic test data has no date
+    };
+
+    min[key] = minRowIdx >= 0 ? { value: minValue, date: getDate(minRowIdx) } : null;
+    max[key] = maxRowIdx >= 0 ? { value: maxValue, date: getDate(maxRowIdx) } : null;
+  }
+
+  // Aggregate all metrics
+  aggregateMetric('sleepDuration', validRows);
+  aggregateMetric('napDuration', napRows);
+  aggregateMetric('dayLength', validRows);
+  aggregateMetric('combinedSleepNap', napRows);
+  aggregateMetric('totalActivity', napRows);
+  aggregateMetric('activityAfterSleepFactor', napRows);
+
+  // SAA: exclude first row, include only rows with both sleep and prev activity
+  const saaRows = validRows.filter((r, i) => i > 0 && r.sleepAfterActivityFactor !== null);
+  aggregateMetric('sleepAfterActivityFactor', saaRows);
+
+  return { rows, avg, min, max };
+}
