@@ -1602,6 +1602,8 @@ button[data-log] {
 
 .metricsTableScroll {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 8rem);
   margin: 0;
   padding: 0;
 }
@@ -1645,6 +1647,7 @@ button[data-log] {
   border-bottom: 1px solid #e2e8f0;
   text-align: right;
   color: #1a1a1a;
+  white-space: nowrap;
 }
 
 /* ── First column (sticky left, D11-17) ────────────────────────────────– */
@@ -1693,5 +1696,23 @@ button[data-log] {
   text-align: center;
   color: #64748b;
   font-style: italic;
+}
+
+/* ==========================================================================
+ * Landscape orientation optimization (Plan 11-04, G-NW-11-15)
+ * ==========================================================================
+ *
+ * Reduce padding and increase max-width when in landscape orientation to
+ * allow the metrics table to use more horizontal space.
+ */
+
+@media (orientation: landscape) {
+  body {
+    padding: 0.75rem;
+  }
+
+  #app {
+    max-width: 48rem;
+  }
 }
 
