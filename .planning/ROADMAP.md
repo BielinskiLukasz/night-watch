@@ -45,13 +45,18 @@
   4. The Metrics screen shows historical aggregates — average, minimum with date, and maximum with date — for every displayed metric
   5. When a stage is active, user can toggle the Metrics screen to show only stage-scoped data
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/7 plans executed (original) + 4 gap closure plans
 
 - [x] 11-01-PLAN.md
 - [x] 11-02-PLAN.md
 - [x] 11-03-PLAN.md
+- [ ] 11-04-PLAN.md — CSS & layout fixes (G-NW-11-6, G-NW-11-14, G-NW-11-15)
+- [ ] 11-05-PLAN.md — Metrics functions & formulas (G-NW-11-8, G-NW-11-16, G-NW-11-11)
+- [ ] 11-06-PLAN.md — Data attribution & row order (G-NW-11-12, G-NW-11-13)
+- [ ] 11-07-PLAN.md — Stage badge E2E (G-NW-11-9)
 
-**Waves**: Wave 1: 11-01 → Wave 2: 11-02 → Wave 3: 11-03
+**Waves**: Original: Wave 1: 11-01 → Wave 2: 11-02 → Wave 3: 11-03
+Gap Closure: Wave 1: 11-04 + 11-05 (parallel) → Wave 2: 11-06 → Wave 3: 11-07
 **UI hint**: yes
 
 ## Progress
