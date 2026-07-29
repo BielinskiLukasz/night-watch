@@ -24,12 +24,12 @@
 
 ### MET — Metrics Screen
 
-- [ ] **MET-01**: User can navigate to a dedicated Metrics screen from the bottom navigation bar (5th tab, alongside Today, History, Charts, Accuracy)
-- [ ] **MET-02**: Metrics screen shows per-day duration metrics for each logged day: sleep duration (night only), nap duration, combined sleep+nap duration, and day length (wake→bedtime)
-- [ ] **MET-03**: Metrics screen shows per-day activity breakdown: total activity time (day length − nap duration), activity before nap (wake→nap-start), and activity after nap (nap-end→bedtime)
-- [ ] **MET-04**: Metrics screen shows per-day ratio metrics: activity-after-sleep factor (activity time ÷ night-sleep duration) and sleep-after-activity factor (night-sleep duration ÷ previous day's activity time)
-- [ ] **MET-05**: Metrics screen shows historical aggregates for all duration and ratio metrics: average, minimum value with date, and maximum value with date
-- [ ] **MET-06**: When an active stage is set, user can toggle the Metrics screen to show only data within the current stage (same scope control behaviour as the Charts screen stage filter)
+- [x] **MET-01**: User can navigate to a dedicated Metrics screen from the bottom navigation bar (5th tab, alongside Today, History, Charts, Accuracy)
+- [x] **MET-02**: Metrics screen shows per-day duration metrics for each logged day: sleep duration (night only), nap duration, combined sleep+nap duration, and day length (wake→bedtime)
+- [x] **MET-03**: Metrics screen shows per-day activity breakdown: total activity time (day length − nap duration), activity before nap (wake→nap-start), and activity after nap (nap-end→bedtime)
+- [x] **MET-04**: Metrics screen shows per-day ratio metrics: activity-after-sleep factor (activity time ÷ night-sleep duration) and sleep-after-activity factor (night-sleep duration ÷ previous day's activity time)
+- [x] **MET-05**: Metrics screen shows historical aggregates for all duration and ratio metrics: average, minimum value with date, and maximum value with date
+- [x] **MET-06**: When an active stage is set, user can toggle the Metrics screen to show only data within the current stage (same scope control behaviour as the Charts screen stage filter)
 
 ---
 
