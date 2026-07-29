@@ -565,7 +565,7 @@ function renderStageSelector(container, stages, activeStageId, settingsStore) {
   const label = el('label', { className: 'stage-selector-label' });
   label.appendChild(document.createTextNode('Showing data for: '));
 
-  const select = el('select', { className: 'stage-select' });
+  const select = el('select', { className: 'stage-select', id: 'stage-select', name: 'stage-select' });
   select.setAttribute('aria-label', 'Select data stage');
 
   // "All data" option (D6-12)
