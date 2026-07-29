@@ -334,7 +334,7 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
 
     // Per-day rows tbody (most-recent-first, D11-03)
     const daysTbody = document.createElement('tbody');
-    for (let i = rows.length - 1; i >= 0; i--) {
+    for (let i = 0; i < rows.length; i++) {
       const dayRow = buildDayRow(rows[i], snap);
       daysTbody.appendChild(dayRow);
     }

@@ -170,9 +170,22 @@ export function aggregateMetrics(dayRecords) {
     const day = dayRecords[i];
     const prevDay = i > 0 ? dayRecords[i - 1] : null;
 
+    // Date attribution: prefer wake date, but if only bedtime exists (overnight sleep),
+    // attribute to the next calendar day (the wake date).
+    let dateStr = extractDate(day.wake);
+    if (!dateStr && day.bedtime) {
+      const bedtimeDate = extractDate(day.bedtime);
+      if (bedtimeDate) {
+        // Parse date and add 1 day (wake occurs on the next calendar date)
+        const [year, month, dayNum] = bedtimeDate.split('-').map(Number);
+        const nextDate = new Date(year, month - 1, dayNum + 1);
+        dateStr = nextDate.toISOString().slice(0, 10);
+      }
+    }
+
     rows.push({
       // Date and index tracking for CR-01/CR-02 fixes
-      date: extractDate(day.wake) || extractDate(day.bedtime) || null,
+      date: dateStr || null,
       _dayRecordsIdx: i,
       // Raw times: store full ISO strings for formatTime, not extractTime results
       wake: (day.wake && day.wake.at) ? day.wake.at : (typeof day.wake === 'string' ? day.wake : null),
