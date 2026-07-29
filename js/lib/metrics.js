@@ -174,11 +174,11 @@ export function aggregateMetrics(dayRecords) {
       // Date and index tracking for CR-01/CR-02 fixes
       date: extractDate(day.wake) || extractDate(day.bedtime) || null,
       _dayRecordsIdx: i,
-      // Raw times
-      wake: extractTime(day.wake) || null,
-      bedtime: extractTime(day.bedtime) || null,
-      napStart: extractTime(day.napStart) || null,
-      napEnd: extractTime(day.napEnd) || null,
+      // Raw times: store full ISO strings for formatTime, not extractTime results
+      wake: (day.wake && day.wake.at) ? day.wake.at : (typeof day.wake === 'string' ? day.wake : null),
+      bedtime: (day.bedtime && day.bedtime.at) ? day.bedtime.at : (typeof day.bedtime === 'string' ? day.bedtime : null),
+      napStart: (day.napStart && day.napStart.at) ? day.napStart.at : (typeof day.napStart === 'string' ? day.napStart : null),
+      napEnd: (day.napEnd && day.napEnd.at) ? day.napEnd.at : (typeof day.napEnd === 'string' ? day.napEnd : null),
       // Durations
       sleepDuration: sleepDuration(day),
       napDuration: napDuration(day),

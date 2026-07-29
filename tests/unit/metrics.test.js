@@ -457,6 +457,41 @@ describe('aggregateMetrics(dayRecords)', () => {
       assert.ok(result.min.sleepDuration.date !== undefined);
     }
   });
+
+  it('time columns store full ISO strings (not extractTime results)', () => {
+    // Test with real event objects that have .at property
+    const days = [
+      {
+        wake: { at: '2026-01-01T07:00' },
+        bedtime: { at: '2025-12-31T21:00' },
+        napStart: { at: '2026-01-01T12:00' },
+        napEnd: { at: '2026-01-01T13:00' },
+      },
+    ];
+    const result = aggregateMetrics(days);
+
+    // Row should have full ISO strings, not 'HH:MM'
+    assert.strictEqual(result.rows[0].wake, '2026-01-01T07:00');
+    assert.strictEqual(result.rows[0].bedtime, '2025-12-31T21:00');
+    assert.strictEqual(result.rows[0].napStart, '2026-01-01T12:00');
+    assert.strictEqual(result.rows[0].napEnd, '2026-01-01T13:00');
+  });
+
+  it('time columns handle null values gracefully', () => {
+    const days = [
+      {
+        wake: { at: '2026-01-01T07:00' },
+        bedtime: { at: '2025-12-31T21:00' },
+        napStart: null,
+        napEnd: null,
+      },
+    ];
+    const result = aggregateMetrics(days);
+
+    // Should store null for missing times, not crash
+    assert.strictEqual(result.rows[0].wake, '2026-01-01T07:00');
+    assert.strictEqual(result.rows[0].napStart, null);
+  });
 });
 
 // ---------------------------------------------------------------------------
