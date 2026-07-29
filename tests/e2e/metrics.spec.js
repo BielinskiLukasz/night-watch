@@ -47,13 +47,118 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
   });
 
   test('MET-06: Stage filter badge shown/hidden based on active stage', async ({ page }) => {
-    // Check that stage badge is initially hidden (no stage active)
-    const stageBadge = page.locator('#metrics-screen .stageChip');
-    await page.locator('[data-tab="metrics"]').click();
-    await expect(stageBadge).toHaveAttribute('hidden', '');
+    // ========================================================================
+    // PART 1: Set up test data
+    // ========================================================================
+    // Seed a database with one sleep event so we have metrics to display.
+    // Create a stage that covers the logged event's date.
 
-    // NOTE: Activating a stage requires Settings modal interaction
-    // This is deferred to a more complex test; for now, just verify the badge element exists with hidden attribute
+    // Get today's date
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Seed data: one logged event (wake) and one stage
+    const seedDb = {
+      version: 2,
+      settings: {
+        subjectName: 'Test',
+        cutoverHour: 4,
+        timeFormat: '24h',
+        maxDelta: 30,
+        minDays: 1,
+        windowDays: 7,
+        statBlend: 'median',
+        autoOutlier: false,
+        groupingMode: 'calendar',
+        rejectedDays: [],
+        stages: [
+          {
+            id: 'work-week',
+            name: 'Work Week',
+            startDate: '2024-01-01',
+            endDate: null
+          }
+        ],
+        activeStageId: null,
+      },
+      events: [
+        {
+          type: 'wake',
+          at: todayISO + 'T08:00'
+        },
+        {
+          type: 'bedtime',
+          at: todayISO + 'T22:00'
+        }
+      ],
+      activityLog: {},
+    };
+
+    // Inject the seed data and reload
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+
+    // ========================================================================
+    // PART 2: Verify stage badge is initially hidden on Metrics screen
+    // ========================================================================
+    await page.locator('[data-tab="metrics"]').click();
+    const stageBadge = page.locator('#metrics-screen .stageChip');
+    await expect(stageBadge).toHaveAttribute('hidden');
+
+    // ========================================================================
+    // PART 3: Select the stage from the stage selector on Today screen
+    // ========================================================================
+    // Navigate back to Today screen
+    await page.locator('[data-tab="today"]').click();
+
+    // Find and click the stage selector dropdown
+    const stageSelect = page.locator('.stage-select');
+    await expect(stageSelect).toBeVisible();
+
+    // Select the "Work Week" stage (id='work-week')
+    await stageSelect.selectOption('work-week');
+
+    // Verify the selection was saved to localStorage
+    const storedAfterSelect = await page.evaluate(() => {
+      const raw = localStorage.getItem('nightwatch:db');
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(storedAfterSelect.settings.activeStageId).toBe('work-week');
+
+    // ========================================================================
+    // PART 4: Navigate to Metrics screen and verify badge is visible
+    // ========================================================================
+    await page.locator('[data-tab="metrics"]').click();
+
+    // Badge should now be visible and show "Viewing: Work Week"
+    await expect(stageBadge).not.toHaveAttribute('hidden');
+    const badgeText = await stageBadge.textContent();
+    expect(badgeText).toContain('Viewing: Work Week');
+
+    // ========================================================================
+    // PART 5: Select "All" and verify badge is hidden again
+    // ========================================================================
+    // Go back to Today screen
+    await page.locator('[data-tab="today"]').click();
+
+    // Select "All data" (empty value)
+    await stageSelect.selectOption('');
+
+    // Verify it was saved
+    const storedAfterDeselect = await page.evaluate(() => {
+      const raw = localStorage.getItem('nightwatch:db');
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(storedAfterDeselect.settings.activeStageId).toBeNull();
+
+    // Navigate back to Metrics screen
+    await page.locator('[data-tab="metrics"]').click();
+
+    // Badge should now be hidden again
+    await expect(stageBadge).toHaveAttribute('hidden');
   });
 
   test('Navigation back from Metrics tab hides metrics screen', async ({ page }) => {
