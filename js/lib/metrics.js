@@ -56,20 +56,30 @@ export function napDuration(day) {
   return timeToMinutes(endStr) - timeToMinutes(startStr);
 }
 
-/** Active time between wake and nap start. */
+/** Active time between wake and nap start. For complete no-nap days (both napStart and napEnd null), returns 0. */
 export function activityBeforeNap(day) {
   const wakeStr  = extractTime(day.wake);
   const napStr   = extractTime(day.napStart);
-  if (wakeStr == null || napStr == null) return null;
+  const napEndStr = extractTime(day.napEnd);
+  if (wakeStr == null) return null;
+  // Complete no-nap day: both napStart and napEnd are null → return 0
+  if (napStr == null && napEndStr == null) return 0;
+  // Otherwise use original logic: both napStart and napEnd must be present (or just napStart for synthetic tests)
+  if (napStr == null) return null;
   const result = timeToMinutes(napStr) - timeToMinutes(wakeStr);
   return result < 0 ? result + 24 * 60 : result;
 }
 
-/** Active time between nap end and bedtime. */
+/** Active time between nap end and bedtime. For complete no-nap days (both napStart and napEnd null), returns 0. */
 export function activityAfterNap(day) {
+  const napStartStr = extractTime(day.napStart);
   const napEndStr = extractTime(day.napEnd);
   const bedStr    = extractTime(day.bedtime);
-  if (napEndStr == null || bedStr == null) return null;
+  if (bedStr == null) return null;
+  // Complete no-nap day: both napStart and napEnd are null → return 0
+  if (napStartStr == null && napEndStr == null) return 0;
+  // Otherwise use original logic: both napStart and napEnd must be present (or just napEnd for synthetic tests)
+  if (napEndStr == null) return null;
   const result = timeToMinutes(bedStr) - timeToMinutes(napEndStr);
   return result < 0 ? result + 24 * 60 : result;
 }
@@ -83,11 +93,12 @@ export function dayLength(day) {
   return result < 0 ? result + 24 * 60 : result;
 }
 
-/** Sum of night sleep and nap; null if either component is unavailable. */
+/** Sum of night sleep and nap; if no nap, returns sleep duration only. Null if sleep is unavailable. */
 export function combinedSleepNap(day) {
   const sleep = sleepDuration(day);
   const nap   = napDuration(day);
-  if (sleep == null || nap == null) return null;
+  if (sleep == null) return null;
+  if (nap == null) return sleep; // No nap → return sleep duration only
   return sleep + nap;
 }
 
@@ -97,7 +108,8 @@ export function combinedSleepNap(day) {
 
 /**
  * Total activity time: sum of time before nap and time after nap.
- * Returns null if nap slots are absent (no-nap days have no activity calculation).
+ * For no-nap days, returns 0 (both before and after are 0).
+ * Returns null only if wake or bedtime are unavailable.
  * (D11-23)
  */
 export function totalActivity(day) {
@@ -108,26 +120,26 @@ export function totalActivity(day) {
 }
 
 /**
- * Activity-after-sleep factor (AAS): totalActivity / sleepDuration.
- * Returns null if either component is null or if sleepDuration is 0 (avoid division by zero).
+ * Activity-after-sleep factor (AAS): totalActivity / combinedSleepNap.
+ * Returns null if either component is null or if combinedSleepNap is 0 (avoid division by zero).
  * (D11-24)
  */
 export function activityAfterSleepFactor(day) {
   const activity = totalActivity(day);
-  const sleep    = sleepDuration(day);
-  if (activity == null || sleep == null || sleep === 0) return null;
-  return activity / sleep;
+  const combined = combinedSleepNap(day);
+  if (activity == null || combined == null || combined === 0) return null;
+  return activity / combined;
 }
 
 /**
- * Sleep-after-activity factor (SAA): sleepDuration(day) / totalActivity(prevDay).
+ * Sleep-after-activity factor (SAA): combinedSleepNap(day) / totalActivity(prevDay).
  * Returns null if prevDay is absent, if either component is null, or if prevDay.totalActivity is 0.
  * First day in an array always returns null (per D11-16).
  * (D11-25)
  */
 export function sleepAfterActivityFactor(day, prevDay) {
   if (prevDay == null) return null;
-  const sleep      = sleepDuration(day);
+  const sleep      = combinedSleepNap(day);
   const prevActivity = totalActivity(prevDay);
   if (sleep == null || prevActivity == null || prevActivity === 0) return null;
   return sleep / prevActivity;
