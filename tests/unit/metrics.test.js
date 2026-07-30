@@ -349,6 +349,56 @@ describe('sleepAfterActivityFactor(day, prevDay)', () => {
       null,
     );
   });
+
+  // === NEW TESTS FOR NO-NAP DAYS (D11-25 gap closure) ===
+
+  it('no-nap current day with previous day having activity (nap): sleepDuration / prevActivity', () => {
+    // current day: wake=07:00, bedtime=21:00, no nap (napStart=null, napEnd=null)
+    //   sleepDuration = 600 min (10 hours: 21:00 to 07:00)
+    //   combinedSleepNap returns sleepDuration when no nap → 600
+    // prevDay: wake=06:00, bedtime=22:00, napStart=12:00, napEnd=13:00 (has nap with activity)
+    //   before nap: 360 min (12:00 - 06:00), after nap: 540 min (22:00 - 13:00)
+    //   activity = 360 + 540 = 900
+    // saa = 600 / 900 ≈ 0.667
+    const prevDay = makeDay('06:00', '22:00', '12:00', '13:00');
+    const currentDay = makeDay('07:00', '21:00', null, null); // no nap
+    const saa = sleepAfterActivityFactor(currentDay, prevDay);
+    assert.ok(saa !== null, 'SAA should not be null for no-nap day with active prevDay');
+    assert.ok(typeof saa === 'number');
+    const expectedSaa = 600 / 900; // sleepDuration / prevActivity = 0.667
+    assert.ok(Math.abs(saa - expectedSaa) < 0.001, `Expected ${expectedSaa}, got ${saa}`);
+  });
+
+  it('no-nap current day with no-nap previous day (zero prevActivity): division by zero → null', () => {
+    // current day: wake=07:00, bedtime=21:00, no nap
+    // prevDay: wake=06:00, bedtime=22:00, no nap (totalActivity = 0 + 0 = 0)
+    // saa = 600 / 0 → null (division by zero)
+    const prevDay = makeDay('06:00', '22:00', null, null); // no nap
+    const currentDay = makeDay('07:00', '21:00', null, null); // no nap
+    assert.strictEqual(
+      sleepAfterActivityFactor(currentDay, prevDay),
+      null,
+      'SAA should be null when prevDay has zero activity (no nap)',
+    );
+  });
+
+  it('day with nap: uses combinedSleepNap = sleep + nap (baseline)', () => {
+    // prevDay: wake=06:00, bedtime=22:00, nap 12:00-13:00
+    //   activity = 360 (before) + 540 (after) = 900
+    // current day: wake=07:00, bedtime=21:00, nap 12:00-13:00
+    //   sleepDuration = 600 min, napDuration = 60 min
+    //   combinedSleepNap = 600 + 60 = 660
+    // saa = 660 / 900 ≈ 0.733 (using combinedSleepNap)
+    // NOT 600 / 900 ≈ 0.667 (sleepDuration alone)
+    const prevDay = makeDay('06:00', '22:00', '12:00', '13:00');
+    const currentDay = makeDay('07:00', '21:00', '12:00', '13:00'); // has nap
+    const saa = sleepAfterActivityFactor(currentDay, prevDay);
+    assert.ok(saa !== null);
+    const expectedWithNap = 660 / 900; // combinedSleepNap / prevActivity ≈ 0.733
+    const expectedWithoutNap = 600 / 900; // sleepDuration / prevActivity ≈ 0.667 (wrong formula)
+    assert.ok(Math.abs(saa - expectedWithNap) < 0.001, `Should use combined (nap + sleep), got ${saa} vs expected ${expectedWithNap}`);
+    assert.ok(Math.abs(saa - expectedWithoutNap) > 0.01, `Should NOT use sleep duration alone`);
+  });
 });
 
 // ---------------------------------------------------------------------------
