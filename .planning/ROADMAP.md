@@ -45,7 +45,7 @@
   4. The Metrics screen shows historical aggregates — average, minimum with date, and maximum with date — for every displayed metric
   5. When a stage is active, user can toggle the Metrics screen to show only stage-scoped data
 
-**Plans**: 10 plans total
+**Plans**: 8/10 plans executed
 
 - [x] 11-01-PLAN.md
 - [x] 11-02-PLAN.md
@@ -54,7 +54,7 @@
 - [x] 11-05-PLAN.md — Metrics functions & formulas (G-NW-11-8, G-NW-11-16, G-NW-11-11)
 - [x] 11-06-PLAN.md — Data attribution & row order (G-NW-11-12, G-NW-11-13)
 - [x] 11-07-PLAN.md — Stage badge E2E (G-NW-11-9)
-- [ ] 11-08-PLAN.md — UI tweaks: button centering & reorder, reduce gutters, column order (G-NW-11-17, G-NW-11-19, G-NW-11-20)
+- [x] 11-08-PLAN.md — UI tweaks: button centering & reorder, reduce gutters, column order (G-NW-11-17, G-NW-11-19, G-NW-11-20)
 - [ ] 11-09-PLAN.md — SAA no-nap computation (G-NW-11-18)
 - [ ] 11-10-PLAN.md — Overnight sleep pairing & duration (G-NW-11-21, G-NW-11-22)
 
@@ -68,7 +68,7 @@ Gap Closure (final): Wave 1: 11-08 + 11-09 (parallel) → Wave 2: 11-10
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. TIF Algorithm & Settings | 0/5 | Not started | - |
-| 11. Metrics Screen | 6/7 | In Progress|  |
+| 11. Metrics Screen | 8/10 | In Progress|  |
 
 ## Backlog
 
