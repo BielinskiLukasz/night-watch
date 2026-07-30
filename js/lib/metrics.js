@@ -230,6 +230,7 @@ export function aggregateMetrics(dayRecords) {
       }
     }
 
+    const napDur = napDuration(day);
     rows.push({
       // Date and index tracking for CR-01/CR-02 fixes
       date: dateStr || null,
@@ -241,9 +242,9 @@ export function aggregateMetrics(dayRecords) {
       napEnd: (day.napEnd && day.napEnd.at) ? day.napEnd.at : (typeof day.napEnd === 'string' ? day.napEnd : null),
       // Durations (with overnight sleep handling)
       sleepDuration: sleepDur,
-      napDuration: napDuration(day),
+      napDuration: napDur,
       dayLength: dayLength(day),
-      combinedSleepNap: sleepDur !== null ? (napDuration(day) !== null ? sleepDur + napDuration(day) : sleepDur) : null,
+      combinedSleepNap: sleepDur !== null ? (napDur !== null ? sleepDur + napDur : sleepDur) : null,
       totalActivity: totalActivity(day),
       activityBeforeNap: activityBeforeNap(day),
       activityAfterNap: activityAfterNap(day),
@@ -310,7 +311,7 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('sleepDuration', validRows);
   aggregateMetric('napDuration', napRows);
   aggregateMetric('dayLength', validRows);
-  aggregateMetric('combinedSleepNap', napRows);
+  aggregateMetric('combinedSleepNap', validRows);
   aggregateMetric('totalActivity', napRows);
   aggregateMetric('activityBeforeNap', napRows);
   aggregateMetric('activityAfterNap', napRows);
