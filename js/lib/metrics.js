@@ -160,26 +160,73 @@ export function sleepAfterActivityFactor(day, prevDay) {
  *   - Min/Max: return { value, date } where date is the wake time or bedtime as ISO string
  *   - Average durations: Math.round to nearest minute
  *   - Average ratios: compute normally
- *   - Edge cases: empty array, all rejected, single day
+ *   - Overnight sleep (bedtime on one date, wake on next): paired across calendar dates
  * (D11-26)
  */
 export function aggregateMetrics(dayRecords) {
   // Build per-day rows with all metrics
   const rows = [];
+
+  // Helper: calculate sleep duration for overnight events (bedtime prev day, wake next day)
+  function calculateOvernightSleep(bedtimeStr, nextDayWakeStr) {
+    if (!bedtimeStr || !nextDayWakeStr) return null;
+    const bedtimeMinutes = timeToMinutes(bedtimeStr);
+    const wakeMinutes = timeToMinutes(nextDayWakeStr);
+    // Wake is on the next day, so account for midnight crossing
+    const result = wakeMinutes - bedtimeMinutes;
+    return result < 0 ? result + 24 * 60 : result;
+  }
+
+  // Helper: add one day to a YYYY-MM-DD string using string manipulation (timezone-safe)
+  function addOneDay(ymd) {
+    const [year, month, day] = ymd.split('-').map(Number);
+    // Use UTC date arithmetic to avoid timezone issues
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  }
+
   for (let i = 0; i < dayRecords.length; i++) {
     const day = dayRecords[i];
     const prevDay = i > 0 ? dayRecords[i - 1] : null;
+    const nextDay = i < dayRecords.length - 1 ? dayRecords[i + 1] : null;
 
-    // Date attribution: prefer wake date, but if only bedtime exists (overnight sleep),
-    // attribute to the next calendar day (the wake date).
-    let dateStr = extractDate(day.wake);
+    // Date attribution and overnight sleep handling
+    let dateStr = null;
+    let sleepDur = sleepDuration(day); // Normal case: both bedtime and wake in same day
+
+    // Overnight sleep case: Current day has wake but no bedtime
+    // (bedtime is in previous day — check if we can pair them)
+    if (day.wake && !day.bedtime && prevDay && prevDay.bedtime) {
+      const wakeDateFromWake = extractDate(day.wake);
+      const bedtimeDateFromBedtime = extractDate(prevDay.bedtime);
+      if (wakeDateFromWake && bedtimeDateFromBedtime) {
+        // Check if current day's wake is on the expected next calendar date after bedtime
+        const expectedDateStr = addOneDay(bedtimeDateFromBedtime);
+        if (wakeDateFromWake === expectedDateStr) {
+          // Pair them: bedtime (prev day) → wake (current day)
+          dateStr = wakeDateFromWake; // Attribute to the wake date
+          const bedtimeStr = extractTime(prevDay.bedtime);
+          const wakeStr = extractTime(day.wake);
+          sleepDur = calculateOvernightSleep(bedtimeStr, wakeStr);
+        } else {
+          // No matching bedtime on previous day, use wake date
+          dateStr = wakeDateFromWake;
+        }
+      }
+    }
+
+    // Fallback: if we have a wake date, use it
+    if (!dateStr && day.wake) {
+      dateStr = extractDate(day.wake);
+    }
+
+    // Fallback: if only bedtime exists, attribute to bedtime+1 day
     if (!dateStr && day.bedtime) {
       const bedtimeDate = extractDate(day.bedtime);
       if (bedtimeDate) {
-        // Parse date and add 1 day (wake occurs on the next calendar date)
-        const [year, month, dayNum] = bedtimeDate.split('-').map(Number);
-        const nextDate = new Date(year, month - 1, dayNum + 1);
-        dateStr = nextDate.toISOString().slice(0, 10);
+        dateStr = addOneDay(bedtimeDate);
       }
     }
 
@@ -192,11 +239,11 @@ export function aggregateMetrics(dayRecords) {
       bedtime: (day.bedtime && day.bedtime.at) ? day.bedtime.at : (typeof day.bedtime === 'string' ? day.bedtime : null),
       napStart: (day.napStart && day.napStart.at) ? day.napStart.at : (typeof day.napStart === 'string' ? day.napStart : null),
       napEnd: (day.napEnd && day.napEnd.at) ? day.napEnd.at : (typeof day.napEnd === 'string' ? day.napEnd : null),
-      // Durations
-      sleepDuration: sleepDuration(day),
+      // Durations (with overnight sleep handling)
+      sleepDuration: sleepDur,
       napDuration: napDuration(day),
       dayLength: dayLength(day),
-      combinedSleepNap: combinedSleepNap(day),
+      combinedSleepNap: sleepDur !== null ? (napDuration(day) !== null ? sleepDur + napDuration(day) : sleepDur) : null,
       totalActivity: totalActivity(day),
       activityBeforeNap: activityBeforeNap(day),
       activityAfterNap: activityAfterNap(day),
