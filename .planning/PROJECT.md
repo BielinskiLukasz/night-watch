@@ -145,7 +145,15 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - Metrics screen (B-26) — new 5th bottom-nav tab with daily per-day metrics, ratio/factor metrics, historical aggregates, and stage-scoped filtering
 - Shared `js/lib/metrics.js` module — duration and ratio calculations consumed by both TIF and the Metrics screen
 
-## Current State (v1.1 — shipped 2026-07-10)
+## Current State (v1.2 — in progress, 2026-07-30)
+
+Phase 11 (Metrics Screen) complete — 10/10 plans executed, 6/6 requirements verified, all post-launch gaps closed. 647 tests passing.
+
+- **Metrics screen**: dedicated 5th tab showing per-day sleep/nap durations, AAS/SAA factors, historical aggregates, stage filtering, sticky header/column layout
+- **Overnight sleep**: pairing logic correctly attributes cross-midnight sleep to wake date; calculates duration across midnight boundary
+- **UI polish**: Today screen buttons centered and reordered (Wake → Nap start → Nap end → Bedtime); reduced side gutters across all screens; Metrics column order corrected
+
+## Previous State (v1.1 — shipped 2026-07-10)
 
 Nightwatch v1.1 is complete and tagged `v1.1.0`. All 9 v1.1 requirements delivered across 1 phase in 10 days. Building on the v1.0 PWA foundation, v1.1 reduced daily logging friction and improved visual clarity:
 
@@ -199,4 +207,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-13 — v1.2 milestone started*
+*Last updated: 2026-07-30 — Phase 11 (Metrics Screen) complete*
