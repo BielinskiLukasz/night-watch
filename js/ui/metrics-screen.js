@@ -108,9 +108,9 @@ function formatCellValue(value, colDef, snap) {
 
   if (colDef.isTime && value) {
     return formatTime(value, snap.timeFormat);
-  } else if (colDef.isRatio && value != null) {
+  } else if (colDef.isRatio && value !== null && value !== undefined) {
     return value.toFixed(2);
-  } else if (!colDef.isTime && !colDef.isRatio && value != null) {
+  } else if (!colDef.isTime && !colDef.isRatio && value !== null && value !== undefined) {
     // Duration columns
     return formatDuration(value);
   } else {
@@ -209,7 +209,7 @@ function buildAggregateRow(label, aggregateData, snap) {
   // Remaining columns
   for (let i = 1; i < COLUMNS.length; i++) {
     const col = COLUMNS[i];
-    const value = aggregateData[col.key] || null;
+    const value = aggregateData[col.key];
 
     // For min/max, value is {value, date}; for avg, it's just the number
     const minMaxVal = (typeof value === 'object' && value !== null && 'value' in value) ? value : null;
@@ -249,7 +249,6 @@ function buildAggregateRow(label, aggregateData, snap) {
 export function mountMetricsScreen({ root, eventLog, settings }) {
   // Guard: root must exist
   if (!root) {
-    console.warn('mountMetricsScreen: root element is null or undefined');
     return { unsubscribe() {} };
   }
 
@@ -334,7 +333,7 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
 
     // Per-day rows tbody (most-recent-first, D11-03)
     const daysTbody = document.createElement('tbody');
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = rows.length - 1; i >= 0; i--) {
       const dayRow = buildDayRow(rows[i], snap);
       daysTbody.appendChild(dayRow);
     }
