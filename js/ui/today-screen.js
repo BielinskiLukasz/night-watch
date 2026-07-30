@@ -50,9 +50,9 @@ import { filterDayRecordsByStage } from '../lib/stages.js';
  *  the label/button parity invariant at the module-API layer. */
 export const BUTTONS = Object.freeze([
   Object.freeze({ type: 'wake', label: 'Woke up' }),
-  Object.freeze({ type: 'bedtime', label: 'Going to sleep' }),
   Object.freeze({ type: 'napStart', label: 'Nap start' }),
   Object.freeze({ type: 'napEnd', label: 'Nap end' }),
+  Object.freeze({ type: 'bedtime', label: 'Going to sleep' }),
 ]);
 
 /** Map event.type -> display label for list rows. Derived from BUTTONS -- DO NOT

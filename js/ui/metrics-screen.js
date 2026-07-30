@@ -39,9 +39,9 @@ import { formatTime, formatDuration } from '../lib/time.js';
 const COLUMNS = Object.freeze([
   { key: 'date', label: 'Date', isTime: false, isRatio: false, sticky: true },
   { key: 'wake', label: 'Wake', isTime: true, isRatio: false },
-  { key: 'bedtime', label: 'Bedtime', isTime: true, isRatio: false },
   { key: 'napStart', label: 'Nap Start', isTime: true, isRatio: false },
   { key: 'napEnd', label: 'Nap End', isTime: true, isRatio: false },
+  { key: 'bedtime', label: 'Bedtime', isTime: true, isRatio: false },
   { key: 'sleepDuration', label: 'Sleep', isTime: false, isRatio: false },
   { key: 'napDuration', label: 'Nap', isTime: false, isRatio: false },
   { key: 'combinedSleepNap', label: 'Comb', isTime: false, isRatio: false },
