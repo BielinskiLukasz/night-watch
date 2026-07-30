@@ -575,3 +575,180 @@ describe('formatDuration(minutes)', () => {
     assert.ok(result === '7h 30m' || result === '7h 31m');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 12. Overnight sleep (spanning two calendar dates) — G-NW-11-21, G-NW-11-22
+// ---------------------------------------------------------------------------
+
+describe('overnight sleep across calendar dates', () => {
+  it('overnight sleep: bedtime 31.03 at 23:00, wake 01.04 at 07:00 (across two days)', () => {
+    // Day 1: bedtime only (31.03), no wake yet
+    const day1 = {
+      date: '2026-03-31',
+      bedtime: { at: '2026-03-31T23:00' },
+      wake: null,
+      napStart: null,
+      napEnd: null,
+    };
+    // Day 2: wake only (01.04), matching the previous day's bedtime
+    const day2 = {
+      date: '2026-04-01',
+      bedtime: null,
+      wake: { at: '2026-04-01T07:00' },
+      napStart: null,
+      napEnd: null,
+    };
+
+    const result = aggregateMetrics([day1, day2]);
+
+    // Check that we have 2 rows
+    assert.strictEqual(result.rows.length, 2);
+
+    // Row 1 (day1) should NOT have a sleepDuration (no wake on same day)
+    assert.strictEqual(result.rows[0].sleepDuration, null);
+
+    // Row 2 (day2) should have the paired sleep duration
+    // Sleep: 23:00 (day1) → 07:00 (day2) = 8 hours = 480 minutes
+    assert.strictEqual(result.rows[1].sleepDuration, 480);
+
+    // Row 2 should be attributed to 01.04 (the wake date)
+    assert.strictEqual(result.rows[1].date, '2026-04-01');
+  });
+
+  it('overnight sleep with late bedtime: 22:30 on 31.03, wake 07:30 on 01.04', () => {
+    const day1 = {
+      date: '2026-03-31',
+      bedtime: { at: '2026-03-31T22:30' },
+      wake: null,
+      napStart: null,
+      napEnd: null,
+    };
+    const day2 = {
+      date: '2026-04-01',
+      bedtime: null,
+      wake: { at: '2026-04-01T07:30' },
+      napStart: null,
+      napEnd: null,
+    };
+
+    const result = aggregateMetrics([day1, day2]);
+
+    // Sleep: 22:30 → 07:30 (next day) = 9 hours = 540 minutes
+    assert.strictEqual(result.rows[1].sleepDuration, 540);
+    assert.strictEqual(result.rows[1].date, '2026-04-01');
+  });
+
+  it('overnight sleep with very early wake: 23:45 on 31.03, wake 00:30 on 01.04', () => {
+    const day1 = {
+      date: '2026-03-31',
+      bedtime: { at: '2026-03-31T23:45' },
+      wake: null,
+      napStart: null,
+      napEnd: null,
+    };
+    const day2 = {
+      date: '2026-04-01',
+      bedtime: null,
+      wake: { at: '2026-04-01T00:30' },
+      napStart: null,
+      napEnd: null,
+    };
+
+    const result = aggregateMetrics([day1, day2]);
+
+    // Sleep: 23:45 → 00:30 (next day) = 45 minutes
+    assert.strictEqual(result.rows[1].sleepDuration, 45);
+    assert.strictEqual(result.rows[1].date, '2026-04-01');
+  });
+
+  it('overnight sleep with nap on wake day: bedtime 31.03, wake+nap on 01.04', () => {
+    const day1 = {
+      date: '2026-03-31',
+      bedtime: { at: '2026-03-31T23:00' },
+      wake: null,
+      napStart: null,
+      napEnd: null,
+    };
+    const day2 = {
+      date: '2026-04-01',
+      bedtime: null,
+      wake: { at: '2026-04-01T07:00' },
+      napStart: { at: '2026-04-01T12:00' },
+      napEnd: { at: '2026-04-01T13:00' },
+    };
+
+    const result = aggregateMetrics([day1, day2]);
+
+    // Row 2: sleep=480, nap=60 → combined=540
+    assert.strictEqual(result.rows[1].sleepDuration, 480);
+    assert.strictEqual(result.rows[1].napDuration, 60);
+    assert.strictEqual(result.rows[1].combinedSleepNap, 540);
+    assert.strictEqual(result.rows[1].date, '2026-04-01');
+  });
+
+  it('normal same-day sleep (sanity check): no overnight pairing', () => {
+    const day = {
+      date: '2026-04-01',
+      bedtime: { at: '2026-03-31T23:00' },
+      wake: { at: '2026-04-01T07:00' },
+      napStart: null,
+      napEnd: null,
+    };
+
+    const result = aggregateMetrics([day]);
+
+    // Normal case: both bedtime and wake in same day → sleepDuration computed normally
+    assert.strictEqual(result.rows[0].sleepDuration, 480);
+    assert.strictEqual(result.rows[0].date, '2026-04-01');
+  });
+
+  it('multiple overnight sleeps: 2 consecutive days with overnight spans', () => {
+    const day1 = { date: '2026-03-31', bedtime: { at: '2026-03-31T22:00' }, wake: null, napStart: null, napEnd: null };
+    const day2 = { date: '2026-04-01', bedtime: null, wake: { at: '2026-04-01T07:00' }, napStart: null, napEnd: null };
+    const day3 = { date: '2026-04-01', bedtime: { at: '2026-04-01T23:00' }, wake: null, napStart: null, napEnd: null };
+    const day4 = { date: '2026-04-02', bedtime: null, wake: { at: '2026-04-02T07:30' }, napStart: null, napEnd: null };
+
+    const result = aggregateMetrics([day1, day2, day3, day4]);
+
+    // Row 2 (day2): first overnight sleep from day1→day2
+    assert.strictEqual(result.rows[1].sleepDuration, 540); // 22:00 → 07:00 = 9h
+    assert.strictEqual(result.rows[1].date, '2026-04-01');
+
+    // Row 4 (day4): second overnight sleep from day3→day4
+    assert.strictEqual(result.rows[3].sleepDuration, 510); // 23:00 → 07:30 = 8.5h = 510 minutes
+    assert.strictEqual(result.rows[3].date, '2026-04-02');
+  });
+
+  it('bedtime without wake on last day: fall back to bedtime+1 attribution', () => {
+    const day1 = {
+      date: '2026-03-31',
+      bedtime: { at: '2026-03-31T23:00' },
+      wake: null,
+      napStart: null,
+      napEnd: null,
+    };
+
+    const result = aggregateMetrics([day1]);
+
+    // No following day to pair with → attribute to bedtime+1 day
+    assert.strictEqual(result.rows[0].date, '2026-04-01');
+    assert.strictEqual(result.rows[0].sleepDuration, null); // No wake to calculate duration
+  });
+
+  it('aggregates overnight sleep: avg sleepDuration includes paired sleepi', () => {
+    const day1 = { date: '2026-03-31', bedtime: { at: '2026-03-31T22:00' }, wake: null, napStart: null, napEnd: null };
+    const day2 = { date: '2026-04-01', bedtime: null, wake: { at: '2026-04-01T07:00' }, napStart: null, napEnd: null };
+    const day3 = { date: '2026-04-01', bedtime: { at: '2026-04-01T23:00' }, wake: null, napStart: null, napEnd: null };
+    const day4 = { date: '2026-04-02', bedtime: null, wake: { at: '2026-04-02T08:00' }, napStart: null, napEnd: null };
+
+    const result = aggregateMetrics([day1, day2, day3, day4]);
+
+    // Two overnight sleeps:
+    // day1→day2: 22:00 → 07:00 = 540 min
+    // day3→day4: 23:00 → 08:00 = 540 min
+    // Average: (540 + 540) / 2 = 540 (but day1 has no sleep on its row, so only day2 and day4 count)
+    assert.ok(result.avg.sleepDuration !== null);
+    // The average should be over non-null sleep durations
+    assert.strictEqual(result.avg.sleepDuration, 540);
+  });
+});
