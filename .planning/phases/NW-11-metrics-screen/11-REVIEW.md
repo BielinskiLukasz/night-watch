@@ -1,223 +1,202 @@
 ---
 phase: 11-metrics-screen
-reviewed: 2026-07-28T00:00:00Z
+reviewed: 2026-07-30T00:00:00Z
 depth: standard
-files_reviewed: 12
+files_reviewed: 5
 files_reviewed_list:
-  - index.html
-  - js/app.js
   - js/lib/metrics.js
-  - js/lib/time.js
-  - js/ui/bottom-nav.js
   - js/ui/metrics-screen.js
+  - js/ui/today-screen.js
   - style.css
-  - sw.js
-  - tests/e2e/metrics.spec.js
   - tests/unit/metrics.test.js
-  - tests/unit/sw-precache.test.js
-  - tests/unit/time.test.js
 findings:
   critical: 2
-  warning: 2
-  info: 1
+  warning: 1
+  info: 2
   total: 5
 status: issues_found
 ---
 
-# Phase 11: Code Review Report
+# Phase 11: Code Review Report (Focused Review)
 
-**Reviewed:** 2026-07-28
+**Reviewed:** 2026-07-30
 **Depth:** standard
-**Files Reviewed:** 12
+**Files Reviewed:** 5 (subset from workflow)
 **Status:** issues_found
 
 ## Summary
 
-Phase 11 metrics screen implementation contains two critical bugs affecting data accuracy: date information loss in the metrics table display and incorrect date extraction for min/max aggregate values. The metrics.js pure function has correct logic for duration and ratio calculations, but the integration with the UI layer has data flow issues. Security posture is sound (no XSS vulnerabilities, proper adapter injection, SW precache complete). Test suite coverage exists but has logical inconsistencies.
-
-## Critical Issues
-
-### CR-01: Date Information Lost in Metrics Table Display
-
-**File:** `js/ui/metrics-screen.js:174-180`
-
-**Issue:** The date column extraction extracts the wrong data. The `dayMetrics.wake` and `dayMetrics.bedtime` values are time-only strings (`'HH:MM'` format, e.g., `'07:30'`), not ISO timestamps. Calling `.slice(0, 10)` on `'07:30'` returns `'07:30'` instead of a date. The date information was never captured in the row building phase.
-
-Root cause: In `metrics.js` lines 155-157, the rows built by `aggregateMetrics()` populate only the time portion:
-```javascript
-wake: extractTime(day.wake) || null,  // '07:30', not '2026-05-01T07:30'
-bedtime: extractTime(day.bedtime) || null,
-```
-
-The ISO date (`'2026-05-01'`) is extracted elsewhere but not stored in the row.
-
-**Fix:** Capture the full ISO date in each row during aggregateMetrics:
-```javascript
-// In aggregateMetrics, around line 153-172, modify the row building:
-rows.push({
-  date: extractDate(day),  // new helper to extract 'YYYY-MM-DD'
-  wake: extractTime(day.wake) || null,
-  bedtime: extractTime(day.bedtime) || null,
-  // ... rest of columns
-});
-
-// Add extractDate helper near extractTime (line 22-28):
-function extractDate(slot) {
-  if (slot == null) return null;
-  if (typeof slot === 'object' && slot.at) return slot.at.slice(0, 10);
-  // Synthetic test data has no date
-  return null;
-}
-```
-
-Then in metrics-screen.js, use the dedicated date field:
-```javascript
-const dateStr = dayMetrics.date || '—';  // line 176
-```
+Code review of Phase 11 metrics implementation (focused on the 5 changed files) identifies two critical logic errors in aggregation and display layers that corrupt metric averages and hide zero values. The previous review's CR-01/CR-02 data-loss bugs have been fixed (date tracking and index storage are now in place). However, two new critical bugs were introduced in the aggregation logic and display layer. These must be fixed before shipping.
 
 ---
 
-### CR-02: Min/Max Date Extraction Fails for Nap-Dependent Metrics
+## Critical Issues
 
-**File:** `js/lib/metrics.js:183-230` (getDate helper and date mapping)
+### CR-01: Aggregate Metrics Exclude No-Nap Days from Combined Sleep (D11-26 Violation)
 
-**Issue:** The `getDate()` function attempts to find the original day record to extract the date for min/max cells. However, the mapping is broken when metrics are aggregated over filtered subsets (napRows vs. validRows):
+**File:** `js/lib/metrics.js:313`
 
+**Issue:**
+Line 313 aggregates `combinedSleepNap` over `napRows` (days with naps only), excluding days with no naps. This contradicts the stated design intent in D11-26: "Excluded no-nap days from **nap-dependent** aggregates." The `combinedSleepNap` metric is **not** nap-dependent—it returns sleep duration alone for no-nap days (line 101). Excluding these valid values from the average produces wrong statistical results.
+
+**Impact:** Mixed-nap-pattern weeks will show incorrect average combined sleep.
+
+**Example:** Week with 1 nap day (6h sleep + 1h nap = 7h combined) and 1 no-nap day (10h sleep):
+- Correct average: (7 + 10) / 2 = 8.5 hours
+- Current code: 7 / 1 = 7 hours (wrong by 1.5 hours, underestimated)
+
+**Root cause:** Line 260 defines `napRows = validRows.filter(r => r.napDuration !== null)`, excluding all no-nap days. Line 313 passes `napRows` to aggregateMetric for combinedSleepNap, but combinedSleepNap is valid (non-null) for all days.
+
+**Fix:**
 ```javascript
-// Line 210-211: finds index within the filtered rows passed to aggregateMetric
-const minRowIdx = rows.findIndex(r => r[key] === minValue);
-// ...
-// Line 218: tries to find original day via validRows — but this fails for napRows metrics
-const origDay = dayRecords[validRows.indexOf(row)];
+// Line 313: change napRows to validRows to include no-nap days
+aggregateMetric('combinedSleepNap', validRows);
 ```
 
-When `aggregateMetric('napDuration', napRows)` is called:
-1. `rows` parameter is `napRows` (a filtered subset)
-2. `minRowIdx` is found within `napRows`
-3. `validRows.indexOf(row)` searches for the row in `validRows` 
-4. Even if found, the index in `validRows` ≠ index in `dayRecords` (due to rejected day filtering)
+The nap-dependent metrics stay on `napRows`: napDuration, totalActivity, activityBeforeNap, activityAfterNap, activityAfterSleepFactor. Only combinedSleepNap moves to validRows.
 
-Result: `getDate()` returns `null` for all min/max values on nap-dependent metrics (napDuration, totalActivity, activityBeforeNap, activityAfterNap, activityAfterSleepFactor, sleepAfterActivityFactor).
+---
 
-**Fix:** Track the original dayRecords index when building rows. Modify aggregateMetrics:
+### CR-02: Display Converts Zero Values to Null, Hiding Valid Metrics
+
+**File:** `js/ui/metrics-screen.js:212`
+
+**Issue:**
+Using the `||` operator (`aggregateData[col.key] || null`) converts any falsy value (including legitimate zero) to `null`, rendering valid zero metrics invisible in the table.
+
+Affected cases:
+- Average `totalActivity = 0` when all days are no-nap (before + after = 0 + 0 = 0)
+- Average `activityBeforeNap = 0` on no-nap day aggregates
+- Average `activityAfterNap = 0` on no-nap day aggregates
+- Any ratio metric that correctly evaluates to 0
+
+The zero is a valid, meaningful metric (no activity on no-nap days) and should display as "0h 0m" or "0.00", not "—" (em-dash).
+
+**Impact:** Users cannot distinguish "no data" (null/em-dash) from "zero activity" (0 minutes). Stats become misleading.
+
+**Example:** All-no-nap week should display "Average activity: 0h 0m", not "Average activity: —".
+
+**Root cause:** `aggregateMetric()` (line 267-307) correctly returns 0 as a valid value. But at line 212, the `||` operator treats 0 as falsy and converts it to null:
 ```javascript
-// Line 153-172: When building rows, store the original index
-for (let i = 0; i < dayRecords.length; i++) {
-  const day = dayRecords[i];
-  rows.push({
-    _dayRecordsIdx: i,  // store original index
-    wake: extractTime(day.wake) || null,
-    // ... rest of columns
-  });
-}
-
-// Line 214-226: Use the stored index in getDate
-const getDate = (rowIdx) => {
-  const row = rows[rowIdx];
-  if (!row || row._dayRecordsIdx === undefined) return null;
-  const origDay = dayRecords[row._dayRecordsIdx];
-  if (!origDay) return null;
-  const timeStr = extractTime(origDay.wake) || extractTime(origDay.bedtime);
-  if (origDay.wake && typeof origDay.wake === 'object' && origDay.wake.at) {
-    return origDay.wake.at.slice(0, 10);
-  }
-  return null;
-};
+// BROKEN:
+const value = aggregateData[col.key] || null;  // 0 becomes null
 ```
+
+**Fix:**
+```javascript
+// Line 212: remove the || operator; trust aggregateMetric's output
+const value = aggregateData[col.key];
+```
+
+The helper already guarantees a value: either a number (which may be 0) or null (when no data). The `||` is unnecessary and harmful.
 
 ---
 
 ## Warnings
 
-### WR-01: Contradictory E2E Test Logic
+### WR-01: Inefficient Double-Call to napDuration in Row Building
 
-**File:** `tests/e2e/metrics.spec.js:49-58`
+**File:** `js/lib/metrics.js:244–246`
 
-**Issue:** The test MET-06 has mutually exclusive assertions:
+**Issue:**
+`napDuration(day)` is called twice in the same row construction:
+- Line 244: `napDuration: napDuration(day),`
+- Line 246: `combinedSleepNap: ... (napDuration(day) !== null ? sleepDur + napDuration(day) : sleepDur) ...`
+
+This is inefficient but not incorrect. The function should be called once and reused.
+
+**Fix:**
 ```javascript
-test('MET-06: Stage filter badge shown/hidden based on active stage', async ({ page }) => {
-  const stageBadge = page.locator('#metrics-screen .stageChip');
-  await page.locator('[data-tab="metrics"]').click();
-  await expect(stageBadge).toHaveAttribute('hidden', '');  // expects hidden
-
-  // ... comment claims badge is visible but hidden attribute set ...
-  await expect(stageBadge).toBeVisible(); // expects visible — contradicts line 53
+// Lines 244–246: compute napDur once
+const napDur = napDuration(day);
+rows.push({
+  // ...
+  napDuration: napDur,
+  combinedSleepNap: sleepDur !== null 
+    ? (napDur !== null ? sleepDur + napDur : sleepDur) 
+    : null,
+  // ...
 });
 ```
 
-An element with the `hidden` attribute set is not visible in the accessibility tree. The second `toBeVisible()` will fail if the first `toHaveAttribute('hidden', '')` passes. The test cannot pass both assertions.
-
-**Fix:** Clarify test intent. If the goal is to verify the badge is hidden initially:
+Alternatively, call the helper directly (simpler):
 ```javascript
-test('MET-06: Stage filter badge hidden when no stage is active', async ({ page }) => {
-  await page.locator('[data-tab="metrics"]').click();
-  const stageBadge = page.locator('#metrics-screen .stageChip');
-  // Verify hidden attribute
-  await expect(stageBadge).toHaveAttribute('hidden', '');
-  // Do NOT assert toBeVisible() — it contradicts the hidden state
-});
-```
-
----
-
-### WR-02: Misleading Test Name vs. Assertion
-
-**File:** `tests/unit/metrics.test.js:184-192`
-
-**Issue:** Test name claims totalActivity should be 600 minutes, but assertion verifies 780 minutes:
-```javascript
-it('normal nap day: wake=07:00, napStart=12:00, napEnd=13:00, bedtime=21:00 → 600 (5h before + 8h after)', () => {
-  // ... comments correctly state 780 ...
-  assert.strictEqual(
-    totalActivity(makeDay('07:00', '21:00', '12:00', '13:00')),
-    780,  // correct value: 5h (300m) + 8h (480m) = 780m
-  );
-});
-```
-
-The assertion is correct (780 = 5h + 8h). The test name is wrong (says 600). This will confuse future maintainers.
-
-**Fix:** Update the test name to match the correct value:
-```javascript
-it('normal nap day: wake=07:00, napStart=12:00, napEnd=13:00, bedtime=21:00 → 780 (5h before + 8h after)', () => {
+combinedSleepNap: combinedSleepNap(day),
 ```
 
 ---
 
 ## Info
 
-### IN-01: CSS Z-Index Sticky Column Layout
+### IN-01: Debug Console Warning in Production Code
 
-**File:** `style.css:1620-1660`
+**File:** `js/ui/metrics-screen.js:252`
 
-**Finding:** Z-index layering for sticky columns is correctly specified:
-- `.metricsTable th` (header row): `z-index: 2`
-- `.metricsTable th:first-child` (top-left corner): `z-index: 3` (higher, correct)
-- `.metricsTable td.sticky-col` (left column cells): `z-index: 1` (lower)
+**Issue:**
+```javascript
+console.warn('mountMetricsScreen: root element is null or undefined');
+```
 
-However, there is no visual testing or regression verification that the sticky positioning actually works correctly when:
-- Scrolling horizontally while the top header remains sticky
-- Scrolling vertically while the left column remains sticky
-- Simultaneous horizontal + vertical scroll (top-left cell should appear above all others)
+Production code should not emit console warnings for expected error states. This condition (null root) should be handled silently or tested, not logged.
 
-The CSS is theoretically correct, but the E2E test suite does not verify sticky behavior. Consider adding an E2E test that scrolls the metrics table and confirms the header/column positioning remains correct.
+**Fix:**
+```javascript
+if (!root) {
+  return { unsubscribe() {} };  // Silent no-op; console logs belong in tests only
+}
+```
+
+---
+
+### IN-02: Redundant Date Extraction in getDate Helper
+
+**File:** `js/lib/metrics.js:297–303`
+
+**Issue:**
+The `getDate` helper inside `aggregateMetric` looks up the original day record via `_dayRecordsIdx`, then returns `row.date`, which was already extracted and cached during row construction (line 235). The original day lookup is redundant.
+
+**Current code:**
+```javascript
+const getDate = (rowIdx) => {
+  const row = rows[rowIdx];
+  if (!row || row._dayRecordsIdx === undefined) return null;
+  const origDay = dayRecords[row._dayRecordsIdx];
+  if (!origDay) return null;
+  return row.date;  // Just returns the cached value; origDay lookup was unnecessary
+};
+```
+
+**Fix:**
+```javascript
+// Line 297–303: simplify to direct access
+const minRowIdx = rows.findIndex(r => r[key] === minValue);
+const maxRowIdx = rows.findIndex(r => r[key] === maxValue);
+
+min[key] = minRowIdx >= 0 ? { value: minValue, date: rows[minRowIdx].date } : null;
+max[key] = maxRowIdx >= 0 ? { value: maxValue, date: rows[maxRowIdx].date } : null;
+```
 
 ---
 
 ## Security & Code Quality Notes
 
 **Positive findings:**
+- ✓ **XSS prevention:** All dynamic content uses `textContent`, never `innerHTML`. Stage names and metrics are safe.
+- ✓ **Pure functions:** metrics.js has no DOM, storage, or clock access. Pure calculation layer is portable and testable.
+- ✓ **Adapter injection:** Both files respect the adapter seam; no hardcoded Date or localStorage calls.
+- ✓ **Null safety:** Functions guard against null/undefined slots.
+- ✓ **Subscription cleanup:** mountMetricsScreen returns unsubscribe handles for proper lifecycle.
+- ✓ **Table layout:** Sticky header/column z-index stacking is correct (z-index: 3 for corner, 2 for header, 1 for left column).
+- ✓ **No secrets detected:** No hardcoded credentials, API keys, or sensitive data.
 
-- ✓ **XSS prevention:** All dynamic content in metrics-screen.js uses `.textContent` (lines 73-150). No innerHTML with user-supplied data. Stage names, dates, and formatted values are safe.
-- ✓ **Adapter injection:** No direct `new Date()` or `localStorage` calls in metrics.js or metrics-screen.js. Dependencies are injected.
-- ✓ **Service worker precache:** sw.js includes `./js/lib/metrics.js` and `./js/ui/metrics-screen.js` in PRECACHE_LIST (lines 44, 60). sw-precache.test.js verifies completeness.
-- ✓ **Division-by-zero guards:** metrics.js includes explicit checks (e.g., line 110: `|| sleep === 0`).
-- ✓ **Null safety:** All pure functions check for null/undefined slots before computing durations.
-- ✓ **Subscription cleanup:** mountMetricsScreen returns unsubscribe handles (lines 358-363) for proper lifecycle management.
-- ✓ **Bottom nav registration:** 'metrics' tab is in VALID_TABS (bottom-nav.js:17) and properly wired in app.js (lines 143-145).
+**Previous CR-01/CR-02 fixes verified:**
+- Date field populated at line 235: `date: dateStr || null`
+- Index tracking at line 236: `_dayRecordsIdx: i`
+- ISO timestamps stored for times (line 238-241): full `.at` strings preserved, not just extractTime results
+- These fixes enable correct min/max date attribution
 
 ---
 
-_Reviewed: 2026-07-28_
+_Reviewed: 2026-07-30_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
