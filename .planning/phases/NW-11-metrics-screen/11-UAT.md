@@ -248,8 +248,62 @@ blocked: 0
     - "Center the action button row (justify-content: center or text-align: center)"
     - "Reorder render: Woke Up → Nap → Going to Sleep"
 
+- gap_id: G-NW-11-19
+  truth: "All screens use the full available width with minimal side padding (no large white gutters)"
+  status: failed
+  reason: "User reported: each screen has big white spaces on left and right"
+  severity: minor
+  test: observed
+  root_cause: ""
+  artifacts:
+    - path: "style.css"
+      issue: "body padding or #app max-width too narrow, leaving large gutters on wider screens"
+  missing:
+    - "Reduce side padding or increase max-width so content fills the screen comfortably"
+
+- gap_id: G-NW-11-20
+  truth: "Metrics table column order is: Date, Wake, Nap Start, Nap End, Bedtime, Sleep, Nap, Sleep+Nap, Day Length, Act Before Nap, Act After Nap, Total Activity, AAS, SAA (Bedtime after Nap End)"
+  status: failed
+  reason: "User reported: Bedtime is still before Nap columns, should be after"
+  severity: minor
+  test: observed
+  root_cause: ""
+  artifacts:
+    - path: "js/ui/metrics-screen.js"
+      issue: "Column definition array has Bedtime before Nap Start/End; should appear after Nap End"
+  missing:
+    - "Move Bedtime column definition to after Nap End in the columns array"
+
+- gap_id: G-NW-11-21
+  truth: "In the Metrics table, an overnight sleep (bedtime 31.03, wake 1.04) appears on the 1.04 row (wake date), not 31.03"
+  status: failed
+  reason: "User reported: sleep shows on wrong date — for wake 1.04 with bedtime 31.03, sleep record appears on 31.03 instead of 1.04"
+  severity: major
+  test: observed
+  root_cause: ""
+  artifacts:
+    - path: "js/lib/metrics.js"
+      issue: "Date attribution logic still uses bedtime date as row date instead of wake date"
+    - path: "js/lib/day-bucket.js"
+      issue: "Overnight pair bucketing may not be fully resolved by 11-06 fix"
+  missing:
+    - "Ensure each Metrics row date = wake date; cross-midnight bedtime+wake pairs must land on the wake-day row"
+
+- gap_id: G-NW-11-22
+  truth: "Sleep duration is calculated as wake time minus previous-day bedtime (overnight span), not within the same calendar day"
+  status: failed
+  reason: "User reported: sleep calculation is invalid — should be since yesterday bedtime to today wake, not sleep within the same calendar day"
+  severity: major
+  test: observed
+  root_cause: ""
+  artifacts:
+    - path: "js/lib/metrics.js"
+      issue: "sleepDuration likely computes within-day bucket instead of cross-midnight bedtime→wake duration"
+  missing:
+    - "Compute sleep duration as: wake_time - paired_bedtime where bedtime may be from previous calendar day's bucket"
+
 ## Deferred Follow-Ups
 
-- test: 4
-  idea: "Move Bedtime column after Nap End in the metrics table column order"
-  deferred_at: 2026-07-29
+- test: observed
+  idea: "Verify AAS and SAA values are correct after sleep duration calculation is fixed (G-NW-11-22)"
+  deferred_at: 2026-07-30
