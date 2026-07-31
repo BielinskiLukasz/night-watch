@@ -3,7 +3,7 @@ status: complete
 phase: NW-11-metrics-screen
 source: [11-01-SUMMARY.md, 11-02-SUMMARY.md, 11-03-SUMMARY.md]
 started: 2026-07-29T00:00:00Z
-updated: 2026-07-30T00:00:00Z
+updated: 2026-08-01T00:00:00Z
 ---
 
 ## Current Test
@@ -221,7 +221,9 @@ blocked: 0
 
 - gap_id: G-NW-11-18
   truth: "SAA is computed for no-nap days using nap=0 in combinedSleepNap (SAA = sleepDuration / prevDay.totalActivity when no nap)"
-  status: failed
+  status: resolved
+  resolved_by: 11-09-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: SAA should be computed for days without a nap, not shown as em-dash"
   severity: major
   test: observed
@@ -234,7 +236,9 @@ blocked: 0
 
 - gap_id: G-NW-11-17
   truth: "Today screen action buttons (Woke Up, Nap, Going to Sleep) are centered and ordered Woke Up | Nap | Going to Sleep"
-  status: failed
+  status: resolved
+  resolved_by: 11-08-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: wider card width from landscape fix makes left-aligned action buttons look unbalanced. Fix: center the three action buttons and reorder to Woke Up | Nap | Going to Sleep (swap current Bedtime position to after Nap)"
   severity: cosmetic
   test: observed
@@ -250,7 +254,9 @@ blocked: 0
 
 - gap_id: G-NW-11-19
   truth: "All screens use the full available width with minimal side padding (no large white gutters)"
-  status: failed
+  status: resolved
+  resolved_by: 11-08-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: each screen has big white spaces on left and right"
   severity: minor
   test: observed
@@ -263,7 +269,9 @@ blocked: 0
 
 - gap_id: G-NW-11-20
   truth: "Metrics table column order is: Date, Wake, Nap Start, Nap End, Bedtime, Sleep, Nap, Sleep+Nap, Day Length, Act Before Nap, Act After Nap, Total Activity, AAS, SAA (Bedtime after Nap End)"
-  status: failed
+  status: resolved
+  resolved_by: 11-08-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: Bedtime is still before Nap columns, should be after"
   severity: minor
   test: observed
@@ -276,7 +284,9 @@ blocked: 0
 
 - gap_id: G-NW-11-21
   truth: "In the Metrics table, an overnight sleep (bedtime 31.03, wake 1.04) appears on the 1.04 row (wake date), not 31.03"
-  status: failed
+  status: resolved
+  resolved_by: 11-10-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: sleep shows on wrong date — for wake 1.04 with bedtime 31.03, sleep record appears on 31.03 instead of 1.04"
   severity: major
   test: observed
@@ -291,7 +301,9 @@ blocked: 0
 
 - gap_id: G-NW-11-22
   truth: "Sleep duration is calculated as wake time minus previous-day bedtime (overnight span), not within the same calendar day"
-  status: failed
+  status: resolved
+  resolved_by: 11-10-PLAN.md
+  resolved_at: 2026-08-01
   reason: "User reported: sleep calculation is invalid — should be since yesterday bedtime to today wake, not sleep within the same calendar day"
   severity: major
   test: observed
