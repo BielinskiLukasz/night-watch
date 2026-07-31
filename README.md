@@ -1,7 +1,7 @@
 # Nightwatch
 
 ![Status](https://img.shields.io/badge/status-active_development-brightgreen)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -82,6 +82,7 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Charts | Sleep-length line chart, time-band scatter plot, nap-pattern indicator, activity-vs-sleep correlation chart |
 | Calendar heatmap | Sleep length by calendar day |
 | Accuracy dashboard | Three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) across all four event types |
+| Metrics screen | Dedicated 5th-tab table with 14 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), and behaviour-ratio scores (AAS, SAA); historical aggregates (average, min + date, max + date) for every column; stage-scoped filter toggle |
 
 ### Platform
 
@@ -254,7 +255,7 @@ The app targets current evergreen browsers using only baseline platform APIs (`l
 | v1.0 | 8 | PWA & Platform Hardening | ✅ Complete |
 | v1.1 | 9 | UX Polish | ✅ Complete |
 | v1.2 | 10 | TIF Algorithm & Settings | ✅ Complete |
-| v1.2 | 11 | Metrics Screen | ⬜ Planned |
+| v1.2 | 11 | Metrics Screen | ✅ Complete |
 
 Full phase details and backlog in [`.planning/ROADMAP.md`](.planning/ROADMAP.md).
 
