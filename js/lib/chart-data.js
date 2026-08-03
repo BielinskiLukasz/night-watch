@@ -13,6 +13,7 @@
 // TDD: RED → GREEN → REFACTOR (Plan 07-03)
 
 import { timeToMinutes } from './forecast.js';
+import { sleepDuration, napDuration } from './metrics.js';
 
 // ---------------------------------------------------------------------------
 // Config (Object.freeze per CLAUDE.md convention)
@@ -55,20 +56,6 @@ function extractMinutes(event) {
   return timeToMinutes(hhmm);
 }
 
-/**
- * Compute sleep duration in hours from a day record.
- * Uses cross-midnight arithmetic: (wakeMin - bedMin + 1440) % 1440 / 60.
- *
- * @param {{ wake: object|null, bedtime: object|null }} dayRecord
- * @returns {number|null} hours (may be 0 for same-time edge case), or null if either event missing
- */
-function computeSleepHours(dayRecord) {
-  if (!dayRecord.wake || !dayRecord.bedtime) return null;
-  const wakeMin = extractMinutes(dayRecord.wake);
-  const bedMin = extractMinutes(dayRecord.bedtime);
-  if (wakeMin === null || bedMin === null) return null;
-  return ((wakeMin - bedMin + 1440) % 1440) / 60;
-}
 
 /**
  * Advance a YYYY-MM-DD date string by one calendar day.
@@ -133,7 +120,7 @@ function getWeekIndex(dateStr, firstDateStr) {
 export function buildSleepLengthSeries(dayRecords) {
   return dayRecords.map(d => ({
     date: d.date,
-    sleepHours: computeSleepHours(d),
+    sleepHours: sleepDuration(d) != null ? sleepDuration(d) / 60 : null,
     rejected: !!d.rejected,
   }));
 }
@@ -163,9 +150,11 @@ export function buildHeatmapData(dayRecords) {
 
   // Walk calendar day by day from first to last date (inclusive)
   while (cur <= lastDate) {
+    const dayData = byDate.get(cur);
+    const dur = dayData ? sleepDuration(dayData) : null;
     cells.push({
       date: cur,
-      sleepHours: byDate.has(cur) ? computeSleepHours(byDate.get(cur)) : null,
+      sleepHours: dur != null ? dur / 60 : null,
       dayOfWeek: getISODayOfWeek(cur),
       weekIndex: getWeekIndex(cur, firstDate),
     });
@@ -252,12 +241,7 @@ export function buildNapStats(dayRecords) {
   // Average nap length in minutes (only days with both napStart and napEnd)
   const napLengths = napDays
     .filter(d => d.napEnd)
-    .map(d => {
-      const startMin = extractMinutes(d.napStart);
-      const endMin = extractMinutes(d.napEnd);
-      if (startMin === null || endMin === null) return null;
-      return ((endMin - startMin + 1440) % 1440);
-    })
+    .map(napDuration)
     .filter(len => len !== null);
 
   const avgNapLengthMin =
@@ -285,8 +269,9 @@ export function buildActivityCorrelation(dayRecords, activityLog) {
     if (typeof score !== 'number') continue;
     const day = dayRecords.find(d => d.date === date);
     if (!day) continue;
-    const sleepHours = computeSleepHours(day);
-    if (sleepHours === null) continue;
+    const sleepDur = sleepDuration(day);
+    if (sleepDur === null) continue;
+    const sleepHours = sleepDur / 60;
     corr.push({ activityScore: score, sleepHours });
   }
 
