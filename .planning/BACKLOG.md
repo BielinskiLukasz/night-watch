@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-07-13 (added B-031 — TIF accuracy on Accuracy screen; B-032 — Settings forecast section UX)
-Last assigned ID: **B-032** — next new item must be **B-033**
+Last updated: 2026-08-03 (added B-033 — TIF ratio windows for nap forecasts; B-034 — replace SAA with day length/sleep factor; B-035 — TIF window bounds on metrics screen)
+Last assigned ID: **B-035** — next new item must be **B-036**
 
 ---
 
@@ -893,3 +893,97 @@ Possible layout options (to decide at planning time):
 - On initial render, apply the same `hidden` state based on the current `snap.forecastAlgorithm` value so the UI is correct on first open.
 - No data model or settings store changes — purely presentational logic in the modal renderer.
 - Update any relevant E2E tests in `tests/e2e/` that assert the visibility of these fields.
+
+---
+
+## TIF algorithm extensions and metrics refinements (captured 2026-08-03)
+
+### B-033 · TIF ratio-based windows: activity/sleep → nap-start; activity/nap → nap-end
+
+**Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-021 (TIF algorithm) is promoted and implemented — extends `js/lib/forecast-tif.js`
+
+**What:** Add two ratio-based forecast windows to the TIF algorithm (B-021) for nap prediction:
+
+1. **Activity-before-nap / sleep-duration ratio → nap-start window.** Compute the historical ratio `(napStart − wake) / sleepDuration` per day (trimmed). Given a known or predicted sleep duration, project nap-start as `wake_anchor + ratio × sleepDuration_anchor`. This creates an additional window that constrains nap-start from two independent signals: the raw activity gap (existing window 2 in B-021) and its relationship to the preceding night's sleep length.
+
+2. **Activity-before-nap / nap-duration ratio → nap-end window.** Compute the historical ratio `(napStart − wake) / napDuration` per day (trimmed). Given a known or predicted pre-nap activity window, project nap duration as `activityBeforeNap / ratio`, then derive nap-end as `napStart_anchor + projectedNapDuration`. This creates an additional window for nap-end that does not rely on a historical nap-length distribution alone.
+
+Both ratios must be trimmed with the same `trimPct` setting as other TIF windows. Anchor resolution follows the same rule as B-021: use the actual logged time if the anchoring event exists; otherwise use the TIF midpoint prediction for that event type.
+
+**Why:** Nap timing is not independent of the preceding sleep. A longer night's sleep typically pushes the nap later (higher activity before nap) and may shorten the nap. Capturing this relationship as a trimmed ratio window gives TIF an additional intersection constraint that is not already expressed by the raw activity-before-nap band. These windows were identified empirically from the spreadsheet workflow.
+
+**Open questions when this gets planned:**
+
+- Should each ratio window be enabled independently via a settings toggle, or is the full set always active when TIF is enabled?
+- How to handle days with unusually short or long sleep (outliers still present after trimming)? Consider whether the trim budget applies to the ratio series independently.
+- Should the ratio be computed as `activityBeforeNap / sleepDuration` (dimensionless, typically < 1) or its inverse? Check whether the trimmed distribution is more symmetric in one form.
+- Interaction with B-026 (metrics dashboard): the ratio values are worth surfacing as per-day metrics alongside AAS/SAA.
+
+**Implementation notes:**
+
+- Add `buildActivityToSleepRatioSeries(days)` and `buildActivityToNapRatioSeries(days)` in `js/lib/metrics.js` (or inline in `forecast-tif.js`) — both return an array of ratio values filtered to days where all required events exist.
+- Apply `trimmedMinMax(ratioValues, trimPct, 0)` to each series to get `[minRatio, maxRatio]`.
+- Project windows: nap-start window = `[wake_anchor + minRatio × sleep_anchor, wake_anchor + maxRatio × sleep_anchor]`; nap-end window = `[napStart_anchor + activityBeforeNap / maxRatio, napStart_anchor + activityBeforeNap / minRatio]` (note inversion).
+- Slot these as window 3 for nap-start and window 3 for nap-end in B-021's window lists; the intersection logic is unchanged.
+- Unit-test each window builder with known fixture data; verify that ratio inversion is correct.
+
+---
+
+### B-034 · Replace SAA metric with day-length / sleep-duration factor
+
+**Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** when B-026 (metrics dashboard) is implemented — same phase
+
+**What:** Remove the SAA (Sleep After Activity) ratio — defined as `sleepDuration / activityTime` — from the metrics dashboard and replace it with a more informative compound factor. The suggested replacement is **day-length / sleep-duration** (`dayLength / sleepDuration`), which expresses how much of the total waking window is backed by the preceding night's sleep.
+
+SAA is mathematically identical to `1 / AAS` (Activity After Sleep = `activityTime / sleepDuration`), so displaying both adds no information. The day-length / sleep-duration ratio captures a different and non-redundant relationship: how long the child stays awake relative to how long they slept — a proxy for sleep pressure that grows as the ratio increases.
+
+**Why:** Presenting two metrics that are algebraic inverses of each other wastes screen space and can confuse users who attempt to interpret both independently. Replacing SAA with a factor that is not derivable from AAS preserves the metric count while adding diagnostic value. A high `dayLength / sleepDuration` ratio may indicate accumulated sleep debt; a low ratio may indicate unusually long naps or early bedtimes.
+
+**Open questions when this gets planned:**
+
+- Should the replacement metric be `dayLength / sleepDuration` specifically, or evaluated alongside other candidates (e.g., `combinedSleep / dayLength`, `activityAfterNap / napDuration`)?
+- Should both AAS and the new factor be shown together, or should AAS also be reviewed for redundancy?
+- What is a "normal" range for the new ratio — is it stable enough across stages to be interpretable without stage filtering?
+- Should the metrics dashboard display a trend indicator (arrow up/down) for this ratio?
+
+**Implementation notes:**
+
+- In `js/lib/metrics.js` `dayMetrics()`: remove or rename the `saa` field; add `dayToSleepFactor: dayLength / sleepDuration` (guard for `sleepDuration === 0`).
+- Update `aggregateMetrics()` to compute average/min/max for `dayToSleepFactor` rather than `saa`.
+- Update the metrics UI (when B-026 is implemented) to render the new label ("Day/Sleep Factor" or similar).
+- Remove any references to `saa` from tests and documentation; add a unit test for the new formula including edge cases (nap day vs. no-nap day, zero sleep guard).
+
+---
+
+### B-035 · Show TIF window bounds (min/max) on the metrics screen
+
+**Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after both B-021 (TIF algorithm) and B-026 (metrics dashboard) are implemented
+
+**What:** Display the TIF algorithm's computed prediction window bounds — `finalStart` and `finalEnd` for each event type — on the metrics screen (B-026). For each event type (wake, nap-start, nap-end, bedtime), show the lower and upper bound of the TIF predicted window alongside the other per-day metrics. This gives users a direct view of how wide or narrow TIF's prediction is for the current day, visible in the same place as the sleep and activity metrics.
+
+Example card layout: "Wake: TIF 07:15 – 08:00 · Width: 45 min · Confidence: 87%"
+
+This is distinct from the prediction cards on the Today screen (which show the display window, potentially clipped by `precisionTarget`). The metrics screen would show the raw unclipped `[finalStart, finalEnd]` window so users can see the true algorithmic output.
+
+**Why:** The Today screen prediction cards already show the TIF display window. Exposing the raw window bounds and confidence score on the metrics screen gives users the underlying data that the display window is derived from — useful for understanding when the algorithm has high vs. low certainty, and for validating the `trimPct` and `precisionTarget` settings. Without this, users cannot easily distinguish between a narrow "genuinely tight" prediction and a wide prediction clipped by `precisionTarget`.
+
+**Open questions when this gets planned:**
+
+- Should these bounds appear as a sub-row within each event type's metric section, or as a dedicated "TIF Forecast" card group?
+- Should they show only when `forecastAlgorithm === 'tif'`, or always (with a "N/A" state for classic mode)?
+- Should the confidence score here be the same score from B-021 Step 4, or a simplified version?
+- Should window width be shown in minutes or hours:minutes?
+- Interaction with B-031 (TIF accuracy on the Accuracy screen): the metrics screen is about current-day values; the Accuracy screen is about historical backtesting. Confirm there is no duplication of purpose.
+
+**Implementation notes:**
+
+- Requires B-021's `tifForecast()` to return per-event `{ finalStart, finalEnd, confidenceScore }` in its result object (already implied by B-021's implementation notes).
+- In the metrics screen renderer (B-026 UI): conditionally render a "TIF bounds" sub-row per event type when `snap.forecastAlgorithm === 'tif'` and TIF predictions are available for the selected day.
+- Format `finalStart`/`finalEnd` using the same `formatTime(minutes, timeFormat)` helper used by prediction cards.
+- No new data shape changes beyond what B-021 already introduces.
