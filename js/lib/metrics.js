@@ -107,15 +107,21 @@ export function combinedSleepNap(day) {
 // ---------------------------------------------------------------------------
 
 /**
- * Total activity time: sum of time before nap and time after nap.
- * For no-nap days, returns 0 (both before and after are 0).
- * Returns null only if wake or bedtime are unavailable.
+ * Total activity time: wake-to-bedtime span minus nap time.
+ * For nap days: activityBeforeNap + activityAfterNap.
+ * For no-nap days: full dayLength (the subject was awake the entire day).
+ * Returns null if wake or bedtime are unavailable.
  * (D11-23)
  */
 export function totalActivity(day) {
   const before = activityBeforeNap(day);
   const after  = activityAfterNap(day);
   if (before == null || after == null) return null;
+  // No-nap day: activityBeforeNap and activityAfterNap return 0,
+  // but total activity is the full wake-to-bedtime span.
+  if (before === 0 && after === 0 && day.napStart == null && day.napEnd == null) {
+    return dayLength(day);
+  }
   return before + after;
 }
 
@@ -298,10 +304,10 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('napDuration', napRows);
   aggregateMetric('dayLength', validRows);
   aggregateMetric('combinedSleepNap', validRows);
-  aggregateMetric('totalActivity', napRows);
+  aggregateMetric('totalActivity', validRows);
   aggregateMetric('activityBeforeNap', napRows);
   aggregateMetric('activityAfterNap', napRows);
-  aggregateMetric('activityAfterSleepFactor', napRows);
+  aggregateMetric('activityAfterSleepFactor', validRows);
 
   // SAA: exclude first row, include only rows with both sleep and prev activity
   const saaRows = validRows.filter((r, i) => i > 0 && r.sleepAfterActivityFactor !== null);

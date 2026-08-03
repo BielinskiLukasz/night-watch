@@ -194,11 +194,11 @@ describe('totalActivity(day)', () => {
     );
   });
 
-  it('no nap (napStart=null, napEnd=null) → 0', () => {
-    // No nap means 0 before + 0 after = 0 total activity
+  it('no nap (napStart=null, napEnd=null) → dayLength (840 min)', () => {
+    // No nap: activity = full wake-to-bedtime span = 21:00 - 07:00 = 840 min
     assert.strictEqual(
       totalActivity(makeDay('07:00', '21:00', null, null)),
-      0,
+      840,
     );
   });
 
@@ -234,12 +234,12 @@ describe('activityAfterSleepFactor(day)', () => {
     assert.ok(Math.abs(aas - (780 / 660)) < 0.001);
   });
 
-  it('no nap (totalActivity=0) → 0', () => {
-    // No nap means totalActivity=0, so AAS = 0 / combinedSleepNap = 0
-    assert.strictEqual(
-      activityAfterSleepFactor(makeDay('07:00', '21:00', null, null)),
-      0,
-    );
+  it('no nap → totalActivity(dayLength) / combinedSleepNap', () => {
+    // No nap: totalActivity = dayLength = 840 (21:00-07:00), combinedSleepNap = sleepDuration = 600
+    // AAS = 840 / 600 = 1.4
+    const aas = activityAfterSleepFactor(makeDay('07:00', '21:00', null, null));
+    assert.ok(aas !== null);
+    assert.ok(Math.abs(aas - 840 / 600) < 0.001);
   });
 
   it('no wake/bedtime (sleepDuration null) → null', () => {
@@ -325,12 +325,14 @@ describe('sleepAfterActivityFactor(day, prevDay)', () => {
     );
   });
 
-  it('prevDay has no nap (totalActivity=0) → null (division by zero)', () => {
+  it('prevDay has no nap: SAA uses prevDay dayLength as activity', () => {
+    // prevDayNoNap: wake=06:00, bedtime=22:00, no nap → dayLength = 960 min
+    // day: combinedSleepNap = 660 (600 sleep + 60 nap)
+    // SAA = 660 / 960 = 0.6875
     const prevDayNoNap = makeDay('06:00', '22:00', null, null);
-    assert.strictEqual(
-      sleepAfterActivityFactor(makeDay('07:00', '21:00', '12:00', '13:00'), prevDayNoNap),
-      null,
-    );
+    const saa = sleepAfterActivityFactor(makeDay('07:00', '21:00', '12:00', '13:00'), prevDayNoNap);
+    assert.ok(saa !== null, 'SAA should not be null when prevDay has no nap');
+    assert.ok(Math.abs(saa - 660 / 960) < 0.001, `Expected ${660 / 960}, got ${saa}`);
   });
 
   it('day has no wake/bedtime (combinedSleepNap null) → null', () => {
@@ -369,17 +371,15 @@ describe('sleepAfterActivityFactor(day, prevDay)', () => {
     assert.ok(Math.abs(saa - expectedSaa) < 0.001, `Expected ${expectedSaa}, got ${saa}`);
   });
 
-  it('no-nap current day with no-nap previous day (zero prevActivity): division by zero → null', () => {
-    // current day: wake=07:00, bedtime=21:00, no nap
-    // prevDay: wake=06:00, bedtime=22:00, no nap (totalActivity = 0 + 0 = 0)
-    // saa = 600 / 0 → null (division by zero)
+  it('no-nap current day with no-nap previous day: SAA uses dayLength for both', () => {
+    // current day: wake=07:00, bedtime=21:00, no nap → combinedSleepNap = 600
+    // prevDay: wake=06:00, bedtime=22:00, no nap → dayLength = 960
+    // SAA = 600 / 960 ≈ 0.625
     const prevDay = makeDay('06:00', '22:00', null, null); // no nap
     const currentDay = makeDay('07:00', '21:00', null, null); // no nap
-    assert.strictEqual(
-      sleepAfterActivityFactor(currentDay, prevDay),
-      null,
-      'SAA should be null when prevDay has zero activity (no nap)',
-    );
+    const saa = sleepAfterActivityFactor(currentDay, prevDay);
+    assert.ok(saa !== null, 'SAA should not be null for no-nap/no-nap pair');
+    assert.ok(Math.abs(saa - 600 / 960) < 0.001, `Expected ${600 / 960}, got ${saa}`);
   });
 
   it('day with nap: uses combinedSleepNap = sleep + nap (baseline)', () => {
@@ -439,17 +439,17 @@ describe('aggregateMetrics(dayRecords)', () => {
     assert.ok(result.max.sleepDuration !== null);
   });
 
-  it('no-nap day: nap-columns show null for napDuration, 0 for totalActivity', () => {
+  it('no-nap day: napDuration is null, totalActivity equals dayLength', () => {
     const days = [
       makeDay('07:00', '21:00', '12:00', '13:00'),
-      makeDay('06:30', '21:30', null, null), // no nap
+      makeDay('06:30', '21:30', null, null), // no nap: dayLength = 900 min
     ];
     const result = aggregateMetrics(days);
 
     assert.strictEqual(result.rows.length, 2);
-    // No-nap row should have null napDuration but 0 totalActivity
     assert.strictEqual(result.rows[1].napDuration, null);
-    assert.strictEqual(result.rows[1].totalActivity, 0);
+    // No-nap: totalActivity = dayLength = 21:30 - 06:30 = 900 min
+    assert.strictEqual(result.rows[1].totalActivity, 900);
   });
 
   it('all rejected days: aggregates show empty/null', () => {

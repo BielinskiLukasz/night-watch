@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 Phase: 10 — TIF Algorithm & Settings
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-03 — Completed quick task 260803-k5r: Refactor chart-data.js to reuse sleepDuration and napDuration from metrics.js
+Last activity: 2026-08-03 — Completed quick task 260803-ohi: Fix SAA calculation in metrics.js to include days without naps
 
 Progress: [██████████] 100%
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 |------|------|-------------|
 | 2026-07-13 | tif-card-expand | Make TIF normal prediction cards collapsible with evidence windows on expand |
 | 2026-08-03 | refactor-chart-data-js-to-reuse-sleepdur | Refactor chart-data.js to reuse sleepDuration and napDuration from metrics.js |
+| 2026-08-03 | fix-saa-calculation-in-metrics-js-to-inc | Fix SAA calculation in metrics.js to include days without naps |
 
 ### Pending Todos
 
