@@ -160,7 +160,7 @@ export function sleepAfterActivityFactor(day, prevDay) {
  *   - Min/Max: return { value, date } where date is the wake time or bedtime as ISO string
  *   - Average durations: Math.round to nearest minute
  *   - Average ratios: compute normally
- *   - Overnight sleep (bedtime on one date, wake on next): paired across calendar dates
+ *   - Sleep duration: today's wake paired with previous day's bedtime; null if no prevDay or slots absent
  * (D11-26)
  */
 export function aggregateMetrics(dayRecords) {
@@ -192,29 +192,15 @@ export function aggregateMetrics(dayRecords) {
     const prevDay = i > 0 ? dayRecords[i - 1] : null;
     const nextDay = i < dayRecords.length - 1 ? dayRecords[i + 1] : null;
 
-    // Date attribution and overnight sleep handling
+    // Date attribution and sleep duration
     let dateStr = null;
-    let sleepDur = sleepDuration(day); // Normal case: both bedtime and wake in same day
+    let sleepDur = null;
 
-    // Overnight sleep case: Current day has wake but no bedtime
-    // (bedtime is in previous day — check if we can pair them)
-    if (day.wake && !day.bedtime && prevDay && prevDay.bedtime) {
-      const wakeDateFromWake = extractDate(day.wake);
-      const bedtimeDateFromBedtime = extractDate(prevDay.bedtime);
-      if (wakeDateFromWake && bedtimeDateFromBedtime) {
-        // Check if current day's wake is on the expected next calendar date after bedtime
-        const expectedDateStr = addOneDay(bedtimeDateFromBedtime);
-        if (wakeDateFromWake === expectedDateStr) {
-          // Pair them: bedtime (prev day) → wake (current day)
-          dateStr = wakeDateFromWake; // Attribute to the wake date
-          const bedtimeStr = extractTime(prevDay.bedtime);
-          const wakeStr = extractTime(day.wake);
-          sleepDur = calculateOvernightSleep(bedtimeStr, wakeStr);
-        } else {
-          // No matching bedtime on previous day, use wake date
-          dateStr = wakeDateFromWake;
-        }
-      }
+    // Sleep duration always pairs today's wake with the previous day's bedtime.
+    if (day.wake && prevDay && prevDay.bedtime) {
+      const bedtimeStr = extractTime(prevDay.bedtime);
+      const wakeStr = extractTime(day.wake);
+      sleepDur = calculateOvernightSleep(bedtimeStr, wakeStr);
     }
 
     // Fallback: if we have a wake date, use it

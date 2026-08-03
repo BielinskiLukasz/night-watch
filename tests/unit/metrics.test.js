@@ -686,7 +686,7 @@ describe('overnight sleep across calendar dates', () => {
     assert.strictEqual(result.rows[1].date, '2026-04-01');
   });
 
-  it('normal same-day sleep (sanity check): no overnight pairing', () => {
+  it('first day with bedtime+wake in same record (no prevDay): sleepDuration is null', () => {
     const day = {
       date: '2026-04-01',
       bedtime: { at: '2026-03-31T23:00' },
@@ -697,8 +697,8 @@ describe('overnight sleep across calendar dates', () => {
 
     const result = aggregateMetrics([day]);
 
-    // Normal case: both bedtime and wake in same day → sleepDuration computed normally
-    assert.strictEqual(result.rows[0].sleepDuration, 480);
+    // No previous day to pair with → sleep duration cannot be computed
+    assert.strictEqual(result.rows[0].sleepDuration, null);
     assert.strictEqual(result.rows[0].date, '2026-04-01');
   });
 
