@@ -681,18 +681,21 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
   // Build the day-grouped list mount point.
   const dayList = el('section', { className: 'dayList', 'data-role': 'events' });
 
-  // "+ Add event" trigger (D-10 modal trigger). Lives at the bottom of <main>.
+  // "Add events" trigger (D-10 modal trigger). Now a child of quickLog.
   const addEventBtn = el('button', {
     type: 'button',
     id: 'addEventBtn',
     className: 'addEventBtn',
-    textContent: '+ Add event',
+    textContent: 'Add events',
   });
 
-  // D9-16 layout: quickLog → stageSelector → addEventBtn → nextEventCard → coldStartMsg → forecastCards → toggle → dayList
-  // Per UI-08/D9-16: addEventBtn moved from tail to position 2 (before nextEventCard).
-  // Plan 06-03: stageSelectorContainer inserted between quickLog and addEventBtn (D6-09).
-  root.replaceChildren(quickLog, stageSelectorContainer, addEventBtn, nextEventCard, coldStartMsg, forecastCards, toggle, dayList);
+  // Append addEventBtn to quickLog as its last child.
+  quickLog.appendChild(addEventBtn);
+
+  // D9-16 layout: quickLog (with addEventBtn as last child) → stageSelector → nextEventCard → coldStartMsg → forecastCards → toggle → dayList
+  // Plan 260803-otj: addEventBtn moved into quickLog row to line up with other quick-log buttons.
+  // Plan 06-03: stageSelectorContainer inserted between quickLog and nextEventCard (D6-09).
+  root.replaceChildren(quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList);
 
   // Grouping toggle click — commit-on-click via settings.update (D2-16).
   // No-op when clicking the already-active button to avoid spurious

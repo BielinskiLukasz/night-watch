@@ -218,11 +218,8 @@ button[data-log]:hover {
   background: #fee2e2;
 }
 
-/* "+ Add event" button (Plan 01-04 / D-10 modal trigger) */
+/* "Add events" button (Plan 01-04 / D-10 modal trigger; Plan 260803-otj: moved into quickLog) */
 .addEventBtn {
-  display: block;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
   background: transparent;
