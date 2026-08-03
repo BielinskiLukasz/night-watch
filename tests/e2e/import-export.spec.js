@@ -383,7 +383,7 @@ test.describe('JSON Import (Plan 05-05)', () => {
     await expect(page.locator('#importStatus')).toContainText('Import complete');
 
     // Click Save — the bug was that the stale form overwrote the imported TIF settings here
-    await page.click('button[value="save"]');
+    await page.click('#settings button[value="save"]');
 
     const stored = await page.evaluate(() => {
       const db = JSON.parse(localStorage.getItem('nightwatch:db') || '{}');
