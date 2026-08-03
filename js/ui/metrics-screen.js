@@ -297,8 +297,8 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // Stage badge (D11-09): show/hide with stage.name via textContent.
     renderStageBadge(stageBadge, snap);
 
-    // Compute aggregates
-    const metricsResult = aggregateMetrics(days);
+    // aggregateMetrics expects oldest-first (prevDay pairing); bucketBy returns newest-first.
+    const metricsResult = aggregateMetrics([...days].reverse());
     const { rows, avg, min, max } = metricsResult;
 
     // Build table
@@ -331,7 +331,7 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(maxRow);
     table.appendChild(summaryTbody);
 
-    // Per-day rows tbody (most-recent-first, D11-03)
+    // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
     const daysTbody = document.createElement('tbody');
     for (let i = rows.length - 1; i >= 0; i--) {
       const dayRow = buildDayRow(rows[i], snap);
