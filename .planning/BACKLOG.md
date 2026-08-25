@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-03 (added B-033 — TIF ratio windows for nap forecasts; B-034 — replace SAA with day length/sleep factor; B-035 — TIF window bounds on metrics screen)
-Last assigned ID: **B-035** — next new item must be **B-036**
+Last updated: 2026-08-25 (added B-036 — missing ratio columns in metrics screen; B-037 — TIF use of recorded MA/AA and rolling windows)
+Last assigned ID: **B-037** — next new item must be **B-038**
 
 ---
 
@@ -987,3 +987,77 @@ This is distinct from the prediction cards on the Today screen (which show the d
 - In the metrics screen renderer (B-026 UI): conditionally render a "TIF bounds" sub-row per event type when `snap.forecastAlgorithm === 'tif'` and TIF predictions are available for the selected day.
 - Format `finalStart`/`finalEnd` using the same `formatTime(minutes, timeFormat)` helper used by prediction cards.
 - No new data shape changes beyond what B-021 already introduces.
+
+---
+
+## Metrics screen and TIF feature enhancements (captured 2026-08-25)
+
+### B-036 · Add nap-fraction and morning/afternoon-split ratio columns to metrics screen
+
+**Source:** METRICS-SCREEN-GAP.md + PREDICTION-FEATURES.md (2026-08-25)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** v1.2 — pairs naturally with the B-026 metrics dashboard phase; can also ship standalone (~1 hour of work)
+
+**What:** Add two ratio columns that are currently missing from the 14-column metrics table:
+
+1. **Nap fraction** — `napDuration / combinedSleepNap` — what proportion of total sleep the nap represents (0–1 ratio).
+2. **Morning/afternoon split** — `activityBeforeNap / activityAfterNap` (MA / AA) — ratio of pre-nap to post-nap wake time; captures asymmetry in how the day is structured around the nap.
+
+Both columns follow the exact same pattern as the existing `activityAfterSleepFactor` (AAS):
+- Add a pure helper function to `js/lib/metrics.js`
+- Compute the value in `aggregateMetrics()` per-row and in the aggregate pass
+- Add a column definition object to `COLUMNS` in `js/ui/metrics-screen.js`
+
+**Why:** These two ratios are identified in PREDICTION-FEATURES.md as useful inputs for predicting nap-end and bedtime respectively. Surfacing them in the metrics table lets users see per-day values and historical averages before the TIF algorithm uses them as windows. See also METRICS-SCREEN-GAP.md.
+
+**Open questions when this gets planned:**
+
+- Column labels: "Nap%" and "AM/PM" or longer forms?
+- Should nap-fraction be displayed as a decimal (0.32) or a percentage (32%)?
+- For days with no nap, nap-fraction = null (em-dash); morning/afternoon split = null (no AA denominator). Confirm this matches existing no-nap em-dash behaviour.
+
+**Implementation notes:**
+
+- `js/lib/metrics.js`: add `napFraction(day)` = `napDuration / combinedSleepNap` (guard: `combinedSleepNap === 0 || napDuration === null → null`); add `morningAfternoonSplit(day)` = `activityBeforeNap / activityAfterNap` (guard: `activityAfterNap === 0 || either null → null`).
+- `aggregateMetrics()`: compute both per-row and in the aggregate `aggregateMetric()` call; use nap-only rows for nap-fraction (same filter as `napDuration`).
+- `js/ui/metrics-screen.js`: push two entries into `COLUMNS` with `isRatio: true` and `toFixed(2)` formatting (same as AAS/SAA).
+- Unit tests: one test per helper covering nap day, no-nap day, and zero-denominator guard.
+
+---
+
+### B-037 · TIF: use recorded MA/AA as direct inputs and add rolling-window sources
+
+**Source:** PREDICTION-FEATURES.md + user confirmation that MA/AA are direct recorded inputs (2026-08-25)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-021 (TIF algorithm) ships — extends `js/lib/forecast-tif.js`
+
+**What:** Two related improvements to the TIF algorithm that follow directly from PREDICTION-FEATURES.md:
+
+**1 — Prefer recorded MA/AA over derived timestamp differences.**
+
+Currently the TIF algorithm derives activity-before-nap as `napStart − wake` and activity-after-nap as `napEnd − bedtime` from timestamps. The user records MA (morning activity duration) and AA (afternoon activity duration) directly — these may differ from the timestamp difference when events were logged with a delay. When MA/AA are present on a day record, use them as ground-truth inputs instead of computing the gap from timestamps. This makes the window history cleaner and consistent with what the user actually observed.
+
+Concretely: in the activity-before-nap window (TIF nap-start window 2) and the activity-after-nap window (TIF bedtime window 3), pull from the recorded MA/AA field first; fall back to `extractTime(napStart) − extractTime(wake)` only when the recorded value is absent.
+
+**2 — Add rolling-window (7-day, 14-day) variants as additional TIF sources.**
+
+PREDICTION-FEATURES.md identifies rolling averages and std deviations of each interval as the second-highest-priority predictors (after the same-day anchor). Currently TIF uses all-time trimmed min/max for each window. Adding a rolling-window variant (last N days) as an extra source narrows the intersection when recent behaviour differs from the long-term average — useful as a child's schedule shifts with development.
+
+For each existing window that uses historical distributions (e.g. activity-before-nap band, nap-duration band, bedtime band), compute an additional 14-day rolling min/max from the trimmed series. Add it as an extra window in the intersection. This is opt-in via a new setting `tifRollingDays: number | null` (null = disabled; default 14).
+
+**Why:** Recorded MA/AA values are more accurate than derived differences because parents may log events after the fact. Using ground-truth durations for the window history reduces noise in the trimmed min/max. Rolling windows give the algorithm recency bias so it tracks schedule drift as the child grows, which is the dominant source of prediction error over months.
+
+**Open questions when this gets planned:**
+
+- Should the MA/AA field be added to the existing event-log schema (new field per event), or stored as a per-day annotation? The day record already has `.activityBeforeNap` and `.activityAfterNap` fields from `aggregateMetrics` — confirm whether these are stored or always computed.
+- Should the rolling window be a hard N-day window, or an exponentially weighted moving average? Hard window is simpler and more interpretable.
+- Should `tifRollingDays` be a single setting for all window types, or per-window-type? Single is simpler to start.
+- Interaction with B-033 (ratio windows): do the ratio windows also benefit from a rolling variant? Likely yes — defer to the same `tifRollingDays` setting.
+- Cold-start: if fewer than `tifRollingDays` days exist, fall back to all-time window (no change in behaviour).
+
+**Implementation notes:**
+
+- **MA/AA preference**: in `forecast-tif.js`, add a `resolveActivityBeforeNap(day)` helper that returns `day.recordedMA ?? activityBeforeNap(day)` (importing `activityBeforeNap` from `metrics.js`). Apply symmetrically for AA. Use these in the window history series builders.
+- **Rolling windows**: add `rollingTrimmedMinMax(values, N, trimPct)` helper — takes the last N values from the series before computing `trimmedMinMax`. Slot the rolling window as an additional entry in each event type's window array; the intersection logic is unchanged.
+- **Settings**: add `tifRollingDays: number | null` to `DEFAULT_SETTINGS` and the Settings modal (Forecast & Prediction section, TIF sub-group). Guard: show only when `forecastAlgorithm === 'tif'`.
+- Unit-test `resolveActivityBeforeNap` with recorded vs. absent MA; unit-test `rollingTrimmedMinMax` with N < series length and N > series length.
