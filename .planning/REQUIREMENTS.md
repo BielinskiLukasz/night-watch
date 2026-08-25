@@ -10,17 +10,17 @@
 
 ### TIF — Trimmed Intersection Forecast Algorithm
 
-- [ ] **TIF-01**: User can toggle the forecast algorithm between "Classic" (existing) and "TIF" via a Settings control; the toggle persists across sessions
-- [ ] **TIF-02**: User can set the TIF auto-trim percentage (0–40, step 1, default 10) in Settings — controls how many extreme-value events are excluded per event type before any window is computed
-- [ ] **TIF-03**: User can set the TIF precision target in minutes (default 60) in Settings — the desired maximum width of a displayed TIF prediction window
-- [ ] **TIF-04**: When TIF is active, wake-up predictions are derived from the intersection of three independent windows: (1) historic wake-time band, (2) sleep-duration band projected from bedtime anchor, (3) sleep+nap combined duration band projected from bedtime anchor
-- [ ] **TIF-05**: When TIF is active, nap-start predictions are derived from the intersection of two windows: (1) historic nap-start band, (2) activity-before-nap (wake→nap-start duration) band projected from wake anchor
-- [ ] **TIF-06**: When TIF is active, nap-end predictions are derived from the intersection of two windows: (1) historic nap-end band, (2) nap-duration band projected from nap-start anchor
-- [ ] **TIF-07**: When TIF is active, bedtime predictions are derived from the intersection of three windows: (1) historic bedtime band, (2) day-length (wake→bedtime duration) band projected from wake anchor, (3) activity-after-nap (nap-end→bedtime duration) band projected from nap-end anchor
-- [ ] **TIF-08**: When the intersection of all windows is non-empty, TIF uses that intersected range as the prediction; when the intersection is empty (start > end), TIF falls back to the union of all window ranges and marks the prediction "low confidence"
-- [ ] **TIF-09**: Each TIF prediction displays a precision score: 100% when the algorithm's computed range width ≤ precision target; `precisionTarget / algRange × 100%` otherwise
-- [ ] **TIF-10**: When TIF's computed range exceeds the precision target, the displayed prediction window is narrowed to precision-target width centered on the algorithm's midpoint; the original range and precision score remain visible alongside
-- [ ] **TIF-11**: TIF predictions respect the existing cold-start gate (min_days setting) and the existing manual outlier/rejected-day flags; manually rejected events count against the trim budget before auto-trim is applied
+- [x] **TIF-01**: User can toggle the forecast algorithm between "Classic" (existing) and "TIF" via a Settings control; the toggle persists across sessions
+- [x] **TIF-02**: User can set the TIF auto-trim percentage (0–40, step 1, default 10) in Settings — controls how many extreme-value events are excluded per event type before any window is computed
+- [x] **TIF-03**: User can set the TIF precision target in minutes (default 60) in Settings — the desired maximum width of a displayed TIF prediction window
+- [x] **TIF-04**: When TIF is active, wake-up predictions are derived from the intersection of three independent windows: (1) historic wake-time band, (2) sleep-duration band projected from bedtime anchor, (3) sleep+nap combined duration band projected from bedtime anchor
+- [x] **TIF-05**: When TIF is active, nap-start predictions are derived from the intersection of two windows: (1) historic nap-start band, (2) activity-before-nap (wake→nap-start duration) band projected from wake anchor
+- [x] **TIF-06**: When TIF is active, nap-end predictions are derived from the intersection of two windows: (1) historic nap-end band, (2) nap-duration band projected from nap-start anchor
+- [x] **TIF-07**: When TIF is active, bedtime predictions are derived from the intersection of three windows: (1) historic bedtime band, (2) day-length (wake→bedtime duration) band projected from wake anchor, (3) activity-after-nap (nap-end→bedtime duration) band projected from nap-end anchor
+- [x] **TIF-08**: When the intersection of all windows is non-empty, TIF uses that intersected range as the prediction; when the intersection is empty (start > end), TIF falls back to the union of all window ranges and marks the prediction "low confidence"
+- [x] **TIF-09**: Each TIF prediction displays a precision score: 100% when the algorithm's computed range width ≤ precision target; `precisionTarget / algRange × 100%` otherwise
+- [x] **TIF-10**: When TIF's computed range exceeds the precision target, the displayed prediction window is narrowed to precision-target width centered on the algorithm's midpoint; the original range and precision score remain visible alongside
+- [x] **TIF-11**: TIF predictions respect the existing cold-start gate (min_days setting) and the existing manual outlier/rejected-day flags; manually rejected events count against the trim budget before auto-trim is applied
 
 ### MET — Metrics Screen
 
@@ -76,17 +76,17 @@ Items in the backlog not promoted to this milestone:
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| TIF-01 | Phase 10 | — | ⬜ Planned |
-| TIF-02 | Phase 10 | — | ⬜ Planned |
-| TIF-03 | Phase 10 | — | ⬜ Planned |
-| TIF-04 | Phase 10 | — | ⬜ Planned |
-| TIF-05 | Phase 10 | — | ⬜ Planned |
-| TIF-06 | Phase 10 | — | ⬜ Planned |
-| TIF-07 | Phase 10 | — | ⬜ Planned |
-| TIF-08 | Phase 10 | — | ⬜ Planned |
-| TIF-09 | Phase 10 | — | ⬜ Planned |
-| TIF-10 | Phase 10 | — | ⬜ Planned |
-| TIF-11 | Phase 10 | — | ⬜ Planned |
+| TIF-01 | Phase 10 | — | ✅ Complete |
+| TIF-02 | Phase 10 | — | ✅ Complete |
+| TIF-03 | Phase 10 | — | ✅ Complete |
+| TIF-04 | Phase 10 | — | ✅ Complete |
+| TIF-05 | Phase 10 | — | ✅ Complete |
+| TIF-06 | Phase 10 | — | ✅ Complete |
+| TIF-07 | Phase 10 | — | ✅ Complete |
+| TIF-08 | Phase 10 | — | ✅ Complete |
+| TIF-09 | Phase 10 | — | ✅ Complete |
+| TIF-10 | Phase 10 | — | ✅ Complete |
+| TIF-11 | Phase 10 | — | ✅ Complete |
 | MET-01 | Phase 11 | — | ⬜ Planned |
 | MET-02 | Phase 11 | — | ⬜ Planned |
 | MET-03 | Phase 11 | — | ⬜ Planned |

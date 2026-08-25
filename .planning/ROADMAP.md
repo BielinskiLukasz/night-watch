@@ -10,7 +10,7 @@
 
 **Phase Numbering:** v1.0 used phases 1–8, v1.1 used phase 9, v1.2 continues from phase 10.
 
-- [ ] **Phase 10: TIF Algorithm & Settings** - Opt-in Trimmed Intersection Forecast with precision scoring, Settings controls, and Today screen rendering
+- [x] **Phase 10: TIF Algorithm & Settings** - Opt-in Trimmed Intersection Forecast with precision scoring, Settings controls, and Today screen rendering
 - [x] **Phase 11: Metrics Screen** - Dedicated 5th-tab screen with per-day duration/activity/ratio metrics and historical aggregates (completed 2026-07-28)
 
 ## Phase Details
@@ -67,7 +67,7 @@ Gap Closure (final): Wave 1: 11-08 + 11-09 (parallel) → Wave 2: 11-10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. TIF Algorithm & Settings | 0/5 | Not started | - |
+| 10. TIF Algorithm & Settings | 5/5 | Complete    | 2026-08-24 |
 | 11. Metrics Screen | 10/10 | Complete    | 2026-07-30 |
 
 ## Backlog
