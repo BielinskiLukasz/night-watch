@@ -266,6 +266,39 @@ function annotateRejected(records, settings) {
   }));
 }
 
+// ---------- intense annotation ----------
+
+/**
+ * Annotate an array of day records with the `.intense` boolean derived from
+ * the settings.intenseDays list.
+ *
+ * PRED-10 / D-02: The intense flag marks days the caregiver has tagged as
+ * developmentally intense (e.g. illness, travel, milestones). Like `.rejected`,
+ * this flag is derived at render/forecast time from the settings store — it is
+ * NEVER stored on individual events.
+ *
+ * Backward compatibility: if `settings` is not provided or `intenseDays` is
+ * not an array, all days default to `intense = false`.
+ *
+ * @param {Array<object>} records   day records produced by bucketBy()
+ * @param {object|undefined} settings  settings snapshot (may be absent)
+ * @returns {Array<object>}  new array with .intense boolean on each record
+ */
+function annotateIntense(records, settings) {
+  const intenseDays =
+    settings && Array.isArray(settings.intenseDays)
+      ? settings.intenseDays
+      : [];
+  if (intenseDays.length === 0) {
+    // Fast path: no intense days configured — avoid per-record includes() call.
+    return records.map(day => ({ ...day, intense: false }));
+  }
+  return records.map(day => ({
+    ...day,
+    intense: intenseDays.includes(day.date),
+  }));
+}
+
 // ---------- public API ----------
 
 /**
@@ -275,12 +308,13 @@ function annotateRejected(records, settings) {
  * @param {Array<{id:string,type:string,at:string}>} events
  * @param {number} [limit]  optional max records (D-10 default 7 — passed by caller)
  * @param {object} [settings]  optional settings snapshot; provides rejectedDays for
- *                             D4-05 rejection annotation. Defaults to empty if absent.
- * @returns {Array<object>}  day records, newest first; each has .rejected boolean
+ *                             D4-05 rejection annotation and intenseDays for PRED-10
+ *                             intense annotation. Defaults to empty if absent.
+ * @returns {Array<object>}  day records, newest first; each has .rejected and .intense booleans
  */
 export function daysByCalendar(events, limit, settings) {
   const records = bucketBy(events, calendarKey, limit);
-  return annotateRejected(records, settings);
+  return annotateIntense(annotateRejected(records, settings), settings);
 }
 
 /**
@@ -292,8 +326,9 @@ export function daysByCalendar(events, limit, settings) {
  * @param {number} [cutoverHour=4]  integer 0..23
  * @param {number} [limit]
  * @param {object} [settings]  optional settings snapshot; provides rejectedDays for
- *                             D4-05 rejection annotation. Defaults to empty if absent.
- * @returns {Array<object>}
+ *                             D4-05 rejection annotation and intenseDays for PRED-10
+ *                             intense annotation. Defaults to empty if absent.
+ * @returns {Array<object>}  day records; each has .rejected and .intense booleans
  */
 export function daysBySubjectiveNight(
   events,
@@ -302,5 +337,5 @@ export function daysBySubjectiveNight(
   settings,
 ) {
   const records = bucketBy(events, (at) => subjectiveNightKey(at, cutoverHour), limit);
-  return annotateRejected(records, settings);
+  return annotateIntense(annotateRejected(records, settings), settings);
 }
