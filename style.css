@@ -396,7 +396,8 @@ button[data-log]:hover {
   color: #334155;
 }
 
-#settings label.checkboxRow {
+#settings label.checkboxRow,
+#manualEntry label.checkboxRow {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
