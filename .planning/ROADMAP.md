@@ -54,7 +54,13 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
   4. When no nap-start has been logged by the configured threshold hour, the Today screen bedtime prediction shifts earlier to reflect likely earlier tiredness on a no-nap day
   5. The nap prediction card shows a "% chance of nap today" score derived from stage-specific nap frequency, elapsed wake time, consecutive no-nap streak, and whether the nap window has already passed
   6. Prediction cards on Today screen appear in the order wake → nap start → nap end → bedtime in both collapsed and expanded states
-**Plans**: TBD (estimated 5–6 plans)
+**Plans**: 6 plans
+- [ ] 12-01-PLAN.md — Tracer: DB migration (4 new settings fields) + PRED-08 evening-hour rule + UI-07 card order fix + settings modal inputs/validation
+- [ ] 12-02-PLAN.md — TDD: annotateIntense in day-bucket.js (PRED-10 data model)
+- [ ] 12-03-PLAN.md — Execute: intense-day UI (checkbox in manual-entry, badge in history-screen, CSS)
+- [ ] 12-04-PLAN.md — TDD: PRED-09 wake duration-band union (computeDurationBand + union logic)
+- [ ] 12-05-PLAN.md — TDD: PRED-10 intense bedtime modifier + PRED-11 no-nap bedtime shift (subWindowBedtime, forecast context param)
+- [ ] 12-06-PLAN.md — Execute: PRED-12 nap probability score (napProbability fn + Today screen display)
 **UI hint**: yes
 
 ### Phase 13: TIF Algorithm Extensions
@@ -92,7 +98,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
-| 12. Prediction Logic Refinements | v1.3 | 0/? | Not started | — |
+| 12. Prediction Logic Refinements | v1.3 | 0/6 | Not started | — |
 | 13. TIF Algorithm Extensions | v1.3 | 0/? | Not started | — |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 
