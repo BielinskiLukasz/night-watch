@@ -5,15 +5,15 @@ milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 12
 current_phase_name: prediction-logic-refinements
 status: executing
-stopped_at: Completed NW-12-05-PLAN.md
-last_updated: "2026-08-25T21:13:20.696Z"
+stopped_at: Completed NW-12-06-PLAN.md
+last_updated: "2026-08-25T21:37:06.027Z"
 last_activity: 2026-08-25
 last_activity_desc: Phase NW-12 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -66,6 +66,7 @@ Last activity: 2026-08-25 — Phase NW-12 execution started
 | Phase NW-12 P04 | 17 | 3 tasks | 2 files |
 | Phase NW-12 P03 | 5 | 2 tasks | 4 files |
 | Phase NW-12 P05 | 30 | 3 tasks | 3 files |
+| Phase NW-12 P06 | 25 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Last activity: 2026-08-25 — Phase NW-12 execution started
 - [Phase ?]: Plan 12-03: settings.update guarded — only fires when intenseDays state actually changed
 - [Phase ?]: PRED-11 takes precedence over PRED-10 when both conditions fire simultaneously (no-nap + evening + intense day)
 - [Phase ?]: subWindowBedtime returns numeric minutes so callers can apply generateProbabilityBand before minutesToTime conversion
+- [Phase ?]: calculatePercentiles callback must return HH:MM string not minutes; result shape is { min, central, max }
+- [Phase ?]: napProbabilityScore attached to predictions.napStart before renderForecastSection; TIF algorithm benefits transparently
 
 ### Quick Tasks Completed
 
@@ -104,8 +107,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-25T21:13:20.666Z
-Stopped at: Completed NW-12-05-PLAN.md
+Last session: 2026-08-25T21:37:05.999Z
+Stopped at: Completed NW-12-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
