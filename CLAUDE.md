@@ -29,6 +29,13 @@ node --test tests/unit/forecast.test.js           # unit or integration file
 npx playwright test tests/e2e/history.spec.js     # single E2E spec
 ```
 
+Run only integration tests (node:test, no browser):
+```bash
+node --test tests/integration/
+```
+
+E2E runs Chromium only (see `playwright.config.js` — no multi-browser projects configured).
+
 <!-- GSD:stack-start source:STACK.md -->
 ## Technology Stack
 
@@ -78,6 +85,8 @@ tests/
 
 - **Adapter injection** — `js/app.js` injects adapters into every module that needs clock or storage. Modules in `lib/` and `store/` never call `new Date()` or `localStorage` directly. Tests use `storage-memory.js` + `clock-fixed.js` without touching real storage.
 
+- **Dual forecast algorithms** — `forecast.js` is the always-on classic (P10/P50/P90 percentile rolling window); `forecast-tif.js` is the opt-in TIF algorithm toggled in settings. TIF imports helpers from `forecast.js`. Both produce the same top-level prediction shape so `today-screen.js` swaps between them transparently.
+
 - **XSS guard** — all dynamic DOM updates must go through helpers in `js/ui/dom.js` (`textContent` / `replaceChildren()`). No `innerHTML` with user-controlled data anywhere in `js/`.
 
 - **Day boundary** — `js/lib/day-bucket.js` uses the cutover hour setting (default 04:00) to group events into sleep-days (not calendar days). Anything that reasons about "a day's events" must go through this module.
@@ -97,6 +106,10 @@ tests/
 - **UI module mount signature** — every `js/ui/` module exports a `mount*(root, deps)` or `mount*({ root, ...deps })` function. Children are cleared/replaced via helpers in `js/ui/dom.js`. Never write `innerHTML` in a mount function.
 
 - **PRECACHE_LIST must exclude test-only adapters.** `clock-fixed.js` and `storage-memory.js` must not appear in `sw.js`'s `PRECACHE_LIST`; `tests/unit/sw-precache.test.js` enforces this and will fail if an app-shell file is added without updating the list.
+
+- **`metrics.js` circular-import guard** — `metrics.js` is consumed by both `forecast-tif.js` and `metrics-screen.js`. It imports `timeToMinutes` from `forecast.js` but keeps a local copy of `extractTime` to avoid a cycle (`forecast-tif.js` → `metrics.js` → `forecast.js` is fine; the reverse direction would be circular).
+
+- **Stages are date-range filters, not app phases.** `js/lib/stages.js` exposes `filterDayRecordsByStage(dayRecords, stages, activeStageId)`. `activeStageId === null` means "all data". Any screen that aggregates history (Metrics, Accuracy) must pass data through this filter so user-defined life-stage scoping works correctly.
 <!-- GSD:architecture-end -->
 
 <!-- GSD:skills-start source:skills/ -->
