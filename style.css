@@ -983,6 +983,25 @@ button[data-log]:hover {
   margin: 0;
 }
 
+/* PRED-12 / D-14: nap probability secondary text on prediction cards */
+.nap-probability {
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 400;
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+/* PRED-12 / D-15: hero card variant — white text on indigo background */
+.next-event-hero .nap-probability {
+  font-size: 0.875rem;
+  font-weight: 400;
+  opacity: 0.85;
+  color: #fff;
+  margin: 0;
+  margin-top: 0.125rem;
+}
+
 /* ── Missed prediction variant (D3-11) ───────────────────────────────────── */
 
 .prediction-card.missed {

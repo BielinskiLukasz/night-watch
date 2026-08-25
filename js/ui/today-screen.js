@@ -41,7 +41,7 @@
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
-import { forecast, selectNextEvent } from '../lib/forecast.js';
+import { forecast, selectNextEvent, napProbability } from '../lib/forecast.js';
 import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -163,6 +163,13 @@ function renderNextEventCard(prediction, timeFormat) {
         textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
       }));
     }
+    // PRED-12 / D-15: nap probability score on napStart hero card
+    if (prediction.type === 'napStart' && prediction.napProbabilityScore != null && !prediction.isMissed) {
+      const napScoreText = prediction.napProbabilityScore === 0
+        ? '0% — nap window closed'
+        : `${prediction.napProbabilityScore}% chance of nap today`;
+      card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
+    }
   }
 
   // Missed label (D3-11)
@@ -273,6 +280,13 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
         className: 'time-band',
         textContent: `${formatHHMM(prediction.min, timeFormat)} – ${formatHHMM(prediction.max, timeFormat)}`,
       }));
+    }
+    // PRED-12 / D-14: nap probability score on napStart prediction card (not shown when missed)
+    if (eventType === 'napStart' && prediction.napProbabilityScore != null && !isMissed) {
+      const napScoreText = prediction.napProbabilityScore === 0
+        ? '0% — nap window closed'
+        : `${prediction.napProbabilityScore}% chance of nap today`;
+      card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
 
@@ -895,6 +909,32 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
     const predictions = snap.forecastAlgorithm === 'tif'
       ? tifForecast(forecastDays, snap)
       : forecast(forecastDays, snap, forecastContext);
+
+    // PRED-12: Compute nap probability score and attach to napStart prediction.
+    // Inline getSlotTime: extractTime is not exported from forecast.js — per D-13.
+    // gsd:allow-ui-clock — scheduling heuristic for current minute (display-only).
+    if (predictions.napStart && !predictions.isColdStart) {
+      const _getSlotTime = slot => (slot == null ? null : (typeof slot === 'object' ? slot.at?.slice(11) : slot));
+      // todayWakeHHMM: 'HH:MM' part of today's wake event, or null if not yet logged.
+      const todayWakeHHMM = _getSlotTime(todayDayRecord?.wake ?? null);
+      // napStreak: consecutive recent days (most recent first, skip today at index 0) without napStart.
+      let napStreak = 0;
+      for (let i = 1; i < forecastDays.length; i++) {
+        if (_getSlotTime(forecastDays[i].napStart) == null) {
+          napStreak++;
+        } else {
+          break;
+        }
+      }
+      const currentMinute = new Date().getMinutes(); // gsd:allow-ui-clock
+      predictions.napStart.napProbabilityScore = napProbability(forecastDays, snap, {
+        currentHour:   forecastContext.currentHour,
+        currentMinute,
+        napStreak,
+        todayWakeHHMM,
+      });
+    }
+
     renderForecastSection(predictions, snap, forecastDays, nextEventCard, coldStartMsg, forecastCards);
   }
 }
