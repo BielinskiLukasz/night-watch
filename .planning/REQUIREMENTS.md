@@ -75,31 +75,31 @@ Items remaining in backlog after v1.3 scope was set:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRED-08 | — | Pending |
-| PRED-09 | — | Pending |
-| PRED-10 | — | Pending |
-| PRED-11 | — | Pending |
-| PRED-12 | — | Pending |
-| TIF-12 | — | Pending |
-| TIF-13 | — | Pending |
-| TIF-15 | — | Pending |
-| TIF-16 | — | Pending |
-| TIF-14 | — | Pending |
-| MET-07 | — | Pending |
-| MET-08 | — | Pending |
-| MET-09 | — | Pending |
-| MET-10 | — | Pending |
-| MET-11 | — | Pending |
-| UI-07 | — | Pending |
-| UI-08 | — | Pending |
-| UI-09 | — | Pending |
-| UI-10 | — | Pending |
+| PRED-08 | Phase 12 | Pending |
+| PRED-09 | Phase 12 | Pending |
+| PRED-10 | Phase 12 | Pending |
+| PRED-11 | Phase 12 | Pending |
+| PRED-12 | Phase 12 | Pending |
+| UI-07 | Phase 12 | Pending |
+| TIF-12 | Phase 13 | Pending |
+| TIF-13 | Phase 13 | Pending |
+| TIF-15 | Phase 13 | Pending |
+| TIF-16 | Phase 13 | Pending |
+| TIF-14 | Phase 14 | Pending |
+| MET-07 | Phase 14 | Pending |
+| MET-08 | Phase 14 | Pending |
+| MET-09 | Phase 14 | Pending |
+| MET-10 | Phase 14 | Pending |
+| MET-11 | Phase 14 | Pending |
+| UI-08 | Phase 14 | Pending |
+| UI-09 | Phase 14 | Pending |
+| UI-10 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 19 total
-- Mapped to phases: 0 (roadmapper will assign)
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19 (Phase 12: 6, Phase 13: 4, Phase 14: 9)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-25*
-*Last updated: 2026-08-25 after initial definition*
+*Last updated: 2026-08-25 — traceability filled in by roadmapper*
