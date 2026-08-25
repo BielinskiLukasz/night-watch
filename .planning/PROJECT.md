@@ -70,9 +70,20 @@ compared to reality.
 - ✓ Historical aggregates (avg, min with date, max with date) for all metrics — v1.2
 - ✓ Stage-scoped Metrics filtering — v1.2
 
+## Current Milestone: v1.3 Prediction & TIF Enhancements
+
+**Goal:** Refine the classic and TIF forecasting engines with contextual rules and ratio-based windows, and extend the Metrics + Accuracy screens to surface TIF-specific data.
+
+**Target features:**
+- Prediction logic refinements: time-based bedtime rule, duration-based prediction, intense-day flag, missing-nap impact on bedtime
+- TIF algorithm extensions: ratio-based windows (activity/sleep → nap-start, activity/nap → nap-end), rolling windows + MA/AA preference
+- TIF metrics & accuracy: TIF accuracy screen, replace SAA with day/sleep factor, TIF window bounds on Metrics screen, nap-fraction + AM/PM split columns
+
 ### Active
 
-*(No active requirements — planning next milestone via `/gsd-new-milestone`)*
+- [ ] Phase 12 — Prediction logic refinements (B-004, B-005, B-006, B-007)
+- [ ] Phase 13 — TIF algorithm extensions (B-033, B-037)
+- [ ] Phase 14 — TIF metrics & accuracy (B-031, B-034, B-035, B-036)
 
 ### Out of Scope
 
@@ -197,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-24 after v1.2 milestone — Prediction & Metrics shipped*
+*Last updated: 2026-08-25 after v1.3 milestone start — Prediction & TIF Enhancements*
