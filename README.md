@@ -1,6 +1,6 @@
 # Nightwatch
 
-![Status](https://img.shields.io/badge/status-active_development-brightgreen)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
 ![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
@@ -202,10 +202,12 @@ npx playwright test tests/e2e/history.spec.js
 ```
 js/
   app.js              # Composition root — the only place adapters are selected and injected
-  lib/                # Pure functions (no DOM, no side effects): forecast, day-bucket, csv-parse, accuracy, time
+  lib/                # Pure functions (no DOM, no side effects): forecast, forecast-tif, metrics,
+                      #   day-bucket, stages, csv-parse, accuracy, time, …
   store/              # Stateful stores with pub/sub: event-log.js, settings.js
   adapters/           # Injectable seams: storage-local/memory, clock-system/fixed
-  ui/                 # DOM rendering: today-screen, history-screen, charts-screen, header, manual-entry, dom helpers
+  ui/                 # DOM rendering: today-screen, history-screen, charts-screen,
+                      #   accuracy-screen, metrics-screen, header, manual-entry, dom helpers
 tests/
   unit/               # node:test — pure lib/ modules
   integration/        # node:test — stores wired to memory adapter + fixed clock
@@ -225,6 +227,10 @@ scripts/
 **Service worker** — `sw.js` maintains a frozen `PRECACHE_LIST` and cache key `nightwatch-v1`. Adding new app-shell files requires updating both; `tests/unit/sw-precache.test.js` enforces the list is exhaustive.
 
 **Schema migration** — `js/lib/db-shape.js` validates the data shape and runs V1→V2 migration on import. Any data-model change must bump the schema version here.
+
+**Dual forecast algorithms** — `forecast.js` is the always-on classic engine (P10/P50/P90 rolling-window percentile). `forecast-tif.js` is the opt-in TIF algorithm (toggled in Settings); it imports shared helpers from `forecast.js` and produces the same prediction shape, so `today-screen.js` swaps between them transparently.
+
+**Stages filter** — `js/lib/stages.js` provides `filterDayRecordsByStage()`. When a life stage is active, all screens that aggregate history (Metrics, Accuracy) pass their day records through this filter before computing results. `activeStageId === null` means "all data".
 
 ---
 
