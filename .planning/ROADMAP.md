@@ -4,71 +4,40 @@
 
 - **[v1.0](milestones/v1.0-ROADMAP.md)** — 8 phases, 46 plans, 51/51 requirements, 495 tests; shipped 2026-06-30 (tag: `v1.0.0`)
 - **[v1.1](milestones/v1.1-ROADMAP.md)** — 1 phase, 6 plans, 9/9 requirements, 635 tests; shipped 2026-07-10 (tag: `v1.1.0`)
-- **v1.2 Prediction & Metrics** — 2 phases, 17/17 requirements; in progress
+- **[v1.2](milestones/v1.2-ROADMAP.md)** — 2 phases, 15 plans, 17/17 requirements; shipped 2026-08-24 (tag: `v1.2.0`)
 
 ## Phases
 
-**Phase Numbering:** v1.0 used phases 1–8, v1.1 used phase 9, v1.2 continues from phase 10.
+<details>
+<summary>✅ v1.0 MVP (Phases 1–8) — SHIPPED 2026-06-30</summary>
 
-- [x] **Phase 10: TIF Algorithm & Settings** - Opt-in Trimmed Intersection Forecast with precision scoring, Settings controls, and Today screen rendering
-- [x] **Phase 11: Metrics Screen** - Dedicated 5th-tab screen with per-day duration/activity/ratio metrics and historical aggregates (completed 2026-07-28)
+See [v1.0 archive](milestones/v1.0-ROADMAP.md) for full phase details.
 
-## Phase Details
+</details>
 
-### Phase 10: TIF Algorithm & Settings
+<details>
+<summary>✅ v1.1 UX Polish (Phase 9) — SHIPPED 2026-07-10</summary>
 
-**Goal**: Users can opt into the Trimmed Intersection Forecast algorithm from Settings and see multi-window, precision-scored predictions on Today screen
-**Depends on**: Phase 9 (v1.1 complete)
-**Requirements**: TIF-01, TIF-02, TIF-03, TIF-04, TIF-05, TIF-06, TIF-07, TIF-08, TIF-09, TIF-10, TIF-11
-**Success Criteria** (what must be TRUE):
+See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 
-  1. User can open Settings and switch the forecast algorithm between "Classic" and "TIF"; the choice persists across page reloads
-  2. User can set the TIF trim percentage (0–40, default 10) and precision target in minutes (default 60) in Settings; both values persist across sessions
-  3. When TIF is active, each predicted event on Today screen shows a prediction window derived from the intersection of its defined source windows, with a precision score displayed alongside
-  4. When a TIF window intersection is empty for an event, Today screen shows the union range instead and marks the prediction "low confidence"
-  5. When the algorithm range exceeds the precision target, the displayed window is narrowed to precision-target width centered on the midpoint; the original range remains visible alongside
+</details>
 
-**Plans**: 10-01 (metrics.js), 10-02 (forecast-tif.js algorithm), 10-03 (settings data model), 10-04 (settings UI), 10-05 (today screen + app wiring + E2E)
-**Waves**: Wave 1: 10-01 + 10-03 (parallel) → Wave 2: 10-02 + 10-04 (parallel) → Wave 3: 10-05
-**UI hint**: yes
+<details>
+<summary>✅ v1.2 Prediction & Metrics (Phases 10–11) — SHIPPED 2026-08-24</summary>
 
-### Phase 11: Metrics Screen
+- [x] Phase 10: TIF Algorithm & Settings (5/5 plans) — completed 2026-07-13
+- [x] Phase 11: Metrics Screen (10/10 plans) — completed 2026-07-30
 
-**Goal**: Users can explore per-day and aggregate sleep/activity metrics in a dedicated 5th-tab screen
-**Depends on**: Phase 10 (metrics.js shared module)
-**Requirements**: MET-01, MET-02, MET-03, MET-04, MET-05, MET-06
-**Success Criteria** (what must be TRUE):
-
-  1. User can tap a Metrics tab in the bottom navigation bar and land on the Metrics screen
-  2. For each logged day, the Metrics screen shows sleep duration, nap duration, combined duration, and day length
-  3. For each logged day, the Metrics screen shows activity-before-nap, activity-after-nap, total activity time, activity-after-sleep factor, and sleep-after-activity factor
-  4. The Metrics screen shows historical aggregates — average, minimum with date, and maximum with date — for every displayed metric
-  5. When a stage is active, user can toggle the Metrics screen to show only stage-scoped data
-
-**Plans**: 10/10 plans executed
-
-- [x] 11-01-PLAN.md
-- [x] 11-02-PLAN.md
-- [x] 11-03-PLAN.md
-- [x] 11-04-PLAN.md — CSS & layout fixes (G-NW-11-6, G-NW-11-14, G-NW-11-15)
-- [x] 11-05-PLAN.md — Metrics functions & formulas (G-NW-11-8, G-NW-11-16, G-NW-11-11)
-- [x] 11-06-PLAN.md — Data attribution & row order (G-NW-11-12, G-NW-11-13)
-- [x] 11-07-PLAN.md — Stage badge E2E (G-NW-11-9)
-- [x] 11-08-PLAN.md — UI tweaks: button centering & reorder, reduce gutters, column order (G-NW-11-17, G-NW-11-19, G-NW-11-20)
-- [x] 11-09-PLAN.md — SAA no-nap computation (G-NW-11-18)
-- [x] 11-10-PLAN.md — Overnight sleep pairing & duration (G-NW-11-21, G-NW-11-22)
-
-**Waves**: Original: Wave 1: 11-01 → Wave 2: 11-02 → Wave 3: 11-03
-Gap Closure (prior): Wave 1: 11-04 + 11-05 (parallel) → Wave 2: 11-06 → Wave 3: 11-07
-Gap Closure (final): Wave 1: 11-08 + 11-09 (parallel) → Wave 2: 11-10
-**UI hint**: yes
+</details>
 
 ## Progress
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 10. TIF Algorithm & Settings | 5/5 | Complete    | 2026-08-24 |
-| 11. Metrics Screen | 10/10 | Complete    | 2026-07-30 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1–8. Foundation → Accuracy | v1.0 | 46/46 | Complete | 2026-06-30 |
+| 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
+| 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
+| 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
 
 ## Backlog
 

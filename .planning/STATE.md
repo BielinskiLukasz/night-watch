@@ -2,38 +2,36 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Prediction & Metrics
-current_phase: 10
-current_phase_name: TIF Algorithm & Settings
-status: planning
+status: Awaiting next milestone
 stopped_at: Completed 11-08-PLAN.md
-last_updated: "2026-07-30T21:56:03.775Z"
-last_activity: 2026-07-30
-last_activity_desc: Phase NW-11 complete, transitioned to Phase 10
+last_updated: "2026-08-24T20:54:20.610Z"
+last_activity: 2026-08-24
+last_activity_desc: Milestone v1.2 completed and archived
 progress:
   total_phases: 2
   completed_phases: 2
   total_plans: 15
   completed_plans: 15
+current_phase: 10
+current_phase_name: TIF Algorithm & Settings
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-13)
+See: .planning/PROJECT.md (updated 2026-08-24)
 
-**Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful, with explicit uncertainty handling and prediction-accuracy scoring.
+**Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-11 — metrics-screen
+**Current focus:** Planning next milestone via `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 10 — TIF Algorithm & Settings
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-24 — Completed quick task 260824-mbz: Update Phase 10 planning artifacts
-
-Progress: [██████████] 100%
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-24 — Milestone v1.2 completed and archived
 
 ## Phases
 
@@ -95,3 +93,7 @@ None yet.
 Last session: 2026-07-30T17:53:18.719Z
 Stopped at: Completed 11-08-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

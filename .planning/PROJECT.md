@@ -28,55 +28,51 @@ compared to reality.
 
 ### Validated
 
-(None yet — ship to validate)
+**v1.0 — Core application (shipped 2026-06-30)**
+- ✓ Quick-log buttons that auto-timestamp now: "Woke up", "Going to sleep", "Nap start", "Nap end" — v1.0
+- ✓ Form-based entry for editing past days and back-filling — v1.0
+- ✓ All times captured/displayed at 5-minute precision — v1.0
+- ✓ Single nap per day (matches existing data shape) — v1.0
+- ✓ Day boundary is a configurable sleep-cycle cutover hour (default ~04:00) — v1.0
+- ✓ Single user-configurable subject profile (display name only) — v1.0
+- ✓ Settings: max_delta, min_days, outlier rules, rolling window, stat blend, cutover hour, time format — v1.0
+- ✓ Predict next four events (wake, bed, nap start, nap end) with central time + min/max band — v1.0
+- ✓ Probability-band fallback when ±delta exceeds max_delta — v1.0
+- ✓ Cold-start gate — v1.0
+- ✓ Reactive prediction updates on event log/flag changes — v1.0
+- ✓ Today + forecast screen — v1.0
+- ✓ History list with edit/delete and per-day rejected toggle — v1.0
+- ✓ Charts + heatmap (5 SVG visualizations) — v1.0
+- ✓ Accuracy dashboard (3 success metrics) — v1.0
+- ✓ File-as-truth storage (JSON canonical, localStorage cache) — v1.0
+- ✓ CSV + JSON import, JSON export — v1.0
+- ✓ Manual stage boundaries with scope-to-stage forecast — v1.0
+- ✓ Vanilla HTML/CSS/JS, multi-file architecture, installable PWA, GitHub Pages — v1.0
+- ✓ TDD scaffold: unit + integration + E2E via node:test + Playwright — v1.0
+
+**v1.1 — UX Polish (shipped 2026-07-10)**
+- ✓ History edit-mode toggle (controls hidden by default, revealed on tap) — v1.1
+- ✓ Confirm-before-logging setting (pre-filled dialog on quick-log tap) — v1.1
+- ✓ "Save more" bulk-entry button (keeps dialog open, auto-advances event type) — v1.1
+- ✓ Probability-band cards collapsed by default (compact single-line summary) — v1.1
+- ✓ Today screen clarity: "Add event" button above prediction cards, hero card label — v1.1
+- ✓ Forecast E2E rewritten with 32-day 4-type fixture — v1.1
+
+**v1.2 — Prediction & Metrics (shipped 2026-08-24)**
+- ✓ TIF algorithm opt-in toggle (forecastAlgorithm: classic | tif) persists across sessions — v1.2
+- ✓ TIF trim % (0–40) and precision target (minutes) settings with full persistence — v1.2
+- ✓ TIF wake/bed/nap predictions from multi-source window intersection with precision scoring — v1.2
+- ✓ TIF low-confidence fallback to union range when intersection is empty — v1.2
+- ✓ TIF window narrowing to precision target; original range and score remain visible — v1.2
+- ✓ Metrics screen — dedicated 5th bottom-nav tab — v1.2
+- ✓ Per-day sleep/nap/activity duration metrics — v1.2
+- ✓ AAS and SAA ratio metrics with no-nap-day computation — v1.2
+- ✓ Historical aggregates (avg, min with date, max with date) for all metrics — v1.2
+- ✓ Stage-scoped Metrics filtering — v1.2
 
 ### Active
 
-**Logging**
-- [ ] Quick-log buttons that auto-timestamp now: "Woke up", "Going to sleep", "Nap start", "Nap end"
-- [ ] Form-based entry for editing past days and back-filling
-- [ ] All times captured/displayed at 5-minute precision
-- [ ] Single nap per day (matches existing data shape)
-- [ ] Day boundary is a configurable sleep-cycle cutover hour (default ~04:00) — one night = one day
-
-**Subject & configuration**
-- [ ] Single user-configurable subject profile (display name only — no multi-profile switching)
-- [ ] Settings expose: max_delta, min_days-before-forecast, outlier rules (auto + manual per-day "rejected" flag), rolling-window length, stat blend (median / mean / blend), day-cutover hour, time format (24h default / 12h toggle)
-
-**Prediction**
-- [ ] Predict next four events: next wake, next bedtime, next nap start, next nap end
-- [ ] Each prediction shows central time plus min/max band
-- [ ] When the predicted ±delta exceeds the configured max_delta, fall back to a probability band over time (e.g. "P(asleep) by 22:30 = 65%, by 23:00 = 82%, …")
-- [ ] Cold-start gate: predictions hidden until ≥ configured min_days of valid history exist
-- [ ] Predictions update reactively whenever a new event is logged or a day is flagged/unflagged as outlier
-
-**Screens (v1)**
-- [ ] Today + forecast (landing page; next predicted events + probability bands + quick-log)
-- [ ] History list (scrollable table of past days with edit/delete and a per-day "rejected/odrzucone" toggle)
-- [ ] Charts + heatmap (sleep length over time; wake & sleep time bands; nap pattern; activity-vs-sleep correlation; calendar heatmap of sleep length)
-- [ ] Accuracy dashboard (three success metrics: within max_delta, within tighter band ≤ max_delta/2, actual inside predicted min/max — shown side-by-side)
-
-**Data lifecycle**
-- [ ] File-as-truth storage: exported JSON is canonical; in-memory + localStorage acts as a cache
-- [ ] Import CSV files matching the known column schema
-- [ ] Import previously exported JSON (round-trip)
-- [ ] Export structured JSON
-
-**Stages**
-- [ ] Manual stage boundaries — user marks date ranges as "stage X" (e.g. "dropped second nap"); forecast can scope to the current stage's data only
-
-**Platform & distribution**
-- [ ] Vanilla HTML/CSS/JS only — no frameworks, no build step, no package manager
-- [ ] Multi-file architecture (HTML/CSS/JS split into separate files; not a single index.html)
-- [ ] Installable PWA — works offline, works from `file://`, manifest + service worker
-- [ ] Distributable via GitHub Pages (same target as mindful-breathing)
-- [ ] UI language: English only
-- [ ] Theme: calm but distinct — same overall tone as mindful-breathing (dark, minimal, ambient) but its own identity (different accent / different glyphs)
-- [ ] Notifications: in-app only (a prominent "next event" card on the Today screen; no browser/OS push)
-- [ ] App logic is unit-testable via Node's built-in `node:test` runner; tests live in `tests/unit/` and run separately from the deployed PWA bundle (excluded from service-worker precache and GitHub Pages output).
-- [ ] Integration tests in `tests/integration/` compose multiple modules together in Node via thin adapters for DOM, `localStorage`, and the system clock; runtime stays zero-dependency.
-- [ ] End-to-end UI tests via Playwright as a dev-only dependency (`devDependencies` only — never shipped to Pages); E2E tests in `tests/e2e/` drive a real headless browser. Same GitHub Action runs unit + integration + E2E on push/PR.
-- [ ] TDD is the primary discipline: strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with at least one E2E test as a regression guard.
+*(No active requirements — planning next milestone via `/gsd-new-milestone`)*
 
 ### Out of Scope
 
@@ -119,39 +115,33 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Working title "Nightwatch" | User picked from a shortlist; evokes observation + prediction, distinct from "Sleep Tracker" | — Pending |
-| Single configurable subject (no multi-profile in v1) | Multi-profile changes persistence shape and routing; deferring keeps v1 focused | — Pending |
-| File-as-truth storage (JSON export = canonical, localStorage = cache) | User explicitly preferred treating the exported file as the source of truth; survives browser data clears | — Pending |
-| Sleep-cycle day boundary, configurable, default ~04:00 | One night = one day; avoids splitting a single sleep across two calendar dates | — Pending |
-| Multi-file vanilla JS, no build | Inherit mindful-breathing's no-dependency philosophy but split for readability since this app is structurally larger | — Pending |
-| Probability-band fallback on high uncertainty | When ±delta > max_delta, show `P(event)` curve over time instead of a single point — surfaces uncertainty honestly | — Pending |
-| All four v1 screens (Today, History, Charts+heatmap, Accuracy) | User selected all four explicitly | — Pending |
-| Manual stages in v1, auto-detection in v2 | Change-point detection is statistically nontrivial; defer until manual workflow proves value | — Pending |
-| 24h default, 12h toggle in Settings | Matches Polish convention and the existing spreadsheet | — Pending |
-| 5-minute precision | Cleaner stats; matches typical entry behavior | — Pending |
-| Three success metrics on the Accuracy dashboard | User wanted all three (within max_delta / within tighter band / inside probability band) shown side-by-side | — Pending |
-| Direct .xlsx import not in v1 | A pure-vanilla, no-dependency app cannot parse .xlsx without bundling a heavy library; user converts to CSV one-time | — Pending |
-| Unit tests via Node's built-in `node:test`, runtime stays dependency-free | Tests are dev-time only; logic structured as ESM modules so the same files import in both browser (`<script type="module">`) and Node. Unit tests live under `tests/unit/`, excluded from PWA precache. CI uses zero-install `node --test`. | — Pending |
-| Integration tests in Node via DOM/storage/clock adapters | App structured with thin adapters so modules can be composed and exercised together in Node without a real browser. Drives clean seams from Phase 1 onward. Zero npm dependency. Lives under `tests/integration/`. | — Pending |
-| Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | — Pending |
-| Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | — Pending |
+| Working title "Nightwatch" | User picked from a shortlist; evokes observation + prediction, distinct from "Sleep Tracker" | ✓ Good — name stuck through 3 milestones |
+| Single configurable subject (no multi-profile in v1) | Multi-profile changes persistence shape and routing; deferring keeps v1 focused | ✓ Good — constraint held cleanly |
+| File-as-truth storage (JSON export = canonical, localStorage = cache) | User explicitly preferred treating the exported file as the source of truth; survives browser data clears | ✓ Good — no issues in practice |
+| Sleep-cycle day boundary, configurable, default ~04:00 | One night = one day; avoids splitting a single sleep across two calendar dates | ✓ Good — timezone-safe string-slice approach proved robust (v1.2 overnight pairing) |
+| Multi-file vanilla JS, no build | Inherit mindful-breathing's no-dependency philosophy but split for readability since this app is structurally larger | ✓ Good — 264 files managed cleanly without bundler |
+| Probability-band fallback on high uncertainty | When ±delta > max_delta, show `P(event)` curve over time instead of a single point — surfaces uncertainty honestly | ✓ Good — TIF adds a second fallback path (low-confidence union range) |
+| All four v1 screens (Today, History, Charts+heatmap, Accuracy) | User selected all four explicitly | ✓ Good — all shipped; Metrics added as 5th in v1.2 |
+| Manual stages in v1, auto-detection in v2 | Change-point detection is statistically nontrivial; defer until manual workflow proves value | ✓ Good — manual stages used actively in v1.2 Metrics screen |
+| 24h default, 12h toggle in Settings | Matches Polish convention and the existing spreadsheet | ✓ Good |
+| 5-minute precision | Cleaner stats; matches typical entry behavior | ✓ Good |
+| Three success metrics on the Accuracy dashboard | User wanted all three (within max_delta / within tighter band / inside probability band) shown side-by-side | ✓ Good |
+| Direct .xlsx import not in v1 | A pure-vanilla, no-dependency app cannot parse .xlsx without bundling a heavy library; user converts to CSV one-time | ✓ Good |
+| Unit tests via Node's built-in `node:test`, runtime stays dependency-free | Tests are dev-time only; logic structured as ESM modules so the same files import in both browser (`<script type="module">`) and Node. Unit tests live under `tests/unit/`, excluded from PWA precache. CI uses zero-install `node --test`. | ✓ Good — suite grew to 647+ unit/integration tests |
+| Integration tests in Node via DOM/storage/clock adapters | App structured with thin adapters so modules can be composed and exercised together in Node without a real browser. Drives clean seams from Phase 1 onward. Zero npm dependency. Lives under `tests/integration/`. | ✓ Good — adapter seams held through all 3 milestones |
+| Playwright for end-to-end UI tests, dev-only dependency | E2E coverage via a real headless browser; runtime app remains pure-vanilla with zero runtime dependencies. Playwright in `devDependencies`, `tests/e2e/` excluded from PWA bundle, GH Action installs Playwright and runs the suite alongside unit + integration. | ✓ Good |
+| Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | ✓ Good |
+| TIF is additive only; classic forecast.js remains untouched and is the default | TIF ships as opt-in toggle; existing Classic algorithm unchanged | ✓ Good — v1.2 delivered |
+| metrics.js is a shared module consumed by both TIF (duration bands) and Metrics screen | Single source of truth for duration/ratio calculations across both features | ✓ Good — no duplication in either consumer |
 
-## Current Milestone: v1.2 Prediction & Metrics
+## Current State (v1.2 — shipped 2026-08-24)
 
-**Goal:** Upgrade the forecast engine with the Trimmed Intersection Forecast algorithm and add a dedicated Metrics screen surfacing daily, ratio, and historical sleep/activity statistics.
+Both phases complete. 264 files, ~15,500 LOC added over 45 days. All 17/17 v1.2 requirements satisfied. Test suite: 647+ unit/integration tests + E2E coverage for all new screens and algorithm paths.
 
-**Target features:**
-- TIF algorithm (B-21) — opt-in `forecastAlgorithm: 'classic' | 'tif'` toggle in Settings; new `js/lib/forecast-tif.js` implementing percentile trim, multi-source window intersection, and precision scoring
-- Metrics screen (B-26) — new 5th bottom-nav tab with daily per-day metrics, ratio/factor metrics, historical aggregates, and stage-scoped filtering
-- Shared `js/lib/metrics.js` module — duration and ratio calculations consumed by both TIF and the Metrics screen
+**Tech stack as shipped:** Vanilla JS/HTML/CSS, no build, no runtime deps. Layered architecture: `js/lib/` (pure functions) → `js/store/` (stateful pub/sub) → `js/adapters/` (injectable seams) → `js/ui/` (DOM modules). 5 bottom-nav screens: Today, History, Charts, Accuracy, Metrics. Two forecast algorithms: Classic (default) and TIF (opt-in).
 
-## Current State (v1.2 — in progress, 2026-07-30)
-
-Phase 11 (Metrics Screen) complete — 10/10 plans executed, 6/6 requirements verified, all post-launch gaps closed. 647 tests passing.
-
-- **Metrics screen**: dedicated 5th tab showing per-day sleep/nap durations, AAS/SAA factors, historical aggregates, stage filtering, sticky header/column layout
-- **Overnight sleep**: pairing logic correctly attributes cross-midnight sleep to wake date; calculates duration across midnight boundary
-- **UI polish**: Today screen buttons centered and reordered (Wake → Nap start → Nap end → Bedtime); reduced side gutters across all screens; Metrics column order corrected
+**Known issues / tech debt:**
+- None at v1.2 close (0 TODO/FIXME markers, 0 open security threats)
 
 ## Previous State (v1.1 — shipped 2026-07-10)
 
@@ -207,4 +197,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-30 — Phase 11 (Metrics Screen) complete*
+*Last updated: 2026-08-24 after v1.2 milestone — Prediction & Metrics shipped*
