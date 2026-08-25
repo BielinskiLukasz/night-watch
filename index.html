@@ -163,6 +163,16 @@
         </select>
       </label>
       <!--
+        Plan 12-03 / PRED-10 / D-04: Intense-day checkbox.
+        Visible for all event types. Checked state reflects whether the
+        event's calendar date is in settings.intenseDays; saving with
+        checked adds the date, saving unchecked removes it if present.
+      -->
+      <label class="checkboxRow">
+        <input type="checkbox" id="intenseDay" name="intenseDay">
+        Intense day
+      </label>
+      <!--
         Plan 01-07 — inline validation surface (UAT gaps 2 + 3 closure).
         js/ui/manual-entry.js writes per-field error <p> children into this
         block via el({ textContent }) (T-07: never innerHTML). aria-live
