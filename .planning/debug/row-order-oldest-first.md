@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: resolved
 trigger: "G-NW-11-12 — Per-day rows ordered oldest-first instead of newest-first in metrics table"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:00:00Z
+updated: 2026-08-24T00:00:00Z
 goal: find_root_cause_only
 ---
 
@@ -44,10 +44,8 @@ started: UAT Phase NW-11 (2026-07-29)
 
 ## Resolution
 
-root_cause: "Rendering loop at js/ui/metrics-screen.js lines 337-340 iterates rows array backward (i-- from length-1 to 0), reversing the newest-first order from aggregateMetrics(). The loop's comment references D11-03 (most-recent-first) but implements oldest-first."
+root_cause: "The rendering loop iterates rows in reverse. This was correct once aggregateMetrics() was updated to receive oldest-first input (via `[...days].reverse()` in metrics-screen.js line 301). The two reversals cancel out: aggregateMetrics gets oldest-first, outputs oldest-first rows, and the backward loop renders newest-first for display (D11-03)."
 
-fix: (not applied — diagnosis-only mode)
-
-verification: (not verified — diagnosis-only mode)
-
-files_changed: []
+fix: metrics-screen.js line 301 passes `[...days].reverse()` to aggregateMetrics() so it receives oldest-first input. The backward rendering loop (lines 336-339) then correctly produces newest-first display order.
+verification: All 112 E2E tests pass (2026-08-24).
+files_changed: [js/ui/metrics-screen.js]

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "User reports: Stage badge shows 'Viewing: {stage name}' above the metrics table when an active stage exists — but no stage badge or stage-related UI visible on metrics screen despite having 1 ongoing stage created"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:30:00Z
+updated: 2026-08-24T00:00:00Z
 ---
 
 ## Current Focus
@@ -92,4 +92,6 @@ Oracle: Specified requirement (D11-09) states badge is read-only and scoped to "
 
 Suggested investigation: (1) Complete the E2E test case by adding a flow that creates a stage → selects it from Today screen dropdown → navigates to Metrics and verifies badge shows. (2) Add console logging in renderStageBadge to observe snap.activeStageId and snap.stages values when the function is called. (3) Verify that settings subscriber on Metrics screen is actually firing when activeStageId changes. (4) Check if there's a CSS rule or DOM mutation that hides the stageBadge after renderStageBadge runs.
 
-verification: [pending]
+fix: Completed the deferred E2E test case in `tests/e2e/metrics.spec.js` (MET-06): tests full flow of create stage → select from Today screen dropdown → verify badge visible on Metrics → deselect → verify badge hidden. Code in `renderStageBadge()` was already correct.
+verification: All 112 E2E tests pass including MET-06 (2026-08-24).
+files_changed: [tests/e2e/metrics.spec.js]

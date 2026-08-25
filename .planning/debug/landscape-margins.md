@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: resolved
 trigger: "G-NW-11-15: Metrics table does not expand to fill landscape viewport; retains portrait margins"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:00:00Z
+updated: 2026-08-24T00:00:00Z
 symptoms_prefilled: true
 goal: find_root_cause_only
 ---
@@ -52,6 +52,6 @@ started: Discovered during UAT of Phase NW-11
 
 root_cause: ".screen-section (and its parent #app) lack a landscape media query to reduce side padding/margins or increase max-width when viewport is in landscape orientation. Body padding of 1.5rem applies uniformly in both portrait and landscape, and #app max-width of 32rem is never increased for wider screens. History screen has a @media (min-width: 800px) rule that adds padding for desktop, but this is width-based not orientation-based, and does not apply to the metrics screen or other sections."
 
-fix: (N/A — diagnose only)
-verification: (N/A)
-files_changed: []
+fix: Added `@media (orientation: landscape)` block in style.css reducing body padding to 0.75rem and increasing #app max-width to 48rem.
+verification: All 112 E2E tests pass (2026-08-24).
+files_changed: [style.css]

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-NW-11-8: No-nap days show em-dash for Combined Sleep+Nap, Activity durations, and AAS instead of computing with nap=0"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:15:00Z
+updated: 2026-08-24T00:00:00Z
 ---
 
 ## Current Focus
@@ -76,18 +76,15 @@ updated: 2026-07-29T00:15:00Z
 - `totalActivity()` returns null because both before and after are null; should return the full day-span activity (dayLength) when no nap exists
 - `activityAfterSleepFactor()` returns null because totalActivity is null; becomes computable once totalActivity is fixed
 
-**files_involved:**
-- `js/lib/metrics.js`: functions `combinedSleepNap()`, `activityBeforeNap()`, `activityAfterNap()`, `totalActivity()`, `activityAfterSleepFactor()` all need conditional logic for no-nap case
-- `js/ui/metrics-screen.js`: No change needed if metrics.js is fixed; formatCellValue() correctly renders null as em-dash
+**files_changed:**
+- `js/lib/metrics.js`: `activityBeforeNap()`, `activityAfterNap()`, `totalActivity()`, `combinedSleepNap()` updated with no-nap conditional logic; `activityAfterSleepFactor()` works correctly after upstream fixes.
 
-**fix_direction:** 
-Modify the five metric functions in `js/lib/metrics.js` to handle the no-nap case:
-1. `combinedSleepNap()`: return `sleepDuration(day) + 0` when sleep is non-null but nap is null
-2. `activityBeforeNap()`: return 0 when no napStart (or return dayLength if the semantics are "total activity time")
-3. `activityAfterNap()`: return 0 when no napEnd (or return 0 to parallel beforeNap)
-4. `totalActivity()`: will then be `0 + 0 = 0` for no-nap, or compute correctly if beforeNap/afterNap return dayLength and 0
-5. `activityAfterSleepFactor()`: will then be `totalActivity() / sleepDuration()`, no special logic needed once totalActivity is fixed
+**fix applied:**
+- `combinedSleepNap()`: returns `sleepDuration` when nap is null (no-nap day returns sleep only)
+- `activityBeforeNap()`: returns 0 when both napStart and napEnd are null (complete no-nap day)
+- `activityAfterNap()`: returns 0 when both napStart and napEnd are null (complete no-nap day)
+- `totalActivity()`: returns `dayLength()` when both napStart and napEnd are null (full wake-to-bed span)
 
-The exact semantics (whether activityBeforeNap/afterNap should be 0 or dayLength for no-nap days) depends on the domain: if a no-nap day means "I was awake the entire time with no nap break", then totalActivity should equal dayLength. If it means "I had no split-activity calculation", then totalActivity should be 0 or dayLength depending on interpretation. The UAT expects "Activity durations" to be computable, suggesting they should have non-null values.
+**verification:** All 647 unit tests pass; all 112 E2E tests pass (2026-08-24).
 
 ---

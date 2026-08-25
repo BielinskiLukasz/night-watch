@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-NW-11-11: Time columns display only ':' instead of formatted times (e.g. '07:30')"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:00:00Z
+updated: 2026-08-24T00:00:00Z
 goal: find_root_cause_only
 ---
 
@@ -63,6 +63,6 @@ The mismatch: aggregateMetrics stores 'HH:MM' but formatTime expects 'YYYY-MM-DD
 
 The correct fix: aggregateMetrics should store the full ISO string (day.wake.at, day.bedtime.at, etc.) in the rows instead of extractTime(day.wake). The extractTime() function should remain as-is since it is correctly used by the duration helpers.
 
-fix: ""
-verification: ""
-files_changed: []
+fix: In `aggregateMetrics()` (js/lib/metrics.js), changed wake/bedtime/napStart/napEnd row fields to store the full ISO string (`day.wake.at`) instead of `extractTime(day.wake)` ('HH:MM' only). `formatTime()` now receives the expected 'YYYY-MM-DDTHH:MM' format.
+verification: All 647 unit tests pass; all 112 E2E tests pass (2026-08-24).
+files_changed: [js/lib/metrics.js]

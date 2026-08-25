@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: resolved
 trigger: "G-NW-11-14: Column headers remain visible (sticky) when scrolling the metrics table vertically. Expected: <thead> header row stays pinned to the top as the user scrolls down. Actual: Headers scroll away — not sticky on vertical scroll."
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:00:00Z
+updated: 2026-08-24T00:00:00Z
 symptoms_prefilled: true
 goal: find_root_cause_only
 ---
@@ -82,6 +82,6 @@ root_cause: |
   
   Fix direction: Add overflow-y: auto and max-height to .metricsTableScroll to establish a vertical scroll context within the container, allowing position: sticky; top: 0 to work correctly for vertical scrolling.
 
-fix: (not applicable — diagnosis phase only)
-verification: (not applicable)
-files_changed: []
+fix: Added `overflow-y: auto` and `max-height: calc(100vh - 8rem)` to `.metricsTableScroll` in style.css, establishing the vertical scroll context required for `position: sticky; top: 0` on `<th>` elements to work.
+verification: All 112 E2E tests pass (2026-08-24).
+files_changed: [style.css]

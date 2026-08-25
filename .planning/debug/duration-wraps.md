@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: resolved
 trigger: "G-NW-11-6: Duration values wrap to two lines in metrics table"
 created: 2026-07-29T00:00:00Z
-updated: 2026-07-29T00:00:00Z
+updated: 2026-08-24T00:00:00Z
 ---
 
 ## Current Focus
@@ -55,6 +55,6 @@ started: Discovered during Phase NW-11 UAT (Test 6, GAP G-NW-11-6, severity: cos
 ## Resolution
 
 root_cause: ".metricsTable td" CSS rule (style.css line 1643-1648) is missing the `white-space: nowrap` declaration. Without this, the browser wraps space-separated duration values (e.g., "7h 30m") to multiple lines when the column width is narrow.
-fix: (n/a — diagnosis only)
-verification: (n/a)
-files_changed: []
+fix: Added `white-space: nowrap` to `.metricsTable td` in style.css.
+verification: All 112 E2E tests pass (2026-08-24).
+files_changed: [style.css]

@@ -1,10 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Gap G-NW-11-13: Sleep night attributed to bedtime date instead of wake date"
 symptoms_prefilled: true
 goal: find_root_cause_only
 created: 2026-07-29T13:00:00Z
-updated: 2026-07-29T13:15:00Z
+updated: 2026-08-24T00:00:00Z
 ---
 
 ## Current Focus
@@ -79,14 +79,11 @@ Result: Two separate dayRecords, one per calendar date
 - **`js/lib/metrics.js`** (line 163): Date attribution falls back to bedtime when wake unavailable
 - **`js/ui/metrics-screen.js`** (lines 176-177): Renders bucketed date directly without correction
 
-## Suggested Fix Direction
+## Fix Applied
 
-Two possible approaches:
+Approach 2 was applied in `js/lib/metrics.js` `aggregateMetrics()`:
+- When a day record has only bedtime (no wake), `dateStr` falls back to `addOneDay(bedtimeDate)`, attributing the record to the next calendar day (the expected wake date).
+- Sleep duration is computed by pairing today's wake with the previous day's bedtime (cross-record pairing via `prevDay`).
 
-1. **Fix bucketing:** Modify `subjectiveNightKey()` to recognize that a bedtime in the late evening should "claim" the next calendar day's wake event (if that wake occurs on the immediately following calendar date and the bedtime was on a calendar day boundary condition). This would require lookahead or post-processing.
-
-2. **Fix date attribution:** In `aggregateMetrics()`, when a day record has only bedtime (no wake), infer that the wake will be the next day and use that as the date. This is simpler — check if `wake === null && bedtime !== null && extractTime(bedtime).hour >= some_threshold`, then attribute to the next calendar day.
-
-3. **Fix display logic:** In the metrics screen, detect rows that represent only a bedtime event (wake=null, bedtime!=null) and correlate them with the next row's wake event, merging them into a single row attributed to the wake date.
-
-The root cause is architectural: the bucketing strategy doesn't properly handle nights that span calendar boundaries when the wake is after the cutover hour.
+**files_changed:** [js/lib/metrics.js]
+**verification:** All 647 unit tests pass; all 112 E2E tests pass (2026-08-24).
