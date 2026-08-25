@@ -803,6 +803,114 @@ export function selectNextEvent(predictions, dayRecords, settings = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// PRED-12: Nap probability score (D-13)
+// ---------------------------------------------------------------------------
+
+/**
+ * Relative weights for the four nap-probability signals.
+ * Must sum to 1.0. Object.freeze prevents accidental mutation.
+ *
+ * Signal 1 — napFrequency   (40%): fraction of recent days that had a nap
+ * Signal 2 — elapsedWakeTime(30%): elapsed fraction of the napStart P10–P90 window
+ * Signal 3 — noNapStreak   (20%): consecutive days without a nap (penalty)
+ * Signal 4 — windowPassed  (10%): 1 if current time is still inside the nap window
+ *
+ * @type {Readonly<{napFrequency:number, elapsedWakeTime:number, noNapStreak:number, windowPassed:number}>}
+ */
+export const NAP_SCORE_WEIGHTS = Object.freeze({
+  napFrequency:    0.40,
+  elapsedWakeTime: 0.30,
+  noNapStreak:     0.20,
+  windowPassed:    0.10,
+});
+
+/**
+ * Compute a nap-probability score for today.
+ *
+ * Returns:
+ *   null  — cold-start or insufficient data (cannot produce a meaningful estimate)
+ *   0     — the nap window has already passed (distinct from null)
+ *   1–100 — integer probability percentage
+ *
+ * @param {Array<{napStart: string|null, rejected?: boolean}>} dayRecords
+ *   Stage-filtered day records. Each record may have a `napStart` field ('HH:MM' or null).
+ * @param {{minDays: number, windowDays: number, maxDelta: number}} settings
+ * @param {{currentHour: number, currentMinute?: number, napStreak?: number, todayWakeHHMM?: string|null}} context
+ * @returns {number|null}
+ */
+export function napProbability(dayRecords, settings, context) {
+  // Cold-start gate: insufficient history
+  if (!dayRecords || dayRecords.length < (settings.minDays || 1)) return null;
+
+  const {
+    currentHour    = 0,
+    currentMinute  = 0,
+    napStreak      = 0,
+    todayWakeHHMM  = null,
+  } = context || {};
+
+  const nowMins = currentHour * 60 + currentMinute;
+
+  // Helper: extract 'HH:MM' from a dayRecord.napStart field.
+  // dayRecord fields in this module can be bare 'HH:MM' strings (test helpers) or null.
+  const getSlotTime = slot => (slot == null ? null : (typeof slot === 'object' ? slot.at?.slice(11) : slot));
+
+  // --- Signal 1: napFrequency (40%) ---
+  const napDays = dayRecords.filter(d => getSlotTime(d.napStart) !== null).length;
+  const sig1 = napDays / dayRecords.length;
+
+  // --- napStart percentiles for signals 2 and 4 ---
+  // calculatePercentiles expects getTimeFn to return 'HH:MM' (not minutes); it calls
+  // timeToMinutes internally. Its return shape is { min, central, max } in minutes.
+  const napStartResult = calculatePercentiles(
+    dayRecords,
+    d => getSlotTime(d.napStart),  // returns 'HH:MM' string or null
+  );
+
+  // --- Signal 4: windowPassed (10%) ---
+  // If P90 of napStart is known and current time is past it → return 0 (window closed).
+  let sig4 = 1;
+  if (napStartResult !== null) {
+    const p90_ns = napStartResult.max; // calculatePercentiles returns { min, central, max }
+    if (p90_ns !== null && nowMins > p90_ns) {
+      return 0; // window closed — hard collapse
+    }
+  }
+  // sig4 remains 1 (window open or unknown)
+
+  // --- Signal 2: elapsedWakeTime (30%) ---
+  let sig2 = 0;
+  if (
+    todayWakeHHMM !== null &&
+    napStartResult !== null &&
+    napStartResult.min !== null &&
+    napStartResult.max !== null &&
+    napStartResult.max > napStartResult.min
+  ) {
+    const wakeMins   = timeToMinutes(todayWakeHHMM);
+    const windowEnd  = napStartResult.max;
+    const denominator = windowEnd - wakeMins;
+    if (denominator > 0) {
+      const elapsed = Math.max(0, Math.min(nowMins - wakeMins, denominator));
+      sig2 = Math.max(0, Math.min(1, elapsed / denominator));
+    }
+  }
+
+  // --- Signal 3: noNapStreak (20%) ---
+  const streak = typeof napStreak === 'number' ? napStreak : 0;
+  const sig3 = Math.max(0, 1 - streak / 5);
+
+  // --- Weighted sum → integer score ---
+  const raw =
+    NAP_SCORE_WEIGHTS.napFrequency    * sig1 +
+    NAP_SCORE_WEIGHTS.elapsedWakeTime * sig2 +
+    NAP_SCORE_WEIGHTS.noNapStreak     * sig3 +
+    NAP_SCORE_WEIGHTS.windowPassed    * sig4;
+
+  return Math.round(raw * 100);
+}
+
+// ---------------------------------------------------------------------------
 // Phase 3+ placeholder: Auto-outlier detection (CFG-04 — currently inert)
 // ---------------------------------------------------------------------------
 //
