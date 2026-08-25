@@ -317,17 +317,22 @@ describe('forecast(dayRecords, settings)', () => {
   });
 
   it('central prediction is an HH:MM string when data is present and band is narrow', () => {
-    // wake spans only 30 min (== maxDelta) → normal { central, min, max } shape
-    const result = forecast(sevenFullDays, defaultSettings);
+    // PRED-09: Use wake-only days (no bedtimes) so lastBedtime=null → no duration-band →
+    // hour-band only. Wake spans 06:30..07:00 = 30 min == maxDelta=30 → normal shape.
+    // (sevenFullDays has bedtimes; their duration-band widens the union to 60 min > 30 → probabilityBand)
+    const wakeOnlyDays = sevenFullDays.map(d => ({ ...d, bedtime: null }));
+    const result = forecast(wakeOnlyDays, defaultSettings);
     const wake = result.wake;
-    // wake band: P10≈06:30, P90≈07:00, width=30 == maxDelta → NOT > maxDelta → normal shape
+    // hour-band: P10=06:30, P90=07:00, width=30 == maxDelta=30 → NOT > maxDelta → normal shape
     assert.ok('central' in wake, 'wake.central should exist (band ≤ maxDelta)');
     assert.match(wake.central, /^\d{2}:\d{2}$/, 'wake.central should be HH:MM');
   });
 
   it('min and max are HH:MM strings when data is present and band is narrow', () => {
-    // Use wake predictions which have a 30-min band == maxDelta (not triggered)
-    const result = forecast(sevenFullDays, defaultSettings);
+    // PRED-09: Use wake-only days (no bedtimes) so lastBedtime=null → no duration-band →
+    // hour-band only = 30 min == maxDelta → normal { central, min, max } shape.
+    const wakeOnlyDays = sevenFullDays.map(d => ({ ...d, bedtime: null }));
+    const result = forecast(wakeOnlyDays, defaultSettings);
     const wake = result.wake;
     assert.ok('min' in wake, 'wake.min should exist');
     assert.ok('max' in wake, 'wake.max should exist');
@@ -382,7 +387,12 @@ describe('forecast(dayRecords, settings)', () => {
   });
 
   it('wake forecast for 7 days [06:30..07:00]: central is 06:45', () => {
-    const result = forecast(sevenFullDays, defaultSettings);
+    // PRED-09: Use wake-only days so lastBedtime=null → no duration-band → hour-band only.
+    // This isolates the percentile computation (the intent of this test) from the duration-band logic.
+    // With bedtimes present, the union band (60 min) > maxDelta(30) triggers probabilityBand,
+    // hiding wake.central. Testing with bedtimes+PRED-09 belongs in the PRED-09 group.
+    const wakeOnlyDays = sevenFullDays.map(d => ({ ...d, bedtime: null }));
+    const result = forecast(wakeOnlyDays, defaultSettings);
     assert.strictEqual(result.wake.central, '06:45');
   });
 

@@ -325,6 +325,62 @@ export function detectColdStart(dayRecords, minDays) {
 }
 
 // ---------------------------------------------------------------------------
+// PRED-09 (D-10): Duration-band helper for wake prediction
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a wake duration-band from rolling night sleep durations + lastBedtime.
+ *
+ * Night sleep duration per day = wake - bedtime (minutes-since-midnight), normalized
+ * for midnight crossover: if dur < 0 then dur += 24*60 (D-10).
+ *
+ * Returns {min, max} in minutes-since-midnight (normalized to [0, 1440)), or null
+ * if no window days have both wake and bedtime, or if lastBedtimeHHMM is null.
+ *
+ * Values are normalized via % 1440 before return so they are directly comparable
+ * with hour-band values (which are always in [0, 1440)) — without normalization,
+ * lastBedtime + duration for overnight sleep exceeds 1440, causing incorrect
+ * Math.min/max comparisons against the hour-band (backstop invariant D-11).
+ *
+ * @param {object[]} window           rolling window of day records (post-slice)
+ * @param {string|null} lastBedtimeHHMM  'HH:MM' of the most recent bedtime, or null
+ * @returns {{min: number, max: number}|null}
+ */
+function computeDurationBand(window, lastBedtimeHHMM) {
+  if (!lastBedtimeHHMM) return null;
+  const lastBedtimeMin = timeToMinutes(lastBedtimeHHMM);
+
+  // Collect valid night sleep durations from window days that have both wake and bedtime
+  const durations = [];
+  for (const day of window) {
+    const wakeStr = extractTime(day.wake);
+    const bedStr = extractTime(day.bedtime);
+    if (!wakeStr || !bedStr) continue;
+    let dur = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    // T-12-04-01: normalize midnight crossover (e.g., wake=06:30, bedtime=22:00 → dur=-930+1440=510)
+    if (dur < 0) dur += 24 * 60;
+    durations.push(dur);
+  }
+  // T-12-04-02: empty durations → return null so caller falls back to hour-band
+  if (durations.length === 0) return null;
+
+  durations.sort((a, b) => a - b);
+  const p10 = percentile(durations, FORECAST_CONFIG.P_LOW);
+  const p90 = percentile(durations, FORECAST_CONFIG.P_HIGH);
+  if (p10 === null || p90 === null) return null;
+
+  // Normalize to [0, 1440) so values are directly comparable with hour-band minutes.
+  // Without this, lastBedtime(22:00=1320) + duration(540) = 1860, which compares
+  // as "larger" than hourBand.max(420) but minutesToTime(1860)='07:00' could be
+  // earlier than hourBand.max='07:30' after wrapping — violating the backstop invariant.
+  const DAY_MINUTES = 24 * 60;
+  return {
+    min: ((lastBedtimeMin + p10) % DAY_MINUTES + DAY_MINUTES) % DAY_MINUTES,
+    max: ((lastBedtimeMin + p90) % DAY_MINUTES + DAY_MINUTES) % DAY_MINUTES,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main forecast function
 // ---------------------------------------------------------------------------
 
@@ -433,9 +489,53 @@ export function forecast(dayRecords, settings) {
     };
   }
 
+  // PRED-09 (D-10): find the most recent bedtime in the window for duration-band
+  let lastBedtimeHHMM = null;
+  for (let i = window.length - 1; i >= 0; i--) {
+    const b = extractTime(window[i].bedtime);
+    if (b) { lastBedtimeHHMM = b; break; }
+  }
+
+  // PRED-09 (D-11): compute wake prediction as outer union of hour-band and duration-band.
+  // The hour-band captures circadian rhythm; the duration-band captures sleep-cycle length.
+  // Unioning them produces a conservative wider window that accommodates both signals.
+  const wakePred = (() => {
+    const wakeHourResult = calculatePercentiles(window, d => extractTime(d.wake));
+    if (wakeHourResult === null) {
+      return { central: null, min: null, max: null };
+    }
+
+    const durBand = computeDurationBand(window, lastBedtimeHHMM);
+    // Union: final band is the outer envelope of both bands.
+    // When durBand is null (no lastBedtime or no valid durations), use hour-band only (D-11 fallback).
+    const finalMin = durBand
+      ? Math.min(wakeHourResult.min, durBand.min)
+      : wakeHourResult.min;
+    const finalMax = durBand
+      ? Math.max(wakeHourResult.max, durBand.max)
+      : wakeHourResult.max;
+
+    // D3-04: Check probability-band fallback on the final (possibly wider) band.
+    const validWakeTimes = window
+      .filter(d => extractTime(d.wake) != null)
+      .map(d => timeToMinutes(extractTime(d.wake)))
+      .sort((a, b) => a - b);
+    const band = generateProbabilityBand(validWakeTimes, finalMin, finalMax, maxDelta);
+    if (band !== null) {
+      return { probabilityBand: band };
+    }
+
+    // D-11: central stays P50 of wake hours — the duration-band does not alter the central prediction.
+    return {
+      central: minutesToTime(wakeHourResult.central),
+      min:     minutesToTime(finalMin),
+      max:     minutesToTime(finalMax),
+    };
+  })();
+
   return {
     isColdStart: false,
-    wake:     forecastEvent(d => extractTime(d.wake)),
+    wake:     wakePred,
     bedtime:  forecastEvent(d => extractTime(d.bedtime)),
     napStart: forecastEvent(d => extractTime(d.napStart)),
     napEnd:   forecastEvent(d => extractTime(d.napEnd)),
