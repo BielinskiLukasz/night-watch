@@ -17,7 +17,7 @@
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   margin: 0;
-  padding: 1.5rem;
+  padding: 1.5rem 0.75rem;
   line-height: 1.4;
   color: #1a1a1a;
   background: #fafafa;
@@ -82,6 +82,7 @@ body {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 1.5rem;
+  justify-content: center;
 }
 
 button[data-log] {
@@ -217,11 +218,8 @@ button[data-log]:hover {
   background: #fee2e2;
 }
 
-/* "+ Add event" button (Plan 01-04 / D-10 modal trigger) */
+/* "Add events" button (Plan 01-04 / D-10 modal trigger; Plan 260803-otj: moved into quickLog) */
 .addEventBtn {
-  display: block;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
   background: transparent;
@@ -1505,3 +1503,214 @@ button[data-log] {
 .prediction-card .time-central {
   font-weight: 600;
 }
+
+/* ==========================================================================
+ * Phase 10 — TIF Algorithm Settings UI (Plan 10-04)
+ * TIF-01 (algorithm toggle), TIF-02 (trim %), TIF-03 (precision target)
+ * D10-10 (TIF sub-section in Forecast & Prediction fieldset)
+ * ==========================================================================
+ */
+
+/* TIF sub-section container inside Forecast & Prediction fieldset */
+.tif-subsection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* "TIF Algorithm" sub-heading — micro-label tier */
+.tif-subsection-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.35rem 0;
+}
+
+/* ==========================================================================
+ * Phase 10 — TIF Algorithm rendering (Plan 10-05)
+ * TIF-09 (precision score badge), TIF-10 (original range line),
+ * TIF-08 (low-confidence source windows), D10-06/D10-07/D10-09
+ * ==========================================================================
+ */
+
+/* Precision score badge — indigo pill, on TIF prediction cards */
+.tif-score-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  align-self: flex-start;
+}
+
+/* Hero card variant: white-on-accent */
+.next-event-hero .tif-score-badge {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Original algorithm range — subdued, shown only when algRange > precisionTarget */
+.prediction-card .tif-alg-range {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* Source windows list in expanded low-confidence TIF card */
+.tif-source-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tif-source-list li {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* ==========================================================================
+ * Plan 11-02 — Metrics Screen (Phase 11, Metrics dashboard)
+ * ==========================================================================
+ *
+ * Metrics table (D11-01..D11-22): 14-column table with sticky header and
+ * first-column, summary rows (Avg, Min, Max), per-day metrics rows,
+ * rejected-day dimming, and responsive overflow.
+ *
+ * All dynamic content uses textContent (T-11-05); these selectors are not
+ * innerHTML-dependent. Classes match metrics-screen.js output.
+ */
+
+/* ── Metrics table scroll container (D11-17) ──────────────────────────── */
+
+.metricsTableScroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 8rem);
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Metrics table main element (D11-01) ──────────────────────────────── */
+
+.metricsTable {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  background-color: #fff;
+}
+
+/* ── Table header cells (sticky top, D11-18) ──────────────────────────── */
+
+.metricsTable th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f1f5f9;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+}
+
+/* ── Top-left corner (sticky both axes, D11-19) ──────────────────────── */
+
+.metricsTable th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+/* ── Data cells (general) ──────────────────────────────────────────────– */
+
+.metricsTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+
+/* ── First column (sticky left, D11-17) ────────────────────────────────– */
+
+.metricsTable td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #fff;
+  text-align: left;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* ── Summary rows (Avg, Min, Max) (D11-11, D11-12) ──────────────────────– */
+
+.metricsTable tbody.metrics-summary-tbody {
+  border-top: 2px solid #cbd5e1;
+}
+
+.metricsTable tbody.metrics-summary-tbody tr {
+  background-color: #f9fafb;
+}
+
+.metricsTable tbody.metrics-summary-tbody tr.metrics-summary-row td:first-child {
+  font-weight: 700;
+}
+
+/* ── Rejected day rows (dimmed, D11-05) ────────────────────────────────– */
+
+.metricsTable tr.rejected td {
+  opacity: 0.5;
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* ── Optional hover effect for readability ────────────────────────────── */
+
+.metricsTable tbody tr:not(.metrics-summary-row):hover td {
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+/* ── Empty state styling ───────────────────────────────────────────────– */
+
+.emptyState {
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ==========================================================================
+ * Landscape orientation optimization (Plan 11-04, G-NW-11-15)
+ * ==========================================================================
+ *
+ * Reduce padding and increase max-width when in landscape orientation to
+ * allow the metrics table to use more horizontal space.
+ */
+
+@media (orientation: landscape) {
+  body {
+    padding: 0.75rem;
+  }
+
+  #app {
+    max-width: 48rem;
+  }
+}
+

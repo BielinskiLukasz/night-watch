@@ -32,8 +32,8 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 13 keys (10 original + stages + activeStageId + confirmBeforeLogging)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 13);
+  it('has exactly 16 keys (13 prior + forecastAlgorithm + trimPct + precisionTarget)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 16);
   });
 
   it('has stages: [] default', () => {

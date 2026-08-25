@@ -25,8 +25,8 @@ const PRECACHE_LIST = Object.freeze([
   './index.html',
   './style.css',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+  './icons/favicon.jpeg',
+  './icons/app-start.jpeg',
   // App composition root
   './js/app.js',
   // Adapters (runtime only — test-only adapters clock-fixed.js and storage-memory.js excluded)
@@ -38,8 +38,10 @@ const PRECACHE_LIST = Object.freeze([
   './js/lib/csv-parse.js',
   './js/lib/day-bucket.js',
   './js/lib/db-shape.js',
+  './js/lib/forecast-tif.js',
   './js/lib/forecast.js',
   './js/lib/id.js',
+  './js/lib/metrics.js',
   './js/lib/import-export.js',
   './js/lib/settings-validate.js',
   './js/lib/stages.js',
@@ -55,6 +57,7 @@ const PRECACHE_LIST = Object.freeze([
   './js/ui/header.js',
   './js/ui/history-screen.js',
   './js/ui/manual-entry.js',
+  './js/ui/metrics-screen.js',
   './js/ui/settings-modal.js',
   './js/ui/today-screen.js',
 ]);

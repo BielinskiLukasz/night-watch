@@ -19,6 +19,7 @@ import {
   formatTime,
   to24h,
   to12h,
+  formatDuration,
 } from '../../js/lib/time.js';
 
 describe('roundTo5 (round-to-nearest per Pitfall #1 / Assumption A1)', () => {
@@ -196,5 +197,31 @@ describe('to24h (hStr + ampm → h24 — Pitfall #4 boundaries)', () => {
   });
   test("to24h('abc', 'AM') throws (non-numeric hour)", () => {
     assert.throws(() => to24h('abc', 'AM'), /to24h/);
+  });
+});
+
+describe('formatDuration (D11-20, D11-22 — display as "Xh Ym")', () => {
+  const cases = [
+    [450, '7h 30m'],
+    [60, '1h 0m'],
+    [35, '0h 35m'],
+    [0, '0h 0m'],
+    [1439, '23h 59m'],
+  ];
+  for (const [minutes, expected] of cases) {
+    test(`formatDuration(${minutes}) === '${expected}'`, () => {
+      assert.equal(formatDuration(minutes), expected);
+    });
+  }
+
+  test('formatDuration(450.5) rounds to nearest minute', () => {
+    const result = formatDuration(450.5);
+    // 450.5 rounds to 451, which is 7h 31m
+    assert.equal(result, '7h 31m');
+  });
+
+  test('formatDuration(449.4) rounds down to 449 (7h 29m)', () => {
+    const result = formatDuration(449.4);
+    assert.equal(result, '7h 29m');
   });
 });

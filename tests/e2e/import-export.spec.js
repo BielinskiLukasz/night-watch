@@ -350,4 +350,48 @@ test.describe('JSON Import (Plan 05-05)', () => {
     await expect(page.locator('#importStatus')).toContainText(/[Ii]nvalid JSON/);
   });
 
+  test('JSON import with TIF settings → clicking Save persists imported TIF values, not pre-import ones', async ({ page }) => {
+    // Start with classic algorithm defaults
+    await page.evaluate((db) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(db));
+    }, TEST_DB);
+    await page.reload();
+
+    // Open Settings — at this point forecastAlgorithm is 'classic' (from TEST_DB defaults)
+    await page.click('button[aria-label="Settings"]');
+
+    const tifBlob = {
+      version: 2,
+      settings: {
+        ...TEST_DB.settings,
+        forecastAlgorithm: 'tif',
+        trimPct: 25,
+        precisionTarget: 90,
+      },
+      events: TEST_DB.events,
+      activityLog: TEST_DB.activityLog,
+    };
+
+    page.once('dialog', dialog => dialog.accept());
+
+    await page.setInputFiles('#jsonInput', {
+      name: 'tif-settings.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(tifBlob)),
+    });
+
+    await expect(page.locator('#importStatus')).toContainText('Import complete');
+
+    // Click Save — the bug was that the stale form overwrote the imported TIF settings here
+    await page.click('#settings button[value="save"]');
+
+    const stored = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('nightwatch:db') || '{}');
+      return db.settings || {};
+    });
+    expect(stored.forecastAlgorithm).toBe('tif');
+    expect(stored.trimPct).toBe(25);
+    expect(stored.precisionTarget).toBe(90);
+  });
+
 });

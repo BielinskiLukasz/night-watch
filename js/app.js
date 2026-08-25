@@ -30,6 +30,7 @@ import { mountHistoryScreen } from './ui/history-screen.js';
 import { mountBottomNav } from './ui/bottom-nav.js';
 import { mountChartsScreen } from './ui/charts-screen.js';
 import { mountAccuracyScreen } from './ui/accuracy-screen.js';
+import { mountMetricsScreen } from './ui/metrics-screen.js';
 import { downloadJSON } from './lib/import-export.js';
 import { openSettings } from './ui/settings-modal.js';
 
@@ -56,16 +57,18 @@ const historyTableRootEl = document.getElementById('history-table-root');
 // Plan 07-04: new screen and nav elements (D7-01..D7-04)
 const chartsScreenEl = document.getElementById('charts-screen');
 const accuracyScreenEl = document.getElementById('accuracy-screen');
+const metricsScreenEl = document.getElementById('metrics-screen');
 const bottomNavEl = document.getElementById('bottom-nav');
 
-// Show/hide all four screens based on activeTab.
-// Called once at init and after every tab-change (D7-04).
+// Show/hide all screens based on activeTab.
+// Called once at init and after every tab-change (D7-04, D11-01).
 // The SCREENS map uses direct element references captured above.
 const SCREENS = Object.freeze({
   today: todayScreenEl,
   history: historyScreenEl,
   charts: chartsScreenEl,
   accuracy: accuracyScreenEl,
+  metrics: metricsScreenEl,
 });
 
 function applyTabVisibility() {
@@ -137,6 +140,10 @@ if (accuracyScreenEl) {
   mountAccuracyScreen({ root: accuracyScreenEl, eventLog, settings });
 }
 
+if (metricsScreenEl) {
+  mountMetricsScreen({ root: metricsScreenEl, eventLog, settings });
+}
+
 // Initial render: apply tab visibility so Today is shown and all others hidden
 // (matching the 'today' default activeTab).
 applyTabVisibility();
@@ -179,6 +186,10 @@ function showUpdateBanner(reg) {
     if (reg.waiting) {
       pendingControllerReload = true;
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      // Waiting SW already activated (e.g. DevTools "Skip waiting", another tab closed) —
+      // new SW is already in control, so just reload to pick up the new cached files.
+      location.reload();
     }
   }, { once: true });
 }

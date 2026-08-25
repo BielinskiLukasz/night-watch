@@ -33,6 +33,9 @@
  *   stages: Array<{id: string, name: string, startDate: string, endDate: string|null}>,
  *   activeStageId: string|null,
  *   confirmBeforeLogging: boolean,
+ *   forecastAlgorithm: string,
+ *   trimPct: number,
+ *   precisionTarget: number,
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -52,6 +55,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   stages:        [],          // D6-01: array of {id, name, startDate, endDate} stage objects
   activeStageId: null,        // D6-02: currently selected stage id, or null = "All data"
   confirmBeforeLogging: false, // CFG-10 / D9-13: when true, quick-log opens confirm dialog
+  forecastAlgorithm: 'classic', // TIF-01 / D10-11: 'classic' | 'tif' algorithm toggle
+  trimPct:           10,        // TIF-02 / D10-13: auto-trim percentage 0–40 (default 10)
+  precisionTarget:   60,        // TIF-03 / D10-13: desired max window width in minutes
 });
 
 /**
@@ -103,6 +109,16 @@ export function migrateV1ToV2(blob, defaultSettings) {
     // Phase 9 forward-compat: inject confirmBeforeLogging for v2 blobs predating Phase 9
     if (blob.settings && !('confirmBeforeLogging' in blob.settings)) {
       blob.settings.confirmBeforeLogging = false;
+    }
+    // Phase 10 forward-compat: inject TIF settings for v2 blobs predating Phase 10
+    if (blob.settings && !('forecastAlgorithm' in blob.settings)) {
+      blob.settings.forecastAlgorithm = 'classic';
+    }
+    if (blob.settings && !('trimPct' in blob.settings)) {
+      blob.settings.trimPct = 10;
+    }
+    if (blob.settings && !('precisionTarget' in blob.settings)) {
+      blob.settings.precisionTarget = 60;
     }
     return blob;
   }

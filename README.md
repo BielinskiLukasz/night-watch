@@ -1,7 +1,7 @@
 # Nightwatch
 
-![Status](https://img.shields.io/badge/status-active_development-brightgreen)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -53,8 +53,9 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Feature | Description |
 |---------|-------------|
 | Forecast engine | Predicts the next four sleep events from a configurable rolling window of history using P10/P50/P90 percentiles |
-| Hero card | Cycle-aware "Next Predicted Event" card — shows the single most relevant upcoming event, updated on every log action |
-| Uncertainty-honest cards | Tight band (≤ max_delta): shows `central (min – max)`; wide band (> max_delta): collapses to a compact line with a chevron — tap to expand to the full probability table (e.g. `P(wake by 07:00) = 71%`) |
+| TIF algorithm | Opt-in Trimmed Intersection Forecast — trims outlier days, computes multi-source windows per event type, intersects them, and narrows the result to a precision-target width; displayed as a precision score badge on each card |
+| Hero card | Cycle-aware "Next Predicted Event" card — shows the single most relevant upcoming event, updated on every log action; shows precision badge when TIF is active |
+| Uncertainty-honest cards | Classic: tight band (≤ max_delta) shows `central (min – max)`; wide band (> max_delta) collapses to a compact line with chevron — tap to expand to the full probability table. TIF low-confidence (empty intersection): collapsed single line — tap to expand source windows and precision detail |
 | Cold-start gate | When history is below `min_days`, shows an explicit "N more days needed" message instead of fabricating predictions |
 
 ### History
@@ -81,6 +82,7 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Charts | Sleep-length line chart, time-band scatter plot, nap-pattern indicator, activity-vs-sleep correlation chart |
 | Calendar heatmap | Sleep length by calendar day |
 | Accuracy dashboard | Three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) across all four event types |
+| Metrics screen | Dedicated 5th-tab table with 14 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), and behaviour-ratio scores (AAS, SAA); historical aggregates (average, min + date, max + date) for every column; stage-scoped filter toggle |
 
 ### Platform
 
@@ -166,6 +168,9 @@ All settings are available in the **Settings** panel. Changes take effect immedi
 | Stat blend | Median | How central tendency is calculated (median / mean / blend) |
 | Auto-outlier | Off | Automatically flag days that deviate beyond a statistical threshold |
 | Confirm before logging | Off | When ON, quick-log buttons open the pre-filled manual-entry dialog instead of logging instantly |
+| Forecast algorithm | Classic | Algorithm used for predictions: Classic (rolling-window percentile) or TIF (Trimmed Intersection Forecast) |
+| TIF trim % | 10 | Percentage of outlier days trimmed symmetrically before computing TIF intersection windows (0–40); only shown when TIF is selected |
+| TIF precision target | 60 min | Maximum displayed window width in minutes; intersections wider than this are narrowed, centered on the midpoint; only shown when TIF is selected |
 
 ### Life stages
 
@@ -197,10 +202,12 @@ npx playwright test tests/e2e/history.spec.js
 ```
 js/
   app.js              # Composition root — the only place adapters are selected and injected
-  lib/                # Pure functions (no DOM, no side effects): forecast, day-bucket, csv-parse, accuracy, time
+  lib/                # Pure functions (no DOM, no side effects): forecast, forecast-tif, metrics,
+                      #   day-bucket, stages, csv-parse, accuracy, time, …
   store/              # Stateful stores with pub/sub: event-log.js, settings.js
   adapters/           # Injectable seams: storage-local/memory, clock-system/fixed
-  ui/                 # DOM rendering: today-screen, history-screen, charts-screen, header, manual-entry, dom helpers
+  ui/                 # DOM rendering: today-screen, history-screen, charts-screen,
+                      #   accuracy-screen, metrics-screen, header, manual-entry, dom helpers
 tests/
   unit/               # node:test — pure lib/ modules
   integration/        # node:test — stores wired to memory adapter + fixed clock
@@ -220,6 +227,10 @@ scripts/
 **Service worker** — `sw.js` maintains a frozen `PRECACHE_LIST` and cache key `nightwatch-v1`. Adding new app-shell files requires updating both; `tests/unit/sw-precache.test.js` enforces the list is exhaustive.
 
 **Schema migration** — `js/lib/db-shape.js` validates the data shape and runs V1→V2 migration on import. Any data-model change must bump the schema version here.
+
+**Dual forecast algorithms** — `forecast.js` is the always-on classic engine (P10/P50/P90 rolling-window percentile). `forecast-tif.js` is the opt-in TIF algorithm (toggled in Settings); it imports shared helpers from `forecast.js` and produces the same prediction shape, so `today-screen.js` swaps between them transparently.
+
+**Stages filter** — `js/lib/stages.js` provides `filterDayRecordsByStage()`. When a life stage is active, all screens that aggregate history (Metrics, Accuracy) pass their day records through this filter before computing results. `activeStageId === null` means "all data".
 
 ---
 
@@ -249,6 +260,8 @@ The app targets current evergreen browsers using only baseline platform APIs (`l
 | v1.0 | 7 | Charts, Heatmap & Accuracy | ✅ Complete |
 | v1.0 | 8 | PWA & Platform Hardening | ✅ Complete |
 | v1.1 | 9 | UX Polish | ✅ Complete |
+| v1.2 | 10 | TIF Algorithm & Settings | ✅ Complete |
+| v1.2 | 11 | Metrics Screen | ✅ Complete |
 
 Full phase details and backlog in [`.planning/ROADMAP.md`](.planning/ROADMAP.md).
 

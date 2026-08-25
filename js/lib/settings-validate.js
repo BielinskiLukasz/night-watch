@@ -54,6 +54,9 @@ export const RULES = Object.freeze({
   stages:        { type: 'stage[]' },         // D6-01: array of life-stage objects
   activeStageId: { type: 'null-or-string' },  // D6-02: selected stage id or null
   confirmBeforeLogging: { type: 'boolean' },  // CFG-10 / D9-13: confirm before quick-log
+  forecastAlgorithm: { type: 'enum', values: new Set(['classic', 'tif']) },  // TIF-01 / D10-11
+  trimPct:           { type: 'integer', min: 0, max: 40 },                   // TIF-02 / D10-13
+  precisionTarget:   { type: 'integer', min: 1, max: 300 },                  // TIF-03 / D10-13
 });
 
 // ---------------------------------------------------------------------------

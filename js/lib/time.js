@@ -159,3 +159,18 @@ export function to24h(hStr, ampm) {
   if (ampm === 'PM') return h === 12 ? 12 : h + 12;
   throw new Error(`to24h: expected ampm "AM" or "PM", got ${JSON.stringify(ampm)}`);
 }
+
+/**
+ * Format duration in minutes as 'Xh Ym' string (e.g., '7h 30m', '0h 5m').
+ * Rounds fractional input to nearest minute using Math.round.
+ * (D11-20, D11-22)
+ *
+ * @param {number} minutes
+ * @returns {string}
+ */
+export function formatDuration(minutes) {
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const mins = rounded % 60;
+  return `${hours}h ${mins}m`;
+}

@@ -38,6 +38,7 @@ let _jsonClickHandler = null;
 let _jsonChangeHandler = null;
 let _stagesCrudHandler = null;
 let _addStageBtnHandler = null;
+let _forecastAlgorithmChangeHandler = null;
 
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
@@ -62,20 +63,45 @@ export function openSettings({ settings, eventLog, storage, id }) {
 
   const snap = settings.get();
 
-  // Populate every field from the current snapshot. .value / .checked only —
-  // never innerHTML (Pitfall #5, T-2-14).
-  form.elements.namedItem('subjectName').value = snap.subjectName;
-  form.elements.namedItem('cutoverHour').value = String(snap.cutoverHour);
-  form.elements.namedItem('groupingMode').value = snap.groupingMode;
-  form.elements.namedItem('timeFormat').value = snap.timeFormat;
-  form.elements.namedItem('autoOutlier').checked = Boolean(snap.autoOutlier);
-  form.elements.namedItem('maxDelta').value = String(snap.maxDelta);
-  form.elements.namedItem('minDays').value = String(snap.minDays);
-  form.elements.namedItem('windowDays').value = String(snap.windowDays);
-  form.elements.namedItem('statBlend').value = snap.statBlend;
-  // CFG-10 / D9-12: confirm-before-logging toggle in Time & Day group.
-  const confirmEl = form.elements.namedItem('confirmBeforeLogging');
-  if (confirmEl) confirmEl.checked = Boolean(snap.confirmBeforeLogging);
+  // Populate every field from a settings snapshot. .value / .checked only —
+  // never innerHTML (Pitfall #5, T-2-14). Called at open time and again after
+  // a JSON import so the form always reflects the current store state.
+  function populateForm(s) {
+    form.elements.namedItem('subjectName').value = s.subjectName;
+    form.elements.namedItem('cutoverHour').value = String(s.cutoverHour);
+    form.elements.namedItem('groupingMode').value = s.groupingMode;
+    form.elements.namedItem('timeFormat').value = s.timeFormat;
+    form.elements.namedItem('autoOutlier').checked = Boolean(s.autoOutlier);
+    form.elements.namedItem('maxDelta').value = String(s.maxDelta);
+    form.elements.namedItem('minDays').value = String(s.minDays);
+    form.elements.namedItem('windowDays').value = String(s.windowDays);
+    form.elements.namedItem('statBlend').value = s.statBlend;
+    const confirmEl = form.elements.namedItem('confirmBeforeLogging');
+    if (confirmEl) confirmEl.checked = Boolean(s.confirmBeforeLogging);
+    const forecastAlgorithmEl = form.elements.namedItem('forecastAlgorithm');
+    if (forecastAlgorithmEl) forecastAlgorithmEl.value = s.forecastAlgorithm ?? 'classic';
+    const trimPctEl = form.elements.namedItem('trimPct');
+    if (trimPctEl) trimPctEl.value = String(s.trimPct ?? 10);
+    const precisionTargetEl = form.elements.namedItem('precisionTarget');
+    if (precisionTargetEl) precisionTargetEl.value = String(s.precisionTarget ?? 60);
+    const tifOptionsEl = document.getElementById('tifOptions');
+    if (tifOptionsEl) tifOptionsEl.hidden = (s.forecastAlgorithm !== 'tif');
+  }
+
+  populateForm(snap);
+
+  // D10-12: wire forecastAlgorithm change → show/hide #tifOptions
+  const forecastAlgorithmEl = form.elements.namedItem('forecastAlgorithm');
+  const tifOptionsEl        = document.getElementById('tifOptions');
+  if (forecastAlgorithmEl && tifOptionsEl) {
+    if (_forecastAlgorithmChangeHandler) {
+      forecastAlgorithmEl.removeEventListener('change', _forecastAlgorithmChangeHandler);
+    }
+    _forecastAlgorithmChangeHandler = () => {
+      tifOptionsEl.hidden = (forecastAlgorithmEl.value !== 'tif');
+    };
+    forecastAlgorithmEl.addEventListener('change', _forecastAlgorithmChangeHandler);
+  }
 
   // Stale errors from a prior open get cleared (D2-14: each open is fresh).
   if (errorsEl) clear(errorsEl);
@@ -96,7 +122,7 @@ export function openSettings({ settings, eventLog, storage, id }) {
         subjectName: String(data.get('subjectName') ?? '').trim(),
         cutoverHour: Number(data.get('cutoverHour')),
         groupingMode: String(data.get('groupingMode') ?? ''),
-        rejectedDays: snap.rejectedDays || [],
+        rejectedDays: settings.get().rejectedDays || [],
         timeFormat: String(data.get('timeFormat') ?? ''),
         autoOutlier: data.get('autoOutlier') === 'on',
         maxDelta: Number(data.get('maxDelta')),
@@ -106,6 +132,9 @@ export function openSettings({ settings, eventLog, storage, id }) {
         stages: settings.get().stages || [],
         activeStageId: settings.get().activeStageId ?? null,
         confirmBeforeLogging: data.get('confirmBeforeLogging') === 'on',
+        forecastAlgorithm: String(data.get('forecastAlgorithm') ?? 'classic'),
+        trimPct:          Number(data.get('trimPct') ?? 10),
+        precisionTarget:  Number(data.get('precisionTarget') ?? 60),
       };
 
       const result = validateSettings(raw, { mode: 'save' });
@@ -270,6 +299,9 @@ export function openSettings({ settings, eventLog, storage, id }) {
       storage.save(migrateV1ToV2(blob, DEFAULT_SETTINGS));
       eventLog.replace(blob);
       settings.replace(blob);
+
+      // Re-populate form so a subsequent Save doesn't overwrite imported settings.
+      populateForm(settings.get());
 
       showStatus(`Import complete — ${dayCount} days restored.`);
     };
@@ -469,15 +501,15 @@ function buildInlineForm(stage, listEl, settings) {
 
   const inputs = el('div', { className: 'stage-inline-inputs' });
 
-  const nameInput  = el('input', { type: 'text', className: 'stage-name-input',  placeholder: 'Stage name', maxlength: '80' });
+  const nameInput  = el('input', { type: 'text', className: 'stage-name-input',  placeholder: 'Stage name', maxlength: '80', name: 'stage-name', autocomplete: 'off' });
   nameInput.setAttribute('aria-label', 'Stage name');
   if (stage) nameInput.value = stage.name;
 
-  const startInput = el('input', { type: 'date', className: 'stage-start-input' });
+  const startInput = el('input', { type: 'date', className: 'stage-start-input', name: 'stage-start', autocomplete: 'off' });
   startInput.setAttribute('aria-label', 'Start date');
   if (stage) startInput.value = stage.startDate;
 
-  const endInput   = el('input', { type: 'date', className: 'stage-end-input' });
+  const endInput   = el('input', { type: 'date', className: 'stage-end-input', name: 'stage-end', autocomplete: 'off' });
   endInput.setAttribute('aria-label', 'End date (leave blank for ongoing)');
   if (stage && stage.endDate) endInput.value = stage.endDate;
 

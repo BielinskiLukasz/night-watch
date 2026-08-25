@@ -56,12 +56,12 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.ok(precacheList.includes('./manifest.json'), 'Missing ./manifest.json');
   });
 
-  test('contains ./icons/icon-192.png', () => {
-    assert.ok(precacheList.includes('./icons/icon-192.png'), 'Missing ./icons/icon-192.png');
+  test('contains ./icons/favicon.jpeg', () => {
+    assert.ok(precacheList.includes('./icons/favicon.jpeg'), 'Missing ./icons/favicon.jpeg');
   });
 
-  test('contains ./icons/icon-512.png', () => {
-    assert.ok(precacheList.includes('./icons/icon-512.png'), 'Missing ./icons/icon-512.png');
+  test('contains ./icons/app-start.jpeg', () => {
+    assert.ok(precacheList.includes('./icons/app-start.jpeg'), 'Missing ./icons/app-start.jpeg');
   });
 
   test('contains ./js/app.js', () => {
@@ -110,7 +110,19 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.deepEqual(bad, [], `Non-relative entries found: ${bad.join(', ')}`);
   });
 
-  test('has at least 31 entries (full app file inventory)', () => {
-    assert.ok(precacheList.length >= 31, `Expected >= 31 entries, got ${precacheList.length}`);
+  test('has at least 32 entries (full app file inventory)', () => {
+    assert.ok(precacheList.length >= 32, `Expected >= 32 entries, got ${precacheList.length}`);
+  });
+
+  test('contains forecast-tif.js (TIF algorithm module)', () => {
+    assert.ok(precacheList.includes('./js/lib/forecast-tif.js'), 'forecast-tif.js missing from PRECACHE_LIST');
+  });
+
+  test('contains metrics.js (TIF metrics helpers module)', () => {
+    assert.ok(precacheList.includes('./js/lib/metrics.js'), 'metrics.js missing from PRECACHE_LIST');
+  });
+
+  test('contains metrics-screen.js (Metrics screen UI module)', () => {
+    assert.ok(precacheList.includes('./js/ui/metrics-screen.js'), 'metrics-screen.js missing from PRECACHE_LIST');
   });
 });
