@@ -1,7 +1,7 @@
 ---
 phase: 12
 slug: prediction-logic-refinements
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-08-25
@@ -258,18 +258,54 @@ Pure code change in `js/ui/today-screen.js:516`. No new CSS or HTML elements. Ar
 
 ## UI Considerations
 
-Applicable state considerations resolved: 7 covered, 1 backstop, 0 unresolved
+Applicable state considerations resolved: 9 covered, 2 backstop, 16 dismissed, 0 unresolved
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | Nap probability when no history | ✅ covered | Element suppressed when score cannot be computed (insufficient data) — no empty string rendered |
-| populated | Nap probability active window | ✅ covered | "{N}% chance of nap today" rendered via textContent — XSS safe |
-| zero | Nap probability window closed | ✅ covered | "0% — nap window closed" rendered; score collapses per D-13 signal 4 |
-| populated | Intense badge visible state | ✅ covered | Badge rendered only when `intense === true` on day record |
-| empty | Intense badge absent state | ✅ covered | No badge element in DOM when `intense === false`; no empty placeholder |
-| long-text | Probability copy with 3-digit N (100%) | 🧪 backstop | "100% chance of nap today" is 25 chars — fits single line on any card width ≥ 150px; verify visually in browser |
-| card-height | Nap-start card with probability line vs. without | ✅ covered | Cards in forecast-grid use flex-direction:column with gap:0.2rem; one additional line adds ~20px — sibling cards in the 2×2 grid will stretch to match via CSS grid row alignment |
-| overflow | Settings modal with two new inputs | ✅ covered | Settings modal uses flex column with 1rem gap inside a scrollable dialog; two additional labels add ~100px — no overflow risk on any mobile viewport ≥ 320px |
+### E1 — Nap Probability Line (static-content + media)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | When score cannot be computed (insufficient data / `minDays` not met), `.nap-probability` is not rendered — no empty string or placeholder |
+| loading | dismissed | Score computation is synchronous over in-memory `dayRecords` — no async fetch, no loading state |
+| error | dismissed | Probability is a pure function returning 0 on any error condition; error path collapses to the 0%/window-closed copy — no separate error surface |
+| populated | ✅ covered | Happy-path renders `{N}% chance of nap today` as a text node via `textContent` — XSS safe |
+| partial | dismissed | Probability is a single scalar per day — no partial data state; insufficient-data path → suppressed |
+| overflow | { "statement": "Longest copy string '0% — nap window closed' (25 chars) renders on a single line inside the flex prediction card at min-width ~140px", "verification": "backstop" } |
+| zero-one-many | dismissed | Probability is a single scalar displayed once per nap-start card; zero/one/many is not applicable |
+| long-text | ✅ covered | All copy strings are bounded and controlled (max 25 chars); rendered via `textContent` which normalises whitespace; card CSS contains text within the flex column |
+
+### E2 — Intense-Day Checkbox (form)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | dismissed | Checkbox always renders in `#manualEntry` modal — always checked or unchecked, no empty state |
+| loading | dismissed | Checkbox initial state read synchronously from `settings.intenseDays` in-memory — no async load |
+| error | ✅ covered | Save errors surface via the existing `.settingsErrors` element; intense-day flag is written on the same submit path as all other manual-entry fields |
+| partial | dismissed | Checkbox is binary (checked/unchecked) — no partial state |
+| overflow | dismissed | Label "Intense day" (10 chars) inside a flex `.checkboxRow` — cannot overflow |
+| long-text | dismissed | Checkbox label is controlled copy ("Intense day", 10 chars) — no user-generated text |
+
+### E3 — Intense-Day Badge (interactive-control)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | Badge element is not rendered when `intense === false` — no placeholder in DOM |
+| loading | dismissed | Badge visibility is derived synchronously from day record's `intense` field — no async operation |
+| error | dismissed | Click handler calls `settings.update()` (synchronous localStorage write); errors absorbed silently, matching rejected-toggle pattern |
+| populated | ✅ covered | When `intense === true`, badge renders as pill button with text "Intense", stageChip palette (#eef2ff bg, #c7d2fe border, #4338ca text) |
+| partial | dismissed | Badge is binary: rendered or absent — no partial rendering |
+| overflow | dismissed | Badge text "Intense" (7 chars) in inline-flex pill; grows to fit date cell; history table row provides sufficient width |
+| zero-one-many | ✅ covered | Zero: no badge DOM node; one: badge visible in date cell; many: N/A — maximum one badge per day row |
+| long-text | dismissed | Badge text "Intense" is controlled copy (7 chars) — no user-generated text |
+
+### E4 — Settings Forecast Inputs (form)
+
+| Category | Status | Resolution |
+|----------|--------|------------|
+| empty | ✅ covered | Inputs pre-filled from settings store defaults via additive migration (`eveningHour: 18`, `noNapBedtimeOffsetMinutes: 30`) — never empty on first load |
+| loading | dismissed | Settings read synchronously from `localStorage` — no async load |
+| error | ✅ covered | Out-of-range values surface specific copy via `.settingsErrors`: "Evening hour must be between 0 and 23" / "Offset must be between 0 and 120 minutes" |
+| partial | dismissed | Each input is an independent scalar — no cross-field partial state |
+| long-text | { "statement": "Inputs are type=number; the browser renders a number widget not free text; an out-of-range value (e.g. 999) should not break the fieldset layout", "verification": "backstop" } |
 
 ---
 
@@ -286,11 +322,11 @@ No third-party registries declared. All UI is implemented in vanilla JS/CSS inli
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS (focal point declared — see Visual Hierarchy section)
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS (4 sizes: 14px/16px/18–20px/36px; 2 weights: 400/600)
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (focal point declared — see Visual Hierarchy section)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (4 sizes: 14px/16px/18–20px/36px; 2 weights: 400/600)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED — 9 covered, 2 backstop, 16 dismissed, 0 unresolved
