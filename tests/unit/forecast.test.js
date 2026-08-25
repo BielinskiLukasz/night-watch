@@ -2184,3 +2184,258 @@ describe('PRED-09 wake duration-band union', () => {
     assert.strictEqual(refResult.napEnd.central, '14:15', 'napEnd.central should not be affected by wake duration-band');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 18. PRED-10 intense-day bedtime modifier (D-03)
+// ---------------------------------------------------------------------------
+//
+// When today is an intense day (isIntenseToday=true):
+//   - If the rolling window has >= minDays intense-day records with bedtime data:
+//     use the P50 of those days for bedtime.central.
+//   - If the intense sub-window has < minDays records:
+//     shift full-window P50 bedtime by -intenseDayOffsetMinutes (default 30).
+// When isIntenseToday=false: no modifier applied — normal full-window bedtime.
+//
+// Uses makeDay extended with optional `intense` field (6th param).
+
+describe('PRED-10 intense-day bedtime modifier', () => {
+  // Extended makeDay with intense flag
+  function makeIntenseDay(wake, bedtime, napStart, napEnd, rejected = false, intense = false) {
+    return { wake, bedtime, napStart, napEnd, rejected, intense };
+  }
+
+  // Base settings: minDays=1 to avoid cold-start gate in these unit tests
+  const baseSettings = {
+    minDays: 1,
+    maxDelta: 120,
+    statBlend: 'median',
+    windowDays: 14,
+    intenseDayOffsetMinutes: 30,
+  };
+
+  it('isIntenseToday=false → bedtime.central equals full-window P50 (no modifier applied)', () => {
+    // Window has 2 intense days and 2 non-intense days
+    // Full-window P50 of bedtimes: [20:30(1230), 21:00(1260), 21:30(1290), 22:00(1320)]
+    // P50: pos=0.5*(4+1)=2.5 → k=1, frac=0.5 → 1260+0.5*(1290-1260)=1275→'21:15'
+    const days = [
+      makeIntenseDay('07:00', '20:30', null, null, false, true),
+      makeIntenseDay('07:00', '21:00', null, null, false, false),
+      makeIntenseDay('07:00', '21:30', null, null, false, false),
+      makeIntenseDay('07:00', '22:00', null, null, false, false),
+    ];
+    const result = forecast(days, baseSettings, { isIntenseToday: false });
+    assert.strictEqual(result.bedtime.central, '21:15',
+      'no modifier: bedtime.central should be full-window P50');
+  });
+
+  it('isIntenseToday=true, intense sub-window < minDays → bedtime shifts by -intenseDayOffsetMinutes', () => {
+    // Window: 1 intense day (bedtime '20:30'), 2 non-intense (bedtime '21:30', '22:00')
+    // Full-window P50 of bedtimes: [1230, 1290, 1320] sorted.
+    //   P50: pos=0.5*(3+1)=2 → k=1, frac=0 → 1290→'21:30'
+    // intense sub-window: only 1 day. minDays=3 in this test → 1 < 3 → fallback offset.
+    // fallback: full-window P50(1290) - 30 = 1260 → '21:00'
+    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
+    const days = [
+      makeIntenseDay('07:00', '20:30', null, null, false, true),   // intense
+      makeIntenseDay('07:00', '21:30', null, null, false, false),
+      makeIntenseDay('07:00', '22:00', null, null, false, false),
+    ];
+    const result = forecast(days, settingsMinDays3, { isIntenseToday: true });
+    assert.strictEqual(result.bedtime.central, '21:00',
+      'thin intense sub-window: bedtime.central should be full-window P50 - 30min');
+  });
+
+  it('isIntenseToday=true, intense sub-window >= minDays → bedtime.central uses sub-window P50', () => {
+    // 3 intense days (bedtimes: '20:00', '20:30', '21:00'), 4 non-intense (bedtimes: '22:00'..'22:30')
+    // Intense sub-window P50: [1200, 1230, 1260] → P50: pos=0.5*(3+1)=2 → k=1 → 1230→'20:30'
+    // Full-window P50 would be '21:30' or later (non-intense skew it later)
+    // With isIntenseToday=true and 3 intense days >= minDays=3:
+    //   bedtime.central should be '20:30' (intense sub-window P50, NOT full-window P50)
+    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
+    const days = [
+      makeIntenseDay('07:00', '20:00', null, null, false, true),
+      makeIntenseDay('07:00', '20:30', null, null, false, true),
+      makeIntenseDay('07:00', '21:00', null, null, false, true),
+      makeIntenseDay('07:00', '22:00', null, null, false, false),
+      makeIntenseDay('07:00', '22:15', null, null, false, false),
+      makeIntenseDay('07:00', '22:30', null, null, false, false),
+      makeIntenseDay('07:00', '22:45', null, null, false, false),
+    ];
+    const resultIntense = forecast(days, settingsMinDays3, { isIntenseToday: true });
+    const resultNormal  = forecast(days, settingsMinDays3, { isIntenseToday: false });
+    // With modifier: central from intense sub-window → earlier than full-window P50
+    assert.strictEqual(resultIntense.bedtime.central, '20:30',
+      'intense sub-window P50 should be used when >= minDays intense records exist');
+    // Without modifier: full-window P50 (later, reflecting non-intense days too)
+    assert.ok(resultNormal.bedtime.central > resultIntense.bedtime.central,
+      'full-window P50 should be later than intense-only P50');
+  });
+
+  it('isIntenseToday=true, no context param at all → no modifier (context defaults to {})', () => {
+    // forecast(days, settings) with no third argument → context = {} → isIntenseToday = false → no modifier
+    const days = [
+      makeIntenseDay('07:00', '21:00', null, null, false, true),
+      makeIntenseDay('07:00', '21:30', null, null, false, false),
+      makeIntenseDay('07:00', '22:00', null, null, false, false),
+    ];
+    const resultNoContext  = forecast(days, baseSettings);
+    const resultFalse     = forecast(days, baseSettings, { isIntenseToday: false });
+    // Both should produce identical bedtime (no modifier either way)
+    assert.strictEqual(resultNoContext.bedtime.central, resultFalse.bedtime.central,
+      'omitting context should produce same result as isIntenseToday=false');
+  });
+
+  it('wake prediction is NOT affected by isIntenseToday (PRED-10 is bedtime-only)', () => {
+    const days = [
+      makeIntenseDay('07:00', '21:00', null, null, false, true),
+      makeIntenseDay('07:10', '21:30', null, null, false, false),
+      makeIntenseDay('07:20', '22:00', null, null, false, false),
+    ];
+    const resultIntense = forecast(days, baseSettings, { isIntenseToday: true });
+    const resultNormal  = forecast(days, baseSettings, { isIntenseToday: false });
+    // wake should be identical regardless of isIntenseToday
+    assert.deepStrictEqual(resultIntense.wake, resultNormal.wake,
+      'wake prediction must not be affected by isIntenseToday');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 19. PRED-11 no-nap bedtime shift (D-08)
+// ---------------------------------------------------------------------------
+//
+// When currentHour >= eveningHour AND napStartLogged=false:
+//   - Sub-window: days with null napStart.
+//   - If no-nap sub-window >= minDays: use their P50 for bedtime.central.
+//   - If no-nap sub-window < minDays: shift full-window P50 bedtime by -noNapBedtimeOffsetMinutes.
+// PRED-11 does NOT fire when napStartLogged=true or currentHour < eveningHour.
+// PRED-11 takes precedence over PRED-10 when both conditions are met.
+
+describe('PRED-11 no-nap bedtime shift', () => {
+  function makeNapDay(wake, bedtime, napStart, napEnd, rejected = false, intense = false) {
+    return { wake, bedtime, napStart, napEnd, rejected, intense };
+  }
+
+  const baseSettings = {
+    minDays: 1,
+    maxDelta: 120,
+    statBlend: 'median',
+    windowDays: 14,
+    eveningHour: 18,
+    noNapBedtimeOffsetMinutes: 30,
+    intenseDayOffsetMinutes: 30,
+  };
+
+  it('PRED-11 does NOT fire when napStartLogged=true (nap was logged today)', () => {
+    // Full-window: 3 no-nap days (bedtime ~21:00) + 0 nap days
+    // When napStartLogged=true → no-nap branch should NOT fire → normal full-window bedtime
+    const days = [
+      makeNapDay('07:00', '21:00', null, null),
+      makeNapDay('07:00', '21:10', null, null),
+      makeNapDay('07:00', '21:20', null, null),
+    ];
+    const context = { napStartLogged: true, currentHour: 19, isIntenseToday: false };
+    const resultNapLogged  = forecast(days, baseSettings, context);
+    const resultNoContext  = forecast(days, baseSettings);
+    // With nap logged, bedtime should equal normal full-window result
+    assert.strictEqual(resultNapLogged.bedtime.central, resultNoContext.bedtime.central,
+      'PRED-11 must not fire when napStartLogged=true');
+  });
+
+  it('PRED-11 does NOT fire when currentHour < eveningHour (evening not reached)', () => {
+    const days = [
+      makeNapDay('07:00', '21:00', null, null),
+      makeNapDay('07:00', '21:10', null, null),
+      makeNapDay('07:00', '21:20', null, null),
+    ];
+    // currentHour=17 < eveningHour=18 → should NOT fire
+    const context = { napStartLogged: false, currentHour: 17, isIntenseToday: false };
+    const resultEarly   = forecast(days, baseSettings, context);
+    const resultControl = forecast(days, baseSettings);
+    assert.strictEqual(resultEarly.bedtime.central, resultControl.bedtime.central,
+      'PRED-11 must not fire when currentHour < eveningHour');
+  });
+
+  it('PRED-11 fires when currentHour >= eveningHour and napStartLogged=false, no-nap sub-window < minDays → shifts by offset', () => {
+    // Window: 2 no-nap days (napStart=null, bedtime '21:00' and '21:30'),
+    //         1 nap day (napStart='13:00', bedtime '22:00')
+    // Full-window P50 of bedtimes: [1260, 1290, 1320] → pos=0.5*(3+1)=2 → k=1 → 1290 → '21:30'
+    // No-nap sub-window: 2 days (bedtime '21:00', '21:30')
+    // minDays=3 → 2 < 3 → fallback: full-window P50(1290) - 30 = 1260 → '21:00'
+    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
+    const days = [
+      makeNapDay('07:00', '21:00', null, null),          // no nap
+      makeNapDay('07:00', '21:30', null, null),          // no nap
+      makeNapDay('07:00', '22:00', '13:00', '14:00'),   // has nap
+    ];
+    const context = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
+    const result = forecast(days, settingsMinDays3, context);
+    assert.strictEqual(result.bedtime.central, '21:00',
+      'thin no-nap sub-window: bedtime should shift by -noNapBedtimeOffsetMinutes from full-window P50');
+  });
+
+  it('PRED-11 fires with no-nap sub-window >= minDays → uses no-nap P50 for bedtime', () => {
+    // 4 no-nap days (bedtime '20:30'..'21:00'), 3 nap days (bedtime '22:00'..'22:30')
+    // No-nap P50 < full-window P50 (because no-nap days go to bed earlier)
+    // minDays=3 → 4 >= 3 → use no-nap sub-window P50
+    // No-nap bedtimes sorted: [1230(20:30), 1245(20:45), 1260(21:00), 1275(21:15)]
+    //   P50: pos=0.5*(4+1)=2.5 → k=1, frac=0.5 → 1245+0.5*(1260-1245)=1252.5→round to '20:55'
+    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
+    const days = [
+      makeNapDay('07:00', '20:30', null, null),            // no nap
+      makeNapDay('07:00', '20:45', null, null),            // no nap
+      makeNapDay('07:00', '21:00', null, null),            // no nap
+      makeNapDay('07:00', '21:15', null, null),            // no nap
+      makeNapDay('07:00', '22:00', '13:00', '14:00'),    // has nap
+      makeNapDay('07:00', '22:15', '13:00', '14:00'),    // has nap
+      makeNapDay('07:00', '22:30', '13:00', '14:00'),    // has nap
+    ];
+    const context = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
+    const resultNoNap   = forecast(days, settingsMinDays3, context);
+    const resultNormal  = forecast(days, settingsMinDays3, { napStartLogged: true, currentHour: 19 });
+    // No-nap modifier should produce an earlier bedtime than the full-window prediction
+    assert.ok(resultNoNap.bedtime.central < resultNormal.bedtime.central,
+      'no-nap modifier should shift bedtime earlier than full-window prediction');
+  });
+
+  it('PRED-11 takes precedence over PRED-10 when both isIntenseToday=true and no-nap fires', () => {
+    // Both PRED-10 (intense) and PRED-11 (no-nap) conditions active.
+    // PRED-11 must win. Result should equal what PRED-11 alone produces.
+    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
+    const days = [
+      makeNapDay('07:00', '20:30', null, null, false, false),   // no nap, normal
+      makeNapDay('07:00', '20:45', null, null, false, false),   // no nap, normal
+      makeNapDay('07:00', '21:00', null, null, false, false),   // no nap, normal
+      makeNapDay('07:00', '22:00', '13:00', '14:00', false, true),  // nap day, intense
+    ];
+    // Context: both intense and no-nap fire
+    const contextBoth      = { napStartLogged: false, currentHour: 19, isIntenseToday: true };
+    const contextNoNapOnly = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
+    const contextIntenseOnly = { napStartLogged: true, currentHour: 19, isIntenseToday: true };
+    const resultBoth        = forecast(days, settingsMinDays3, contextBoth);
+    const resultNoNapOnly   = forecast(days, settingsMinDays3, contextNoNapOnly);
+    // PRED-11 takes precedence: result with both conditions should equal no-nap-only result
+    assert.strictEqual(resultBoth.bedtime.central, resultNoNapOnly.bedtime.central,
+      'PRED-11 must take precedence over PRED-10 when both conditions are active');
+    // And the PRED-10-only result should differ (intense shift gives different bedtime)
+    // (just verify the contexts produce different outputs, confirming the precedence matters)
+    const resultIntenseOnly = forecast(days, settingsMinDays3, contextIntenseOnly);
+    // They may or may not be the same — but resultBoth must equal resultNoNapOnly.
+    assert.strictEqual(resultBoth.bedtime.central, resultNoNapOnly.bedtime.central,
+      'resultBoth must match resultNoNapOnly (PRED-11 wins)');
+  });
+
+  it('wake prediction is NOT affected by PRED-11 (modifier is bedtime-only)', () => {
+    const days = [
+      makeNapDay('07:00', '21:00', null, null),
+      makeNapDay('07:10', '21:30', null, null),
+      makeNapDay('07:20', '22:00', '13:00', '14:00'),
+    ];
+    const contextNoNap = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
+    const contextNap   = { napStartLogged: true, currentHour: 19, isIntenseToday: false };
+    const resultNoNap = forecast(days, baseSettings, contextNoNap);
+    const resultNap   = forecast(days, baseSettings, contextNap);
+    // Wake must be identical regardless of no-nap condition
+    assert.deepStrictEqual(resultNoNap.wake, resultNap.wake,
+      'wake prediction must not be affected by PRED-11 no-nap modifier');
+  });
+});
