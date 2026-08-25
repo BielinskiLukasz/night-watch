@@ -876,9 +876,25 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
       }
     }
 
+    // PRED-10 / PRED-11: build context for contextual bedtime modifiers.
+    // todayDayRecord: the day record whose date matches today's calendar date.
+    // todayNapStart: whether any napStart event was logged for today's sleep day.
+    const todayAllDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // gsd:allow-ui-clock — display-only context: we need today's local date to find today's record.
+    const todayDateStr = new Date().toISOString().slice(0, 10); // gsd:allow-ui-clock
+    const todayDayRecord = todayAllDays.find(d => d.date === todayDateStr);
+    const todayNapStart = todayDayRecord
+      ? (todayDayRecord.allEvents || []).find(e => e.type === 'napStart')
+      : null;
+    const forecastContext = {
+      isIntenseToday:  todayDayRecord ? todayDayRecord.intense === true : false,
+      napStartLogged:  todayNapStart != null,
+      // gsd:allow-ui-clock — display-only scheduling heuristic for PRED-11 (not domain logic)
+      currentHour:     new Date().getHours(), // gsd:allow-ui-clock
+    };
     const predictions = snap.forecastAlgorithm === 'tif'
       ? tifForecast(forecastDays, snap)
-      : forecast(forecastDays, snap);
+      : forecast(forecastDays, snap, forecastContext);
     renderForecastSection(predictions, snap, forecastDays, nextEventCard, coldStartMsg, forecastCards);
   }
 }

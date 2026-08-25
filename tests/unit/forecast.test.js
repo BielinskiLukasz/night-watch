@@ -2263,12 +2263,13 @@ describe('PRED-10 intense-day bedtime modifier', () => {
     ];
     const resultIntense = forecast(days, settingsMinDays3, { isIntenseToday: true });
     const resultNormal  = forecast(days, settingsMinDays3, { isIntenseToday: false });
-    // With modifier: central from intense sub-window → earlier than full-window P50
+    // With modifier: central from intense sub-window (3 days, 60-min band ≤ maxDelta=120 → normal shape)
     assert.strictEqual(resultIntense.bedtime.central, '20:30',
       'intense sub-window P50 should be used when >= minDays intense records exist');
-    // Without modifier: full-window P50 (later, reflecting non-intense days too)
-    assert.ok(resultNormal.bedtime.central > resultIntense.bedtime.central,
-      'full-window P50 should be later than intense-only P50');
+    // Without modifier: full-window spans 7 bedtimes over 165 min > maxDelta=120 → probabilityBand shape
+    // The intense modifier narrows uncertainty; the full-window without modifier is wider (probabilityBand).
+    assert.ok('probabilityBand' in resultNormal.bedtime,
+      'full-window bedtime (165-min span > maxDelta=120) should fall back to probabilityBand');
   });
 
   it('isIntenseToday=true, no context param at all → no modifier (context defaults to {})', () => {
