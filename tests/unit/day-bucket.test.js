@@ -305,3 +305,98 @@ describe('daysBySubjectiveNight: day.rejected boolean (CFG-05)', () => {
     assert.equal(days[0].rejected, true, 'rejection matches rolled-back date');
   });
 });
+
+// ---------- day.intense — Phase 12 Plan 02 (PRED-10, D-02) ----------
+
+describe('annotateIntense via daysByCalendar: day.intense boolean (PRED-10, D-02)', () => {
+  test('all days have intense=false when settings not provided', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const days = daysByCalendar(events);
+    assert.equal(days[0].intense, false, 'intense must be false when settings absent');
+    assert.equal(days[1].intense, false, 'intense must be false when settings absent');
+  });
+
+  test('all days have intense=false when settings.intenseDays is empty', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const settings = { intenseDays: [] };
+    const days = daysByCalendar(events, undefined, settings);
+    assert.ok(days.every(d => d.intense === false),
+      'all days intense=false when intenseDays is empty');
+  });
+
+  test('day with date in intenseDays gets intense=true', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-26T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+    ];
+    const settings = { intenseDays: ['2026-05-26'] };
+    const days = daysByCalendar(events, undefined, settings);
+    const day26 = days.find(d => d.date === '2026-05-26');
+    const day25 = days.find(d => d.date === '2026-05-25');
+    assert.equal(day26.intense, true, '2026-05-26 is in intenseDays → intense=true');
+    assert.equal(day25.intense, false, '2026-05-25 is not in intenseDays → intense=false');
+  });
+
+  test('multiple dates in intenseDays → each matching day gets intense=true', () => {
+    const events = [
+      ev('e1', 'wake', '2026-05-24T06:35'),
+      ev('e2', 'wake', '2026-05-25T06:35'),
+      ev('e3', 'wake', '2026-05-26T06:35'),
+    ];
+    const settings = { intenseDays: ['2026-05-24', '2026-05-26'] };
+    const days = daysByCalendar(events, undefined, settings);
+    const byDate = Object.fromEntries(days.map(d => [d.date, d]));
+    assert.equal(byDate['2026-05-24'].intense, true);
+    assert.equal(byDate['2026-05-25'].intense, false);
+    assert.equal(byDate['2026-05-26'].intense, true);
+  });
+
+  test('non-array intenseDays (null) → all intense=false (T-12-02-01 guard)', () => {
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const settings = { intenseDays: null };
+    const days = daysByCalendar(events, undefined, settings);
+    assert.equal(days[0].intense, false, 'null intenseDays treated as empty → intense=false');
+  });
+
+  test('annotateIntense does not mutate input records (immutability invariant)', () => {
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const settings = { intenseDays: ['2026-05-26'] };
+    const daysBefore = daysByCalendar(events);
+    const daysAfter = daysByCalendar(events, undefined, settings);
+    // Results from the two calls must be independent objects.
+    assert.notEqual(daysBefore[0], daysAfter[0], 'output records are new objects (spread creates new)');
+    assert.equal(daysBefore[0].intense, false, 'first call without intenseDays → intense=false');
+    assert.equal(daysAfter[0].intense, true, 'second call with intenseDays → intense=true');
+  });
+});
+
+describe('annotateIntense via daysBySubjectiveNight: day.intense boolean (PRED-10, D-02)', () => {
+  test('all days have intense=false when settings not provided', () => {
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const days = daysBySubjectiveNight(events);
+    assert.equal(days[0].intense, false, 'intense must be false when settings absent');
+  });
+
+  test('day with date in intenseDays gets intense=true (no rollback case)', () => {
+    // 2026-05-26T06:35 with cutoverHour=4 → subjective date 2026-05-26 (no rollback)
+    const events = [ev('e1', 'wake', '2026-05-26T06:35')];
+    const settings = { intenseDays: ['2026-05-26'] };
+    const days = daysBySubjectiveNight(events, 4, undefined, settings);
+    assert.equal(days[0].intense, true, '2026-05-26 in intenseDays → intense=true');
+  });
+
+  test('subjective rollback date uses the rolled-back key for intense check', () => {
+    // 2026-05-26T03:50 with cutoverHour=4 → subjective date 2026-05-25 (rolled back)
+    const events = [ev('e1', 'wake', '2026-05-26T03:50')];
+    const settings = { intenseDays: ['2026-05-25'] };
+    const days = daysBySubjectiveNight(events, 4, undefined, settings);
+    assert.equal(days[0].date, '2026-05-25', 'event rolled back to previous day');
+    assert.equal(days[0].intense, true, 'intense matches rolled-back date in intenseDays');
+  });
+});
