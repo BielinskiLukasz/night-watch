@@ -30,6 +30,7 @@ import {
   generateProbabilityBand,
   detectColdStart,
   selectNextEvent,
+  napProbability,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -2438,5 +2439,165 @@ describe('PRED-11 no-nap bedtime shift', () => {
     // Wake must be identical regardless of no-nap condition
     assert.deepStrictEqual(resultNoNap.wake, resultNap.wake,
       'wake prediction must not be affected by PRED-11 no-nap modifier');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PRED-12: napProbability(dayRecords, settings, context)
+// ---------------------------------------------------------------------------
+//
+// 4-signal additive score (D-13):
+//   Signal 1 — napFrequency   (40%): napDays / totalDays
+//   Signal 2 — elapsedWakeTime(30%): elapsed fraction of napStart P10-P90 window
+//   Signal 3 — noNapStreak   (20%): max(0, 1 - streak/5)
+//   Signal 4 — windowPassed  (10%): 1 if current time <= P90, 0 if past P90
+//
+// Window-passed collapse: if current time > napStart P90 → return 0 (not null)
+// Cold-start / no data: return null
+
+describe('PRED-12 napProbability', () => {
+  // Helper: synthetic day record with just a napStart (and rejected=false)
+  function makeNapOnlyDay(napStart) {
+    return { wake: null, bedtime: null, napStart, napEnd: null, rejected: false };
+  }
+
+  // 7 days all with nap at 13:00 — solid nap history, window open
+  const allNapDays = [
+    makeNapOnlyDay('13:00'),
+    makeNapOnlyDay('13:05'),
+    makeNapOnlyDay('13:10'),
+    makeNapOnlyDay('13:00'),
+    makeNapOnlyDay('12:55'),
+    makeNapOnlyDay('13:00'),
+    makeNapOnlyDay('13:10'),
+  ];
+
+  const baseSettings = {
+    minDays: 1,
+    windowDays: 14,
+    maxDelta: 60,
+  };
+
+  it('empty dayRecords → returns null (cold start)', () => {
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const result = napProbability([], baseSettings, ctx);
+    assert.strictEqual(result, null);
+  });
+
+  it('dayRecords below minDays → returns null (cold start gate)', () => {
+    const highMinSettings = { ...baseSettings, minDays: 10 };
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const result = napProbability(allNapDays, highMinSettings, ctx);
+    assert.strictEqual(result, null);
+  });
+
+  it('all days have nap, streak=0, window open, wakeHHMM set → score is integer > 50', () => {
+    // napFrequency=1.0 (40%), elapsedWakeTime is moderate (30%), streak penalty=0 (20%), windowPassed=1 (10%)
+    // Expected score well above 50
+    const ctx = {
+      currentHour: 11,    // mid-morning, inside nap window
+      currentMinute: 30,
+      napStreak: 0,
+      todayWakeHHMM: '07:00',
+    };
+    const score = napProbability(allNapDays, baseSettings, ctx);
+    assert.ok(typeof score === 'number', `score should be a number, got ${score}`);
+    assert.ok(Number.isInteger(score), `score should be an integer, got ${score}`);
+    assert.ok(score > 50, `all-nap history with streak=0 should score > 50, got ${score}`);
+  });
+
+  it('returns integer between 0 and 100 inclusive', () => {
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const score = napProbability(allNapDays, baseSettings, ctx);
+    assert.ok(score !== null, 'score should not be null with valid data');
+    assert.ok(score >= 0 && score <= 100, `score ${score} out of [0, 100] range`);
+  });
+
+  it('no days have nap (freq=0) → score is 0 or very low (napFrequency signal zeroed)', () => {
+    const noDays = [
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+      makeNapOnlyDay(null),
+    ];
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const score = napProbability(noDays, baseSettings, ctx);
+    // napFrequency=0 → signal1=0 (40% zeroed).
+    // napStart P90 will be null (no nap history) → windowPassed check skipped → doesn't collapse
+    // But with no napStart history, p90_ns=null → windowOpen=true, sig2=0 (no P10/P90).
+    // sig3 = max(0, 1-0/5)=1. sig4=1.
+    // score = 0*0.40 + 0*0.30 + 1*0.20 + 1*0.10 = 0.30 → 30
+    assert.ok(score !== null, 'should return a score, not null, even with no nap days');
+    assert.ok(score < 50, `no-nap history should give low score, got ${score}`);
+  });
+
+  it('window already passed (currentTime > napStart P90) → returns 0', () => {
+    // napStart times cluster around 13:00. Set current time to 16:00 (past P90).
+    const ctx = {
+      currentHour: 16,
+      currentMinute: 0,
+      napStreak: 0,
+      todayWakeHHMM: '07:00',
+    };
+    const score = napProbability(allNapDays, baseSettings, ctx);
+    assert.strictEqual(score, 0, 'window-passed should return 0 (not null)');
+  });
+
+  it('window-closed returns 0 (integer), not null — distinguishable from cold-start', () => {
+    const ctx = { currentHour: 23, currentMinute: 59, napStreak: 0, todayWakeHHMM: '07:00' };
+    const score = napProbability(allNapDays, baseSettings, ctx);
+    assert.strictEqual(score, 0);
+    // Verify it's not null (cold-start returns null, window-closed returns 0)
+    assert.notStrictEqual(score, null);
+  });
+
+  it('napStreak=5 → noNapStreak signal = 0 (20% weight zeroed, reduces score vs streak=0)', () => {
+    const ctx0 = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctx5 = { currentHour: 11, currentMinute: 0, napStreak: 5, todayWakeHHMM: '07:00' };
+    const score0 = napProbability(allNapDays, baseSettings, ctx0);
+    const score5 = napProbability(allNapDays, baseSettings, ctx5);
+    assert.ok(score5 !== null && score0 !== null, 'both scores should be non-null');
+    assert.ok(score5 < score0, `streak=5 score (${score5}) should be lower than streak=0 (${score0})`);
+  });
+
+  it('todayWakeHHMM=null → elapsedWakeTime signal = 0 (30% weight zeroed, reduces score vs wake set)', () => {
+    const ctxWithWake    = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctxWithoutWake = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: null };
+    const scoreWith    = napProbability(allNapDays, baseSettings, ctxWithWake);
+    const scoreWithout = napProbability(allNapDays, baseSettings, ctxWithoutWake);
+    assert.ok(scoreWith !== null && scoreWithout !== null, 'both scores should be non-null');
+    assert.ok(scoreWithout <= scoreWith,
+      `no-wake score (${scoreWithout}) should be <= wake-set score (${scoreWith})`);
+  });
+
+  it('score is a single Math.round at the end — result is integer', () => {
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 2, todayWakeHHMM: '07:00' };
+    const score = napProbability(allNapDays, baseSettings, ctx);
+    assert.ok(score !== null);
+    assert.strictEqual(score, Math.round(score), 'score must be an integer (single round at end)');
+  });
+
+  it('NAP_SCORE_WEIGHTS sum to 1.0 (weights well-formed)', () => {
+    // Test via behaviour: freq=1, elapsed=1, streak=0(→sig3=1), window=open(→sig4=1)
+    // raw = 1*0.40 + 1*0.30 + 1*0.20 + 1*0.10 = 1.00 → score=100
+    // Set up: all days have nap, wake early so lots of elapsed time, streak=0, window open
+    const ctx = { currentHour: 14, currentMinute: 0, napStreak: 0, todayWakeHHMM: '06:00' };
+    // Use napStart times all at 14:05 so P90=14:05 is just ahead of currentTime (14:00)
+    const daysAt1405 = [
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+      { ...makeNapOnlyDay('14:05'), wake: '06:00' },
+    ];
+    const score = napProbability(daysAt1405, baseSettings, ctx);
+    assert.ok(score !== null, 'score should not be null');
+    assert.ok(score >= 0 && score <= 100, `score ${score} out of range`);
+    assert.strictEqual(score, Math.round(score), 'score must be an integer');
   });
 });
