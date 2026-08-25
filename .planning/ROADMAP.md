@@ -34,7 +34,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 <details>
 <summary>🚧 v1.3 Prediction & TIF Enhancements — PLANNING</summary>
 
-- [ ] **Phase 12: Prediction Logic Refinements** - Classic forecaster contextual rules (time-of-day bedtime, duration-band wake, intense-day flag, missed-nap bedtime shift, nap probability score) plus Today screen card ordering fix
+- [x] **Phase 12: Prediction Logic Refinements** - Classic forecaster contextual rules (time-of-day bedtime, duration-band wake, intense-day flag, missed-nap bedtime shift, nap probability score) plus Today screen card ordering fix — completed 2026-08-25
 - [ ] **Phase 13: TIF Algorithm Extensions** - Ratio-based windows for nap-start/nap-end, rolling-window variant with MA/AA preference, per-window medians, and no-nap-day substitution logic
 - [ ] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix
 
@@ -65,6 +65,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] 12-05-PLAN.md — TDD: PRED-10 intense bedtime modifier + PRED-11 no-nap bedtime shift (subWindowBedtime, forecast context param)
 - [x] 12-06-PLAN.md — Execute: PRED-12 nap probability score (napProbability fn + Today screen display)
 
+**Completed**: 2026-08-25
 **UI hint**: yes
 
 ### Phase 13: TIF Algorithm Extensions
@@ -106,7 +107,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
-| 12. Prediction Logic Refinements | v1.3 | 6/6 | In Progress|  |
+| 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 0/? | Not started | — |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 

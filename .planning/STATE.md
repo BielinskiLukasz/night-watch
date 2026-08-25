@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
-current_phase: 12
-current_phase_name: prediction-logic-refinements
-status: executing
-stopped_at: Completed NW-12-06-PLAN.md
-last_updated: "2026-08-25T21:37:06.027Z"
+current_phase: 13
+current_phase_name: tif-algorithm-extensions
+status: awaiting_next_phase
+stopped_at: Phase NW-12 verified complete; NW-13 not yet planned
+last_updated: "2026-08-25T22:00:00Z"
 last_activity: 2026-08-25
-last_activity_desc: Phase NW-12 execution started
+last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 progress:
   total_phases: 1
   completed_phases: 1
@@ -24,29 +24,29 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-12 — prediction-logic-refinements
+**Current focus:** Phase NW-13 — TIF Algorithm Extensions (planning not yet started)
 
 ## Current Position
 
-Phase: NW-12 (prediction-logic-refinements) — EXECUTING
-Plan: 6 of 6
-Status: Executing Phase NW-12
-Last activity: 2026-08-25 — Phase NW-12 execution started
+Phase: NW-12 (prediction-logic-refinements) — COMPLETE (verified 2026-08-25)
+Next phase: NW-13 (TIF Algorithm Extensions) — not yet planned
+Status: Awaiting next phase planning
 
 ## Phases
 
 | Phase | Name | Requirements | Status |
 |-------|------|-------------|--------|
 | 10 | TIF Algorithm & Settings | TIF-01..11 (11) | Complete |
-| 11 | Metrics Screen | MET-01..06 (6) | Plans ready |
+| 11 | Metrics Screen | MET-01..06 (6) | Complete |
+| 12 | Prediction Logic Refinements | PRED-08..12, UI-07 | Complete |
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3 (this milestone)
-- Average duration: 9 min (3 plans: 12 + 5 + est. 10 min)
-- Total execution time: 27 min
+- Total plans completed: 6 (Phase NW-12)
+- Average duration: ~17 min (plans 01–06)
+- Total execution time: ~101 min
 
 *Updated after each plan completion*
 **Per-Plan Metrics:**
@@ -75,17 +75,17 @@ Last activity: 2026-08-25 — Phase NW-12 execution started
 - Phase 10: metrics.js is a shared dependency — build it as the first plan in Phase 10; Phase 11 reuses it
 - Phase 10: TIF is additive only; classic forecast.js remains untouched and is the default
 - Phase 11: Metrics screen is a new 5th bottom-nav tab (Today / History / Charts / Accuracy / Metrics)
-- [Phase ?]: Phase 12 Plan 01: PRED-08 evening-hour override uses eveningHour=0/25 for CI-stable tests
-- [Phase ?]: Phase 12 Plan 01: buildResult inner function in selectNextEvent shares isMissed logic between PRED-08 branch and switch
-- [Phase ?]: Phase 12 Plan 02: JSDoc for .intense included in GREEN commit (no separate REFACTOR commit needed)
-- [Phase ?]: durBand normalized via % 1440 in computeDurationBand — prevents backstop invariant violation when lastBedtime+duration exceeds 1440
-- [Phase ?]: 3 existing forecast tests updated to wake-only days — PRED-09 union correctly widens sevenFullDays band past maxDelta, so hour-band-only tests now use bedtime:null
-- [Phase ?]: Plan 12-03: intense-day pre-check uses existing.at for edit mode, dateInput.value for add mode
-- [Phase ?]: Plan 12-03: settings.update guarded — only fires when intenseDays state actually changed
-- [Phase ?]: PRED-11 takes precedence over PRED-10 when both conditions fire simultaneously (no-nap + evening + intense day)
-- [Phase ?]: subWindowBedtime returns numeric minutes so callers can apply generateProbabilityBand before minutesToTime conversion
-- [Phase ?]: calculatePercentiles callback must return HH:MM string not minutes; result shape is { min, central, max }
-- [Phase ?]: napProbabilityScore attached to predictions.napStart before renderForecastSection; TIF algorithm benefits transparently
+- Phase 12 Plan 01: PRED-08 evening-hour override uses eveningHour=0/25 for CI-stable tests
+- Phase 12 Plan 01: buildResult inner function in selectNextEvent shares isMissed logic between PRED-08 branch and switch
+- Phase 12 Plan 02: JSDoc for .intense included in GREEN commit (no separate REFACTOR commit needed)
+- Phase 12 Plan 04: durBand normalized via % 1440 in computeDurationBand — prevents backstop invariant violation when lastBedtime+duration exceeds 1440
+- Phase 12 Plan 04: 3 existing forecast tests updated to wake-only days — PRED-09 union correctly widens sevenFullDays band past maxDelta, so hour-band-only tests now use bedtime:null
+- Phase 12 Plan 03: intense-day pre-check uses existing.at for edit mode, dateInput.value for add mode
+- Phase 12 Plan 03: settings.update guarded — only fires when intenseDays state actually changed
+- Phase 12 Plan 05: PRED-11 takes precedence over PRED-10 when both conditions fire simultaneously (no-nap + evening + intense day)
+- Phase 12 Plan 05: subWindowBedtime returns numeric minutes so callers can apply generateProbabilityBand before minutesToTime conversion
+- Phase 12 Plan 06: calculatePercentiles callback must return HH:MM string not minutes; result shape is { min, central, max }
+- Phase 12 Plan 06: napProbabilityScore attached to predictions.napStart before renderForecastSection; TIF algorithm benefits transparently
 
 ### Quick Tasks Completed
 
@@ -99,18 +99,18 @@ Last activity: 2026-08-25 — Phase NW-12 execution started
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None. Phase NW-12 complete. Two human-verification browser checks remain (intense-day badge round-trip and nap probability score display); both are visual confirmation of wired logic that is thoroughly unit-tested.
 
 ## Session Continuity
 
-Last session: 2026-08-25T21:37:05.999Z
-Stopped at: Completed NW-12-06-PLAN.md
+Last session: 2026-08-25T22:00:00Z
+Stopped at: Phase NW-12 verified complete
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd-plan-phase 13` to plan Phase NW-13 (TIF Algorithm Extensions)
