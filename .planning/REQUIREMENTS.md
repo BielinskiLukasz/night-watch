@@ -11,7 +11,7 @@
 ### Prediction Logic
 
 - [x] **PRED-08**: When the current hour is ≥ 18 and the last logged event is a wake, the forecaster predicts bedtime as the next event (not nap start)
-- [ ] **PRED-09**: Wake-up predictions are computed from both a historic hour-band and a sleep-duration-band (bedtime + typical sleep duration), then unioned into a wider, more robust forecast window
+- [x] **PRED-09**: Wake-up predictions are computed from both a historic hour-band and a sleep-duration-band (bedtime + typical sleep duration), then unioned into a wider, more robust forecast window
 - [x] **PRED-10**: User can mark a day as "intense" via a checkbox in the event-entry form; the flag is stored per day in history and used by the forecaster as a contextual modifier
 - [ ] **PRED-11**: When a nap-start event has not occurred by a threshold hour, the forecaster detects a likely missed nap and shifts the bedtime prediction earlier accordingly
 - [ ] **PRED-12**: The nap prediction card on the Today screen displays a nap probability score (% likelihood the child will nap today), derived from: historical nap frequency in the active stage, time elapsed since wake vs. typical nap-start window, consecutive no-nap streak, and whether the typical nap window has already passed
@@ -76,7 +76,7 @@ Items remaining in backlog after v1.3 scope was set:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PRED-08 | Phase 12 | Complete |
-| PRED-09 | Phase 12 | Pending |
+| PRED-09 | Phase 12 | Complete |
 | PRED-10 | Phase 12 | Complete |
 | PRED-11 | Phase 12 | Pending |
 | PRED-12 | Phase 12 | Pending |
