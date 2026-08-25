@@ -56,10 +56,10 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
   5. The nap prediction card shows a "% chance of nap today" score derived from stage-specific nap frequency, elapsed wake time, consecutive no-nap streak, and whether the nap window has already passed
   6. Prediction cards on Today screen appear in the order wake → nap start → nap end → bedtime in both collapsed and expanded states
 
-**Plans**: 1/6 plans executed
+**Plans**: 2/6 plans executed
 
 - [x] 12-01-PLAN.md — Tracer: DB migration (4 new settings fields) + PRED-08 evening-hour rule + UI-07 card order fix + settings modal inputs/validation
-- [ ] 12-02-PLAN.md — TDD: annotateIntense in day-bucket.js (PRED-10 data model)
+- [x] 12-02-PLAN.md — TDD: annotateIntense in day-bucket.js (PRED-10 data model)
 - [ ] 12-03-PLAN.md — Execute: intense-day UI (checkbox in manual-entry, badge in history-screen, CSS)
 - [ ] 12-04-PLAN.md — TDD: PRED-09 wake duration-band union (computeDurationBand + union logic)
 - [ ] 12-05-PLAN.md — TDD: PRED-10 intense bedtime modifier + PRED-11 no-nap bedtime shift (subWindowBedtime, forecast context param)
@@ -106,7 +106,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
-| 12. Prediction Logic Refinements | v1.3 | 1/6 | In Progress|  |
+| 12. Prediction Logic Refinements | v1.3 | 2/6 | In Progress|  |
 | 13. TIF Algorithm Extensions | v1.3 | 0/? | Not started | — |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 
