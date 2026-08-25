@@ -425,6 +425,17 @@ function extractTime(slot) {
  *   4. Convert numeric minutes back to 'HH:MM' strings (5-minute precision)
  *   5. If no days have that event → { central: null, min: null, max: null }
  *
+ * PRED-09 wake band (D-10, D-11, D-12):
+ *   The wake prediction min/max is the outer union of two independent signals:
+ *   - Hour-band: P10/P90 of historical wake hours (circadian rhythm signal)
+ *   - Duration-band: most recent bedtime + P10/P90 of rolling night sleep durations
+ *     (sleep-cycle length signal). Computed by computeDurationBand().
+ *   Union: final_min = min(hourBand.min, durBand.min),
+ *          final_max = max(hourBand.max, durBand.max).
+ *   Central stays P50 of wake hours — unchanged by the duration-band (D-11).
+ *   When lastBedtime is unavailable (null), falls back to the hour-band only.
+ *   bedtime/napStart/napEnd are NOT affected by the duration-band (D-12).
+ *
  * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
  *   Each record is expected to have:
  *     - wake      {string|null}  'HH:MM' or null
