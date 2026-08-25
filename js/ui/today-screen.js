@@ -503,7 +503,7 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
   coldStartMsg.style.display = 'none';
 
   // Next-event hero (D3-10)
-  const nextEvt = selectNextEvent(predictions, dayRecords);
+  const nextEvt = selectNextEvent(predictions, dayRecords, settingsSnap);
   const heroEl = renderNextEventCard(nextEvt, timeFormat);
   if (heroEl) {
     nextEventCard.appendChild(heroEl);
@@ -512,8 +512,8 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
     nextEventCard.style.display = 'none';
   }
 
-  // Four prediction cards in fixed order (D3-08)
-  const EVENT_TYPES = ['wake', 'bedtime', 'napStart', 'napEnd'];
+  // Four prediction cards in fixed order (D3-08, UI-07 / D-16: bedtime last)
+  const EVENT_TYPES = ['wake', 'napStart', 'napEnd', 'bedtime'];
   for (const type of EVENT_TYPES) {
     const pred = predictions[type];
     if (!pred) continue;

@@ -483,7 +483,7 @@ export function forecast(dayRecords, settings) {
  *   - All other fields from the prediction (central, min, max or probabilityBand)
  *   Returns null when no events have been logged or no predictions are available.
  */
-export function selectNextEvent(predictions, dayRecords) {
+export function selectNextEvent(predictions, dayRecords, settings = {}) {
   // ── Step 1: Find the most-recently-logged event across all day records ────
   // allEvents lists within each day record hold the raw events in insertion
   // order. We collect every event and pick the latest by at-string (ISO sort).
@@ -501,7 +501,57 @@ export function selectNextEvent(predictions, dayRecords) {
   // No events logged → cold start; UI suppresses the next-event card
   if (lastEvent === null) return null;
 
-  // ── Step 2: Determine cycle-aware priority order (D3-10) ─────────────────
+  // ── Inner helper: walk a priority list and return the first available prediction ─
+  // Shared by both the PRED-08 early-return path and the switch-based path.
+  function buildResult(preds, priorityList) {
+    for (const eventType of priorityList) {
+      const pred = preds[eventType];
+      // Skip tiers with no prediction (event type never recorded in history)
+      if (!pred) continue;
+
+      // D3-11: Detect "missed" predictions.
+      // A prediction is missed when its central time has passed today.
+      // We compare using minutes-since-midnight only (no date arithmetic needed —
+      // the prediction is always relative to "today's" schedule).
+      // NOTE: this uses performance-time-safe approach — only for UI flagging,
+      // not for sorting. The clock seam (D-07) is not threaded here because
+      // selectNextEvent is pure logic; the UI layer may override this with a
+      // real clock if needed.
+      let isMissed = false;
+      if (pred.central) {
+        // Wall-clock "now" in minutes — safe since we only compare HH:MM
+        // This is the only place in forecast.js that reads wall-clock time.
+        // Phase 8 can inject a clock seam if stricter testability is needed.
+        // gsd:allow-ui-clock — non-domain UI prefill: isMissed is display-only metadata (D3-11).
+        const nowDate = new Date(); // gsd:allow-ui-clock
+        const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+        const centralMinutes = timeToMinutes(pred.central);
+        isMissed = centralMinutes < nowMinutes;
+      }
+
+      return {
+        type: eventType,
+        isMissed,
+        ...pred,
+      };
+    }
+    // All prediction tiers exhausted with no match
+    return null;
+  }
+
+  // ── Step 2: PRED-08 (D-07) evening-hour override ─────────────────────────
+  // When the current hour is at or past eveningHour AND the last logged event
+  // was a wake, skip the nap-start priority and surface bedtime instead.
+  // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic
+  const nowHour = new Date().getHours(); // gsd:allow-ui-clock
+  const eveningHour = (settings && typeof settings.eveningHour === 'number')
+    ? settings.eveningHour
+    : 18;
+  if (lastEvent.type === 'wake' && nowHour >= eveningHour) {
+    return buildResult(predictions, ['bedtime', 'napEnd', 'napStart', 'wake']);
+  }
+
+  // ── Step 3: Determine cycle-aware priority order (D3-10) ─────────────────
   // The priority array encodes "what naturally comes next in the sleep cycle"
   // based on the most recently logged event type.
   let priority;
@@ -527,41 +577,7 @@ export function selectNextEvent(predictions, dayRecords) {
       priority = ['wake', 'bedtime', 'napStart', 'napEnd'];
   }
 
-  // ── Step 3: Walk the priority list and return the first available prediction ─
-  for (const eventType of priority) {
-    const pred = predictions[eventType];
-    // Skip tiers with no prediction (event type never recorded in history)
-    if (!pred) continue;
-
-    // D3-11: Detect "missed" predictions.
-    // A prediction is missed when its central time has passed today.
-    // We compare using minutes-since-midnight only (no date arithmetic needed —
-    // the prediction is always relative to "today's" schedule).
-    // NOTE: this uses performance-time-safe approach — only for UI flagging,
-    // not for sorting. The clock seam (D-07) is not threaded here because
-    // selectNextEvent is pure logic; the UI layer may override this with a
-    // real clock if needed.
-    let isMissed = false;
-    if (pred.central) {
-      // Wall-clock "now" in minutes — safe since we only compare HH:MM
-      // This is the only place in forecast.js that reads wall-clock time.
-      // Phase 8 can inject a clock seam if stricter testability is needed.
-      // gsd:allow-ui-clock — non-domain UI prefill: isMissed is display-only metadata (D3-11).
-      const nowDate = new Date(); // gsd:allow-ui-clock
-      const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-      const centralMinutes = timeToMinutes(pred.central);
-      isMissed = centralMinutes < nowMinutes;
-    }
-
-    return {
-      type: eventType,
-      isMissed,
-      ...pred,
-    };
-  }
-
-  // All prediction tiers exhausted with no match
-  return null;
+  return buildResult(predictions, priority);
 }
 
 // ---------------------------------------------------------------------------

@@ -33,17 +33,18 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 16 field names (D2-21 + CFG-05 rejectedDays + D6-01 stages + D6-02 activeStageId + CFG-10 confirmBeforeLogging + TIF-01/02/03)', () => {
+  it('has entries for all 20 field names (16 prior + 4 Phase 12 fields)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
+      'intenseDays', 'eveningHour', 'noNapBedtimeOffsetMinutes', 'intenseDayOffsetMinutes',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 16);
+    assert.equal(Object.keys(RULES).length, 20);
   });
 });
 
@@ -59,10 +60,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 16 keys (10 original + stages + activeStageId + confirmBeforeLogging + TIF forecastAlgorithm/trimPct/precisionTarget)', () => {
+  it('normalized contains all 20 keys (16 prior + 4 Phase 12 fields)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 16);
+    assert.equal(keys.length, 20);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -417,6 +418,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
+    intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
   };
 
   it('accepts empty stages array', () => {
@@ -485,6 +487,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
+    intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
   };
 
   it('accepts null activeStageId', () => {

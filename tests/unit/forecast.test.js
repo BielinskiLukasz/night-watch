@@ -929,10 +929,11 @@ describe('selectNextEvent(predictions, dayRecords)', () => {
 
   it('last event = wake → selects napStart (priority 1 per D3-10)', () => {
     // Priority after wake: napStart > bedtime > napEnd > wake
+    // eveningHour=25 disables PRED-08 override so normal switch fires (CI-safe)
     const dayRecords = [
       makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:30' }]),
     ];
-    const result = selectNextEvent(predictions, dayRecords);
+    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 25 });
     assert.ok(result !== null, 'should return a prediction');
     assert.strictEqual(result.type, 'napStart');
   });
@@ -1103,10 +1104,11 @@ describe('selectNextEvent() edge cases', () => {
       napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
     };
     // Last event = wake → priority: napStart > bedtime > napEnd > wake
+    // eveningHour=25 disables PRED-08 override so normal switch fires (CI-safe)
     const dayRecords = [
       makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
     ];
-    const result = selectNextEvent(bandPredictions, dayRecords);
+    const result = selectNextEvent(bandPredictions, dayRecords, { eveningHour: 25 });
     assert.ok(result !== null, 'should return napStart even though it uses probabilityBand shape');
     assert.strictEqual(result.type, 'napStart');
     assert.ok('probabilityBand' in result, 'result should carry probabilityBand from prediction');
