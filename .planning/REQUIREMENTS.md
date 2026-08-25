@@ -10,7 +10,7 @@
 
 ### Prediction Logic
 
-- [ ] **PRED-08**: When the current hour is ≥ 18 and the last logged event is a wake, the forecaster predicts bedtime as the next event (not nap start)
+- [x] **PRED-08**: When the current hour is ≥ 18 and the last logged event is a wake, the forecaster predicts bedtime as the next event (not nap start)
 - [ ] **PRED-09**: Wake-up predictions are computed from both a historic hour-band and a sleep-duration-band (bedtime + typical sleep duration), then unioned into a wider, more robust forecast window
 - [ ] **PRED-10**: User can mark a day as "intense" via a checkbox in the event-entry form; the flag is stored per day in history and used by the forecaster as a contextual modifier
 - [ ] **PRED-11**: When a nap-start event has not occurred by a threshold hour, the forecaster detects a likely missed nap and shifts the bedtime prediction earlier accordingly
@@ -34,7 +34,7 @@
 
 ### UI Polish & Bug Fixes
 
-- [ ] **UI-07**: On the Today screen, prediction cards are ordered wake → nap start → nap end → bedtime in the vertical (mobile) layout; bedtime card no longer appears before the nap cards
+- [x] **UI-07**: On the Today screen, prediction cards are ordered wake → nap start → nap end → bedtime in the vertical (mobile) layout; bedtime card no longer appears before the nap cards
 - [ ] **UI-08**: The Wake & Bedtime Bands chart Y-axis is inverted so that earlier times (morning) appear at the bottom and later times (evening) appear at the top; Y-axis tick labels update accordingly
 - [ ] **UI-09**: The Wake & Bedtime Bands chart displays nap-start and nap-end dots alongside the existing wake and bedtime dots, each in a distinct color with the legend updated to show all four series; days with no nap show a gap in the nap series
 - [ ] **UI-10**: The Wake & Bedtime Bands chart renders each event as exactly one dot per day — post-midnight events (e.g. bedtime at 00:30) are plotted only once, at their subjective-night time position relative to the cutover hour, eliminating the duplicate-dot bug
@@ -75,12 +75,12 @@ Items remaining in backlog after v1.3 scope was set:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRED-08 | Phase 12 | Pending |
+| PRED-08 | Phase 12 | Complete |
 | PRED-09 | Phase 12 | Pending |
 | PRED-10 | Phase 12 | Pending |
 | PRED-11 | Phase 12 | Pending |
 | PRED-12 | Phase 12 | Pending |
-| UI-07 | Phase 12 | Pending |
+| UI-07 | Phase 12 | Complete |
 | TIF-12 | Phase 13 | Pending |
 | TIF-13 | Phase 13 | Pending |
 | TIF-15 | Phase 13 | Pending |
@@ -96,6 +96,7 @@ Items remaining in backlog after v1.3 scope was set:
 | UI-10 | Phase 14 | Pending |
 
 **Coverage:**
+
 - v1.3 requirements: 19 total
 - Mapped to phases: 19 (Phase 12: 6, Phase 13: 4, Phase 14: 9)
 - Unmapped: 0 ✓

@@ -2,17 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
-current_phase_name: defining requirements
+current_phase: 12
+current_phase_name: prediction-logic-refinements
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-08-25T15:46:08.584Z"
+stopped_at: Completed NW-12-01-PLAN.md
+last_updated: "2026-08-25T18:03:33.860Z"
 last_activity: 2026-08-25
-last_activity_desc: Milestone v1.3 started
+last_activity_desc: Phase NW-12 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Planning next milestone via `/gsd-new-milestone`
+**Current focus:** Phase NW-12 — prediction-logic-refinements
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-08-25 — Milestone v1.3 started
+Phase: NW-12 (prediction-logic-refinements) — EXECUTING
+Plan: 2 of 6
+Status: Executing Phase NW-12
+Last activity: 2026-08-25 — Phase NW-12 execution started
 
 ## Phases
 
@@ -60,6 +61,7 @@ Last activity: 2026-08-25 — Milestone v1.3 started
 | Phase 11 P08 | 3 min 40 sec | 3 tasks | 3 files |
 | Phase 11 P09 | 8 | 2 tasks | 1 files |
 | Phase 11 P10 | 28 min | 2 tasks | 2 files |
+| Phase NW-12 P01 | 10 | 1 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -68,6 +70,8 @@ Last activity: 2026-08-25 — Milestone v1.3 started
 - Phase 10: metrics.js is a shared dependency — build it as the first plan in Phase 10; Phase 11 reuses it
 - Phase 10: TIF is additive only; classic forecast.js remains untouched and is the default
 - Phase 11: Metrics screen is a new 5th bottom-nav tab (Today / History / Charts / Accuracy / Metrics)
+- [Phase ?]: Phase 12 Plan 01: PRED-08 evening-hour override uses eveningHour=0/25 for CI-stable tests
+- [Phase ?]: Phase 12 Plan 01: buildResult inner function in selectNextEvent shares isMissed logic between PRED-08 branch and switch
 
 ### Quick Tasks Completed
 
@@ -89,9 +93,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-25T15:09:55.191Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/NW-12-prediction-logic-refinements/12-CONTEXT.md
+Last session: 2026-08-25T18:03:33.809Z
+Stopped at: Completed NW-12-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
