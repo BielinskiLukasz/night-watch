@@ -50,21 +50,32 @@ Source: pre-populated from existing `style.css` spacing patterns (8px, 16px, 24p
 
 ## Typography
 
+Exactly 4 sizes, 2 weights:
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px (1rem) | 400 | 1.4 |
-| Label | 14px (0.875rem) | 600 | 1.4 |
+| Label | 14px (0.875rem) | 400 or 600 | 1.4 |
 | Heading | 18–20px (1.15–1.25rem) | 600 | 1.2 |
-| Display (hero time) | 36px (2.25rem) | 700 | 1.1 |
+| Display (hero time) | 36px (2.25rem) | 600 | 1.1 |
 
-New Phase 12 typography additions:
+Declared weights: **400** (regular) and **600** (semibold). No other weights.
 
-| Role | Size | Weight | Notes |
-|------|------|--------|-------|
-| Nap probability line | 13px (0.8rem) | 400 | Secondary line below time-band on nap-start card — matches existing `.prediction-card .time-band` size |
-| Intense badge | 12px (0.75rem) | 500 | Matches existing `.stageChip` font-size |
+**Phase 12 role mapping to existing scale:**
+- Nap probability line — uses Label size (14px / 0.875rem), weight 400. Color (`#475569` on cards, `rgba(255,255,255,0.85)` on hero) provides contextual differentiation without a separate size.
+- Intense badge — uses Label size (14px / 0.875rem), weight 400. Background tint (`#eef2ff`) and border provide visual prominence without a distinct size or weight.
 
-Source: pre-populated from `style.css` `.next-event-hero`, `.prediction-card`, `.stageChip` rules.
+Source: pre-populated from `style.css` `.next-event-hero`, `.prediction-card`, `.stageChip` rules. Revised to satisfy 4-size / 2-weight contract.
+
+---
+
+## Visual Hierarchy
+
+**Today screen focal point:** The `.next-event-hero` card is the primary visual anchor. It occupies the full card width at the top of the scroll area, uses the accent background (`#4f46e5`), and carries the largest text (Display 36px). All other elements are subordinate.
+
+**Eye sequence:** `.next-event-hero` hero card → 4-card prediction grid (`napStart`, `napEnd`, `bedtime`, `wake` in that order after UI-07 fix) → bottom navigation bar.
+
+**Phase 12 additions inherit this hierarchy:** The nap probability line sits inside the hero card (when nap-start is next) or inside a prediction grid card — both positions are already below the hero in the visual stack. The intense-day badge sits in the history table, which is on a separate screen; it does not affect Today-screen hierarchy.
 
 ---
 
@@ -109,7 +120,7 @@ Source: pre-populated from `style.css` palette — confirmed no new hues require
 
 | State | Copy | Style |
 |-------|------|-------|
-| Active window, score > 0 | "{N}% chance of nap today" | `color: #475569; font-size: 0.8rem; margin: 0; margin-top: 0.25rem;` |
+| Active window, score > 0 | "{N}% chance of nap today" | `color: #475569; font-size: 0.875rem; font-weight: 400; margin: 0; margin-top: 0.25rem;` |
 | Window passed (nap-start P90 exceeded) | "0% — nap window closed" | Same style; score collapses to 0 per D-13 signal 4 |
 | Nap already logged (missed/past state) | Element suppressed | Do not render `.nap-probability` when card has `.missed` class |
 | Insufficient data (< minDays) | Element suppressed | Do not render when score cannot be computed |
@@ -120,7 +131,8 @@ When the nap window has passed, use option (a): hard 0% with "nap window closed"
 **Hero card variant:** On `.next-event-hero` when nap-start is next event, add:
 ```
 .next-event-hero .nap-probability {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 400;
   opacity: 0.85;
   color: #fff;  /* hero card is indigo-background */
   margin: 0;
@@ -166,8 +178,8 @@ When the nap window has passed, use option (a): hard 0% with "nap window closed"
   color: #4338ca;
   border: 1px solid #c7d2fe;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.875rem;
+  font-weight: 400;
   cursor: pointer;
   min-height: 28px;       /* visual minimum; 44px touch target via wrapper row */
   line-height: 1;
@@ -275,9 +287,9 @@ No third-party registries declared. All UI is implemented in vanilla JS/CSS inli
 ## Checker Sign-Off
 
 - [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
+- [ ] Dimension 2 Visuals: PASS (focal point declared — see Visual Hierarchy section)
 - [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
+- [ ] Dimension 4 Typography: PASS (4 sizes: 14px/16px/18–20px/36px; 2 weights: 400/600)
 - [ ] Dimension 5 Spacing: PASS
 - [ ] Dimension 6 Registry Safety: PASS
 
