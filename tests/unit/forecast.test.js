@@ -1113,3 +1113,56 @@ describe('selectNextEvent() edge cases', () => {
     assert.ok(!('central' in result), 'result should NOT have central when prediction uses probabilityBand');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 16. selectNextEvent — PRED-08 evening-hour override (D-07)
+// ---------------------------------------------------------------------------
+//
+// Tests use time-invariant eveningHour values to avoid CI flakiness:
+//   eveningHour=0  → always fires (any hour >= 0)
+//   eveningHour=25 → never fires  (no hour >= 25)
+//
+// This tests the semantic contract, not a specific wall-clock time.
+
+describe('selectNextEvent — PRED-08 evening-hour override', () => {
+  function makeDayWithEvents(events) {
+    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
+  }
+
+  const predictions = {
+    wake:     { central: '07:00', min: '06:30', max: '07:30' },
+    napStart: { central: '13:00', min: '12:30', max: '13:30' },
+    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
+    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
+  };
+
+  it('eveningHour=0, lastEvent.type=wake → returns bedtime (override always fires at any hour)', () => {
+    const dayRecords = [makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }])];
+    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 0 });
+    assert.ok(result !== null, 'result should not be null');
+    assert.strictEqual(result.type, 'bedtime', 'evening-hour override must select bedtime when eveningHour=0 and lastEvent=wake');
+  });
+
+  it('eveningHour=25, lastEvent.type=wake → returns napStart (override never fires, falls through to normal switch)', () => {
+    const dayRecords = [makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }])];
+    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 25 });
+    assert.ok(result !== null, 'result should not be null');
+    assert.strictEqual(result.type, 'napStart', 'normal switch must select napStart when eveningHour=25 (never fires)');
+  });
+
+  it('eveningHour=0, lastEvent.type=bedtime → returns wake (rule only fires when lastEvent is wake)', () => {
+    const dayRecords = [makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }])];
+    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 0 });
+    assert.ok(result !== null, 'result should not be null');
+    assert.strictEqual(result.type, 'wake', 'evening-hour rule must NOT fire when lastEvent is bedtime');
+  });
+
+  it('no settings param → behaves as before (default eveningHour=18, normal switch)', () => {
+    // With no settings param, no override fires unless current hour >= 18.
+    // We use lastEvent=napEnd which never triggers the evening-hour rule regardless.
+    const dayRecords = [makeDayWithEvents([{ type: 'napEnd', at: '2026-06-02T14:00' }])];
+    const result = selectNextEvent(predictions, dayRecords);
+    assert.ok(result !== null, 'result should not be null');
+    assert.strictEqual(result.type, 'bedtime', 'napEnd → bedtime via normal switch (no settings param)');
+  });
+});
