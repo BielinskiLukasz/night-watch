@@ -84,6 +84,8 @@ export function openSettings({ settings, eventLog, storage, id }) {
     if (trimPctEl) trimPctEl.value = String(s.trimPct ?? 10);
     const precisionTargetEl = form.elements.namedItem('precisionTarget');
     if (precisionTargetEl) precisionTargetEl.value = String(s.precisionTarget ?? 60);
+    const tifRollingDaysEl = form.elements.namedItem('tifRollingDays');
+    if (tifRollingDaysEl) tifRollingDaysEl.value = String(s.tifRollingDays ?? 7);
     const eveningHourEl = form.elements.namedItem('eveningHour');
     if (eveningHourEl) eveningHourEl.value = String(s.eveningHour ?? 18);
     const noNapOffsetEl = form.elements.namedItem('noNapBedtimeOffsetMinutes');
@@ -139,6 +141,7 @@ export function openSettings({ settings, eventLog, storage, id }) {
         forecastAlgorithm: String(data.get('forecastAlgorithm') ?? 'classic'),
         trimPct:          Number(data.get('trimPct') ?? 10),
         precisionTarget:  Number(data.get('precisionTarget') ?? 60),
+        tifRollingDays:   Number(data.get('tifRollingDays') ?? 7),
         eveningHour:               Number(data.get('eveningHour') ?? 18),
         noNapBedtimeOffsetMinutes: Number(data.get('noNapBedtimeOffsetMinutes') ?? 30),
         intenseDayOffsetMinutes:   settings.get().intenseDayOffsetMinutes ?? 30,

@@ -383,25 +383,31 @@ function buildPrediction(labelledWindows, precisionTarget) {
  *
  * Accepts the same pre-bucketed dayRecords that forecast() receives (from
  * daysBySubjectiveNight()) and a settings object with at least:
- *   { minDays, windowDays, trimPct, precisionTarget }
+ *   { minDays, windowDays, trimPct, precisionTarget, tifRollingDays }
  *
  * Returns the same top-level shape as forecast():
  *   { isColdStart, wake, bedtime, napStart, napEnd }
  * with each prediction carrying extended TIF metadata (D10-05).
  *
- * @param {object[]} dayRecords  pre-bucketed day records
- * @param {object}   settings   settings object
+ * @param {object[]} dayRecords    pre-bucketed day records
+ * @param {object}   settings      settings object
+ * @param {object}   [activityLog] optional map keyed by 'YYYY-MM-DD' date string;
+ *                                 values are MA duration in minutes. When present,
+ *                                 overrides activityBeforeNap(d) for that day (D-09, D-10).
+ * @param {boolean}  [isNoNapDay]  caller-resolved flag: true when eveningHour has passed
+ *                                 and today's napStart is null (D-15). Defaults to false.
  * @returns {object}
  */
-export function tifForecast(dayRecords, settings) {
+export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay = false) {
   // 1. Cold-start gate (TIF-11 / D3-06)
   const { isColdStart } = detectColdStart(dayRecords, settings.minDays);
   if (isColdStart) {
     return { isColdStart: true, wake: null, bedtime: null, napStart: null, napEnd: null };
   }
 
-  // 2. Slice to windowDays (same pattern as forecast.js)
-  const window = dayRecords.slice(-settings.windowDays);
+  // 2. Slice to tifRollingDays (TIF-13 / D-06: TIF uses its own rolling window, not windowDays)
+  const tifRollingDays = settings.tifRollingDays ?? 7;
+  const window = dayRecords.slice(-tifRollingDays);
 
   const trimPct         = settings.trimPct ?? 10;
   const precisionTarget = settings.precisionTarget ?? 60;
@@ -421,7 +427,12 @@ export function tifForecast(dayRecords, settings) {
   // 5. Collect duration metrics for each day in the window.
   const sleepDurations    = window.map(sleepDuration)      .filter(v => v !== null);
   const napDurations      = window.map(napDuration)        .filter(v => v !== null);
-  const actBeforeNap      = window.map(activityBeforeNap)  .filter(v => v !== null);
+  // actBeforeNapPerDay: index-aligned with window[]; activityLog[d.date] overrides
+  // activityBeforeNap(d) when non-null (TIF-13 / D-09, D-10).
+  const actBeforeNapPerDay = window.map(d =>
+    activityLog[d.date] != null ? activityLog[d.date] : activityBeforeNap(d)
+  );
+  const actBeforeNap      = actBeforeNapPerDay.filter(v => v !== null);
   const actAfterNap       = window.map(activityAfterNap)   .filter(v => v !== null);
   const dayLengths        = window.map(dayLength)          .filter(v => v !== null);
   const combinedDurations = window.map(combinedSleepNap)   .filter(v => v !== null);

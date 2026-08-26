@@ -906,8 +906,10 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
       // gsd:allow-ui-clock — display-only scheduling heuristic for PRED-11 (not domain logic)
       currentHour:     new Date().getHours(), // gsd:allow-ui-clock
     };
+    const activityLog = eventLog.getActivityLog();
+    const isNoNapDay = (forecastContext.currentHour >= snap.eveningHour) && (todayDayRecord?.napStart == null);
     const predictions = snap.forecastAlgorithm === 'tif'
-      ? tifForecast(forecastDays, snap)
+      ? tifForecast(forecastDays, snap, activityLog, isNoNapDay)
       : forecast(forecastDays, snap, forecastContext);
 
     // PRED-12: Compute nap probability score and attach to napStart prediction.
