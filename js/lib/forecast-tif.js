@@ -495,6 +495,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
   }
 
+  // MA/sleep ratio band: ratio_i = actBeforeNap_i / sleepDuration_i; projected = ratio_i * todaySleepDuration; anchored to wake
   const todaySleepDuration = sleepDuration(dayRecords[dayRecords.length - 1]);
   if (wakeAnchorForNap != null && todaySleepDuration != null && todaySleepDuration > 0) {
     const ratios = [];
@@ -524,6 +525,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     if (napLenBand) napEndLabelledWindows.push({ label: 'Nap-length band', ...napLenBand });
   }
 
+  // MA/nap ratio band: ratio_i = actBeforeNap_i / napDuration_i; projected = ratio_i * todayMA; anchored to napStart
   const todayActualNapStart = extractTime(dayRecords[dayRecords.length - 1].napStart);
   const todayActualWake = extractTime(dayRecords[dayRecords.length - 1].wake);
   let todayMA = null;
