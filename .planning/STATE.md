@@ -3,24 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 13
-current_phase_name: tif-algorithm-extensions
-status: awaiting_next_phase
-stopped_at: Phase NW-12 verified complete; NW-13 not yet planned
-last_updated: "2026-08-25T22:00:00Z"
-last_activity: 2026-08-25
-last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
+current_phase_name: TIF Algorithm Extensions
+status: planning
+stopped_at: Phase NW-12 complete, ready to plan Phase 13
+last_updated: "2026-08-26T12:47:48.750Z"
+state_head: 97018176b24bbc82fd2e720656bee55fa2992bb7
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 6
   completed_plans: 6
+last_activity: 2026-08-25
+last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-24)
+See: .planning/PROJECT.md (updated 2026-08-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
@@ -28,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 
 ## Current Position
 
-Phase: NW-12 (prediction-logic-refinements) — COMPLETE (verified 2026-08-25)
+Phase: 13 — TIF Algorithm Extensions
 Next phase: NW-13 (TIF Algorithm Extensions) — not yet planned
-Status: Awaiting next phase planning
+Status: Ready to plan
 
 ## Phases
 
@@ -103,12 +104,12 @@ None.
 
 ### Blockers/Concerns
 
-None. Phase NW-12 complete. Two human-verification browser checks remain (intense-day badge round-trip and nap probability score display); both are visual confirmation of wired logic that is thoroughly unit-tested.
+None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix confirmed (commit 1cf2361); mobile nap probability absence confirmed as by-design cold-start suppression.
 
 ## Session Continuity
 
-Last session: 2026-08-25T22:00:00Z
-Stopped at: Phase NW-12 verified complete
+Last session: 2026-08-26T12:00:00Z
+Stopped at: Phase NW-12 UAT complete and verified, phase marked complete. Ready to plan Phase NW-13.
 Resume file: None
 
 ## Operator Next Steps

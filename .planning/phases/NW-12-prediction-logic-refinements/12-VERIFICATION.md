@@ -1,14 +1,16 @@
 ---
 phase: NW-12-prediction-logic-refinements
 verified: 2026-08-25T22:00:00Z
-status: human_needed
+status: passed
 score: 6/6 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
+
   - test: "Open event-entry modal, check 'Intense day', save an event, then open history; confirm the indigo badge appears on that day's row and the badge click removes the flag from the list"
     expected: "Checkbox pre-populates from settings.intenseDays; save updates intenseDays; badge renders in history with a working remove button"
     why_human: "manual-entry.js and history-screen.js are DOM-only modules; their interaction with settings.get()/update() is browser-only and no unit test covers the full checkbox → save → badge round-trip"
+
   - test: "With enough history, open the Today screen during normal daytime hours and verify the nap-start prediction card displays '% chance of nap today' text (non-null score visible)"
     expected: "A line such as '72% chance of nap today' appears below the nap-start prediction band"
     why_human: "napProbabilityScore computation is unit-tested but the DOM rendering path (renderPredictionCard + renderNextEventCard) requires a live browser to confirm textContent placement and CSS class application"

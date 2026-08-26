@@ -81,7 +81,7 @@ compared to reality.
 
 ### Active
 
-- [ ] Phase 12 — Prediction logic refinements (B-004, B-005, B-006, B-007)
+- [x] Phase 12 — Prediction logic refinements (B-004, B-005, B-006, B-007) — Complete 2026-08-26
 - [ ] Phase 13 — TIF algorithm extensions (B-033, B-037)
 - [ ] Phase 14 — TIF metrics & accuracy (B-031, B-034, B-035, B-036)
 
@@ -208,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-25 after v1.3 milestone start — Prediction & TIF Enhancements*
+*Last updated: 2026-08-26 after Phase NW-12 — Prediction Logic Refinements*

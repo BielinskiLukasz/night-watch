@@ -107,7 +107,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
-| 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
+| 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete    | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 0/? | Not started | — |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 
