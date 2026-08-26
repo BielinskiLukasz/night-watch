@@ -50,16 +50,20 @@ function extractTime(slot) {
 // ---------------------------------------------------------------------------
 
 /**
- * Compute trimmed min and max of a sorted ascending numeric array.
+ * Compute trimmed min, max, and median of a sorted ascending numeric array.
  *
  * The auto-trim budget = max(0, floor(N × trimPct / 100) − manualExcludedCount).
  * The budget is split symmetrically: remove floor(budget/2) from the bottom and
  * ceil(budget/2) from the top (matches B-021 Step 1 spec).
  *
+ * The `median` field is the P50 of the trimmed array:
+ *   - Odd-length trimmed array: the middle element.
+ *   - Even-length trimmed array: average of the two middle elements.
+ *
  * @param {number[]} values             sorted ascending numeric array
  * @param {number}   trimPct            0–40 percent to trim total
  * @param {number}   manualExcludedCount already-excluded count (counts against budget)
- * @returns {{ min: number, max: number }|null}  null when all values are trimmed away
+ * @returns {{ min: number, max: number, median: number }|null}  null when all values are trimmed away
  */
 export function trimmedMinMax(values, trimPct, manualExcludedCount) {
   const N = values.length;
@@ -172,8 +176,13 @@ function buildHistoricBand(times, trimPct, manualExcluded) {
 // ---------------------------------------------------------------------------
 
 /**
- * Build a min/max band by projecting trimmed duration statistics onto an anchor time.
- * Result: { min: anchorMinutes + durMin, max: anchorMinutes + durMax }.
+ * Build a min/max/median band by projecting trimmed duration statistics onto an anchor time.
+ * Result: { min: anchorMinutes + durMin, max: anchorMinutes + durMax,
+ *           median: anchorMinutes + P50(sortedDurations) }.
+ *
+ * The `median` field equals anchorMinutes + P50 of the trimmed, sorted durations
+ * (inherited from trimmedMinMax — same P50 definition: middle element for odd-length
+ * arrays, average of the two middle elements for even-length arrays).
  *
  * Note: result is NOT wrapped mod 1440. Callers that anchor to bedtime (producing
  * times that cross midnight) must wrap themselves — see wrapToDay().
@@ -182,7 +191,7 @@ function buildHistoricBand(times, trimPct, manualExcluded) {
  * @param {number}   anchorMinutes  anchor event time in minutes
  * @param {number}   trimPct
  * @param {number}   manualExcluded
- * @returns {{ min: number, max: number }|null}
+ * @returns {{ min: number, max: number, median: number }|null}
  */
 function buildDurationBand(durations, anchorMinutes, trimPct, manualExcluded) {
   if (durations.length === 0) return null;
@@ -347,7 +356,14 @@ function nullPrediction() {
  * Given a list of labelled source windows, intersect them and apply precision
  * scoring to produce a complete TIF prediction object.
  *
- * @param {{ label: string, min: number, max: number }[]} labelledWindows
+ * `central` is computed as the average of medians across all active source windows
+ * that carry a non-null `median` field (TIF-15 / D-12). When no window has a
+ * median, it falls back to the midpoint of the display range (dispMin + dispRange/2).
+ *
+ * Each `sourceWindows` entry in the result includes:
+ *   { label, min, max, median } where `median` is an 'HH:MM' string or null.
+ *
+ * @param {{ label: string, min: number, max: number, median?: number }[]} labelledWindows
  * @param {number} precisionTarget
  * @returns {object}  TIF prediction object
  */
