@@ -5,14 +5,14 @@ milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 13
 current_phase_name: TIF Algorithm Extensions
 status: executing
-stopped_at: Phase 13 context gathered
-last_updated: "2026-08-26T21:55:11.810Z"
-state_head: 4fd5c3419cd6fa3c9724332a7b14e80f91d623cd
+stopped_at: Completed NW-13-01-PLAN.md
+last_updated: "2026-08-26T22:11:41.443Z"
+state_head: a909b79937e50a66b130b0b879bdeeb312315917
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 last_activity: 2026-08-25
 last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 ---
@@ -68,6 +68,7 @@ Status: Executing Phase NW-13
 | Phase NW-12 P03 | 5 | 2 tasks | 4 files |
 | Phase NW-12 P05 | 30 | 3 tasks | 3 files |
 | Phase NW-12 P06 | 25 | 2 tasks | 4 files |
+| Phase NW-13 P01 | 12 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Status: Executing Phase NW-13
 - Phase 12 Plan 05: subWindowBedtime returns numeric minutes so callers can apply generateProbabilityBand before minutesToTime conversion
 - Phase 12 Plan 06: calculatePercentiles callback must return HH:MM string not minutes; result shape is { min, central, max }
 - Phase 12 Plan 06: napProbabilityScore attached to predictions.napStart before renderForecastSection; TIF algorithm benefits transparently
+- [Phase 13]: D-06/D-07: tifRollingDays (default 7, range 3-30) replaces windowDays as TIF history slice via additive migration
+- [Phase 13]: D-09/D-10: actBeforeNapPerDay index-aligned array; activityLog[d.date] overrides when non-null
+- [Phase 13]: D-15: isNoNapDay resolved in today-screen.js (caller-resolved) to keep forecast-tif.js pure
 
 ### Quick Tasks Completed
 
@@ -108,9 +112,9 @@ None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix conf
 
 ## Session Continuity
 
-Last session: 2026-08-26T20:05:34.093Z
-Stopped at: Phase 13 context gathered
-Resume file: .planning/phases/NW-13-tif-algorithm-extensions/13-CONTEXT.md
+Last session: 2026-08-26T22:11:40.520Z
+Stopped at: Completed NW-13-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
