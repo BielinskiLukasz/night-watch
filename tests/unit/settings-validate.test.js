@@ -33,18 +33,19 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 20 field names (16 prior + 4 Phase 12 fields)', () => {
+  it('has entries for all 21 field names (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
       'intenseDays', 'eveningHour', 'noNapBedtimeOffsetMinutes', 'intenseDayOffsetMinutes',
+      'tifRollingDays',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 20);
+    assert.equal(Object.keys(RULES).length, 21);
   });
 });
 
@@ -60,10 +61,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 20 keys (16 prior + 4 Phase 12 fields)', () => {
+  it('normalized contains all 21 keys (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 20);
+    assert.equal(keys.length, 21);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -417,7 +418,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
-    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
+    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
   };
 
@@ -486,7 +487,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     rejectedDays: [], timeFormat: '24h', autoOutlier: false,
     maxDelta: 30, minDays: 7, windowDays: 7, statBlend: 'median',
     stages: [], activeStageId: null, confirmBeforeLogging: false,
-    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60,
+    forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
   };
 
@@ -683,6 +684,55 @@ describe('validateSettings — precisionTarget (TIF-03)', () => {
     const result = validateSettings(valid({ precisionTarget: 301 }), { mode: 'save' });
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'precisionTarget'), 'Expected error for precisionTarget field');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mode:'save' / mode:'load' — tifRollingDays validation (TIF-13 / D-07, Phase 13 Plan 01)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — tifRollingDays (TIF-13)', () => {
+  it('DEFAULT_SETTINGS.tifRollingDays is 7', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.tifRollingDays, 7);
+  });
+
+  it('accepts boundary value 3', () => {
+    const result = validateSettings(valid({ tifRollingDays: 3 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'tifRollingDays'), 'Unexpected error for tifRollingDays');
+  });
+
+  it('accepts midrange value 7', () => {
+    const result = validateSettings(valid({ tifRollingDays: 7 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'tifRollingDays'), 'Unexpected error for tifRollingDays');
+  });
+
+  it('accepts boundary value 30', () => {
+    const result = validateSettings(valid({ tifRollingDays: 30 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'tifRollingDays'), 'Unexpected error for tifRollingDays');
+  });
+
+  it('rejects 2 (below min=3) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ tifRollingDays: 2 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
+      'Expected error for tifRollingDays field when below min');
+  });
+
+  it('rejects 31 (above max=30) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ tifRollingDays: 31 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
+      'Expected error for tifRollingDays field when above max');
+  });
+
+  it('rejects non-integer 7.5 in mode:\'save\'', () => {
+    const result = validateSettings(valid({ tifRollingDays: 7.5 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
+      'Expected error for non-integer tifRollingDays');
   });
 });
 

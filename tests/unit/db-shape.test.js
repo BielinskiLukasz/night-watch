@@ -32,8 +32,12 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 20 keys (16 prior + 4 new Phase 12 fields)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 20);
+  it('has exactly 21 keys (16 prior + 4 Phase 12 + 1 Phase 13 field)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 21);
+  });
+
+  it('has tifRollingDays: 7 default (TIF-13)', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.tifRollingDays, 7);
   });
 
   // -------------------------------------------------------------------------
@@ -506,6 +510,59 @@ describe('migrateV1ToV2 — Phase 12 forward-compat migration', () => {
     assert.strictEqual(result.settings.eveningHour, 18);
     assert.strictEqual(result.settings.noNapBedtimeOffsetMinutes, 30);
     assert.strictEqual(result.settings.intenseDayOffsetMinutes, 30);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// migrateV1ToV2 — Phase 13 forward-compat migration (TIF-13 / D-07)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — Phase 13 tifRollingDays injection', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('v2 blob without tifRollingDays: migrateV1ToV2 injects tifRollingDays: 7', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'classic', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.tifRollingDays, 7,
+      'tifRollingDays must be injected as 7 for v2 blob missing it');
+  });
+
+  it('v2 blob with existing tifRollingDays: migrateV1ToV2 does not clobber it', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'tif', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+        tifRollingDays: 14,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.tifRollingDays, 14,
+      'existing tifRollingDays must not be clobbered');
   });
 });
 
