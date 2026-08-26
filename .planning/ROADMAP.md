@@ -80,12 +80,12 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
   3. Each TIF event prediction displays a central time derived from the average of per-window medians; min/max intersection/union bounds remain unchanged
   4. On a day with no nap logged by the threshold hour, TIF substitutes day-length bands from historical no-nap days for bedtime prediction, and uses no-nap-day sleep/nap patterns for tomorrow's predictions
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 
 - [x] 13-01-PLAN.md — Tracer: tifRollingDays settings wiring (db-shape, validate, UI, forecast-tif signature, today-screen call-site) (TIF-13)
-- [ ] 13-02-PLAN.md — TDD: per-window median (trimmedMinMax → buildHistoricBand → buildDurationBand → buildPrediction central) (TIF-15)
+- [x] 13-02-PLAN.md — TDD: per-window median (trimmedMinMax → buildHistoricBand → buildDurationBand → buildPrediction central) (TIF-15)
 - [ ] 13-03-PLAN.md — TDD: ratio-based windows for nap-start (MA/sleep) and nap-end (MA/nap) (TIF-12)
 - [ ] 13-04-PLAN.md — TDD: no-nap-day substitution (filtered bands for bedtime/wake, post-no-nap nap-start pattern) (TIF-16)
 
@@ -115,7 +115,7 @@ Plans:
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
 | 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete    | 2026-08-25 |
-| 13. TIF Algorithm Extensions | v1.3 | 1/4 | In Progress|  |
+| 13. TIF Algorithm Extensions | v1.3 | 2/4 | In Progress|  |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 
 ## Backlog
