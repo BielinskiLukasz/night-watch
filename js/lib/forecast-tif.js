@@ -495,6 +495,19 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
   }
 
+  const todaySleepDuration = sleepDuration(dayRecords[dayRecords.length - 1]);
+  if (wakeAnchorForNap != null && todaySleepDuration != null && todaySleepDuration > 0) {
+    const ratios = [];
+    for (let i = 0; i < window.length; i++) {
+      const abn = actBeforeNapPerDay[i];
+      const sd = sleepDuration(window[i]);
+      if (abn != null && sd != null && sd > 0) ratios.push(abn / sd);
+    }
+    const projectedDurations = ratios.map(r => r * todaySleepDuration);
+    const ratioBandResult = buildDurationBand(projectedDurations, wakeAnchorForNap, trimPct, 0);
+    if (ratioBandResult != null) napStartLabelledWindows.push({ label: 'MA/sleep ratio band', ...ratioBandResult });
+  }
+
   const napStartPred = buildPrediction(napStartLabelledWindows, precisionTarget);
   tifPredictions.napStart = napStartPred;
 
@@ -509,6 +522,26 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   if (napStartAnchor !== null) {
     const napLenBand = buildDurationBand(napDurations, napStartAnchor, trimPct, 0);
     if (napLenBand) napEndLabelledWindows.push({ label: 'Nap-length band', ...napLenBand });
+  }
+
+  const todayActualNapStart = extractTime(dayRecords[dayRecords.length - 1].napStart);
+  const todayActualWake = extractTime(dayRecords[dayRecords.length - 1].wake);
+  let todayMA = null;
+  if (todayActualNapStart != null && todayActualWake != null) {
+    todayMA = timeToMinutes(todayActualNapStart) - timeToMinutes(todayActualWake);
+  } else if (napStartPred != null && napStartPred.central != null && wakeAnchorForNap != null) {
+    todayMA = timeToMinutes(napStartPred.central) - wakeAnchorForNap;
+  }
+  if (napStartAnchor != null && todayMA != null) {
+    const napRatios = [];
+    for (let i = 0; i < window.length; i++) {
+      const abn = actBeforeNapPerDay[i];
+      const nd = napDuration(window[i]);
+      if (abn != null && nd != null && nd > 0) napRatios.push(abn / nd);
+    }
+    const projectedNapDurations = napRatios.map(r => r * todayMA);
+    const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, 0);
+    if (napRatioBandResult != null) napEndLabelledWindows.push({ label: 'MA/nap ratio band', ...napRatioBandResult });
   }
 
   const napEndPred = buildPrediction(napEndLabelledWindows, precisionTarget);
