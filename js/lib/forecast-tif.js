@@ -75,7 +75,11 @@ export function trimmedMinMax(values, trimPct, manualExcludedCount) {
     : values.slice(low);
 
   if (trimmed.length === 0) return null;
-  return { min: trimmed[0], max: trimmed[trimmed.length - 1] };
+  const mid = Math.floor(trimmed.length / 2);
+  const median = trimmed.length % 2 === 1
+    ? trimmed[mid]
+    : (trimmed[mid - 1] + trimmed[mid]) / 2;
+  return { min: trimmed[0], max: trimmed[trimmed.length - 1], median };
 }
 
 // ---------------------------------------------------------------------------
@@ -186,8 +190,9 @@ function buildDurationBand(durations, anchorMinutes, trimPct, manualExcluded) {
   const result = trimmedMinMax(sorted, trimPct, manualExcluded);
   if (result === null) return null;
   return {
-    min: anchorMinutes + result.min,
-    max: anchorMinutes + result.max,
+    min:    anchorMinutes + result.min,
+    max:    anchorMinutes + result.max,
+    median: anchorMinutes + result.median,
   };
 }
 
@@ -355,7 +360,11 @@ function buildPrediction(labelledWindows, precisionTarget) {
   const { precisionScore, algRange, dispMin, dispMax } =
     applyPrecision(algMinRaw, algMaxRaw, precisionTarget);
 
-  const central = minutesToTime(dispMin + (dispMax - dispMin) / 2);
+  const windowsWithMedian = labelledWindows.filter(w => w.median != null);
+  const centralMinutes = windowsWithMedian.length > 0
+    ? windowsWithMedian.reduce((sum, w) => sum + w.median, 0) / windowsWithMedian.length
+    : dispMin + (dispMax - dispMin) / 2;
+  const central = minutesToTime(centralMinutes);
 
   return {
     central,
@@ -367,9 +376,10 @@ function buildPrediction(labelledWindows, precisionTarget) {
     algMin: minutesToTime(algMinRaw),
     algMax: minutesToTime(algMaxRaw),
     sourceWindows: labelledWindows.map(w => ({
-      label: w.label,
-      min:   minutesToTime(w.min),
-      max:   minutesToTime(w.max),
+      label:  w.label,
+      min:    minutesToTime(w.min),
+      max:    minutesToTime(w.max),
+      median: w.median != null ? minutesToTime(w.median) : null,
     })),
   };
 }
@@ -505,9 +515,10 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const sleepBandRaw = buildDurationBand(sleepDurations, bedtimeAnchor, trimPct, 0);
     if (sleepBandRaw) {
       wakeLabelledWindows.push({
-        label: 'Sleep-length band',
-        min: wrapToDay(sleepBandRaw.min),
-        max: wrapToDay(sleepBandRaw.max),
+        label:  'Sleep-length band',
+        min:    wrapToDay(sleepBandRaw.min),
+        max:    wrapToDay(sleepBandRaw.max),
+        median: sleepBandRaw.median != null ? wrapToDay(sleepBandRaw.median) : null,
       });
     }
   }
@@ -520,9 +531,10 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
     if (combinedBandRaw) {
       wakeLabelledWindows.push({
-        label: 'Sleep + nap combined band',
-        min: wrapToDay(combinedBandRaw.min - todayNapDuration),
-        max: wrapToDay(combinedBandRaw.max - todayNapDuration),
+        label:  'Sleep + nap combined band',
+        min:    wrapToDay(combinedBandRaw.min - todayNapDuration),
+        max:    wrapToDay(combinedBandRaw.max - todayNapDuration),
+        median: combinedBandRaw.median != null ? wrapToDay(combinedBandRaw.median - todayNapDuration) : null,
       });
     }
   }
