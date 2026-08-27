@@ -21,6 +21,7 @@ import {
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
 import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
+import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants (Object.freeze per CLAUDE.md convention)
@@ -272,6 +273,55 @@ function buildAggregateRow(label, aggregateData, snap) {
   return tr;
 }
 
+// TIF event-type columns (the 4 base columns that receive TIF aggregate averages)
+const TIF_EVENT_TYPES = new Set(['wake', 'napStart', 'napEnd', 'bedtime']);
+
+/**
+ * Build a TIF aggregate row (min-TIF, median-TIF, or max-TIF).
+ *
+ * Shows average TIF bounds (algMin / central / algMax) for each event-type column.
+ * All non-event-type base columns and all TIF inline columns render '—'.
+ * The whole row is hidden by the caller (tr.hidden = !isTif) — D-06.
+ *
+ * T-11-05: all cell content via textContent.
+ *
+ * @param {string} label        row label ('min-TIF', 'median-TIF', 'max-TIF')
+ * @param {object} tifAvgs      { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null
+ * @param {object} snap         settings snapshot (for timeFormat)
+ * @returns {HTMLTableRowElement}
+ */
+function buildTifAggregateRow(label, tifAvgs, snap) {
+  const tr = document.createElement('tr');
+  tr.classList.add('metrics-summary-row', 'metrics-tif-row');
+
+  // First cell: label (sticky left)
+  const labelCell = document.createElement('td');
+  labelCell.classList.add('sticky-col');
+  labelCell.textContent = label;
+  tr.appendChild(labelCell);
+
+  // Base COLUMNS (indices 1-15): show average for event-type columns; '—' for the rest
+  for (let i = 1; i < COLUMNS.length; i++) {
+    const col = COLUMNS[i];
+    const td = document.createElement('td');
+    if (tifAvgs && TIF_EVENT_TYPES.has(col.key) && tifAvgs[col.key] != null) {
+      td.textContent = formatTime(tifAvgs[col.key], snap.timeFormat); // T-11-05: textContent
+    } else {
+      td.textContent = '—';
+    }
+    tr.appendChild(td);
+  }
+
+  // TIF inline columns — render '—' in aggregate rows (individual bounds not repeated here)
+  for (let j = 0; j < TIF_COLUMNS.length; j++) {
+    const td = document.createElement('td');
+    td.textContent = '—';
+    tr.appendChild(td);
+  }
+
+  return tr;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -358,6 +408,25 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const tifBoundsArray = isTif ? computeTifBoundsHistory(days, snap, activityLog) : [];
     const tifBoundsMap = new Map(tifBoundsArray.map(e => [e.date, e]));
 
+    // TIF aggregate rows helper: average a specific TIF bounds field across all days (MET-11, D-07)
+    // Returns { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null when no non-null entries.
+    // Uses timeToMinutes/minutesToTime from forecast.js (wall-clock strings, no DST issues — CLAUDE.md).
+    function computeTifRowAvg(field) {
+      const result = {};
+      for (const type of ['wake', 'napStart', 'napEnd', 'bedtime']) {
+        const vals = tifBoundsArray
+          .map(e => (e[type] && e[type][field] != null) ? timeToMinutes(e[type][field]) : null)
+          .filter(v => v !== null);
+        result[type] = vals.length > 0
+          ? minutesToTime(Math.round(vals.reduce((s, v) => s + v, 0) / vals.length))
+          : null;
+      }
+      return result;
+    }
+    const tifMinAvgs    = computeTifRowAvg('algMin');
+    const tifMedianAvgs = computeTifRowAvg('central');
+    const tifMaxAvgs    = computeTifRowAvg('algMax');
+
     // Build table
     const table = document.createElement('table');
     table.className = 'metricsTable';
@@ -393,6 +462,18 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(minRow);
     summaryTbody.appendChild(maxRow);
+
+    // TIF aggregate rows (MET-11, D-06, D-07, D-08) — hidden when TIF is off
+    const minTifRow    = buildTifAggregateRow('min-TIF',    tifMinAvgs,    snap);
+    const medianTifRow = buildTifAggregateRow('median-TIF', tifMedianAvgs, snap);
+    const maxTifRow    = buildTifAggregateRow('max-TIF',    tifMaxAvgs,    snap);
+    minTifRow.hidden    = !isTif;
+    medianTifRow.hidden = !isTif;
+    maxTifRow.hidden    = !isTif;
+    summaryTbody.appendChild(minTifRow);
+    summaryTbody.appendChild(medianTifRow);
+    summaryTbody.appendChild(maxTifRow);
+
     table.appendChild(summaryTbody);
 
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
