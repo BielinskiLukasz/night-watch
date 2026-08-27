@@ -26,10 +26,10 @@
 ### TIF Metrics & Accuracy
 
 - [ ] **TIF-14**: When TIF is the active algorithm, the Accuracy screen shows a TIF-specific grid with: per-event-type window hit rate ("actual time fell inside TIF window"), average window width in minutes, and percentage of days with confidence score ≥ 80%
-- [ ] **MET-07**: The SAA (Sleep After Activity) ratio column is replaced with a Day/Sleep Factor column (`dayLength / sleepDuration`); all existing tests and documentation referencing `saa` are updated
+- [x] **MET-07**: The SAA (Sleep After Activity) ratio column is replaced with a Day/Sleep Factor column (`dayLength / sleepDuration`); all existing tests and documentation referencing `saa` are updated
 - [ ] **MET-08**: When TIF is active, the Metrics screen shows the raw unclipped `[finalStart, finalEnd]` bounds and confidence score per event type for the selected day
-- [ ] **MET-09**: Metrics screen includes a Nap Fraction column (`napDuration / combinedSleepNap`), shown as a decimal; null on no-nap days
-- [ ] **MET-10**: Metrics screen includes an AM/PM Split column (`activityBeforeNap / activityAfterNap`), shown as a decimal; null on no-nap days or when either activity segment is absent
+- [x] **MET-09**: Metrics screen includes a Nap Fraction column (`napDuration / combinedSleepNap`), shown as a decimal; null on no-nap days
+- [x] **MET-10**: Metrics screen includes an AM/PM Split column (`activityBeforeNap / activityAfterNap`), shown as a decimal; null on no-nap days or when either activity segment is absent
 - [ ] **MET-11**: When TIF is active, the Metrics screen historical aggregates section shows three additional rows alongside the existing min/max rows: `min-TIF`, `median-TIF`, and `max-TIF` — computed from the TIF algorithm's window parameters (trimmed lower bound, per-window median, trimmed upper bound) for each event type
 
 ### UI Polish & Bug Fixes
@@ -86,10 +86,10 @@ Items remaining in backlog after v1.3 scope was set:
 | TIF-15 | Phase 13 | Complete |
 | TIF-16 | Phase 13 | Complete |
 | TIF-14 | Phase 14 | Pending |
-| MET-07 | Phase 14 | Pending |
+| MET-07 | Phase 14 | Complete |
 | MET-08 | Phase 14 | Pending |
-| MET-09 | Phase 14 | Pending |
-| MET-10 | Phase 14 | Pending |
+| MET-09 | Phase 14 | Complete |
+| MET-10 | Phase 14 | Complete |
 | MET-11 | Phase 14 | Pending |
 | UI-08 | Phase 14 | Pending |
 | UI-09 | Phase 14 | Pending |

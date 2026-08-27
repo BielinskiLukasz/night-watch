@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 14
-current_phase_name: tif-metrics-accuracy-chart-fixes
+current_phase_name: TIF Metrics, Accuracy & Chart Fixes
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-08-27T11:29:37.227Z"
-state_head: 39009fddad0d14723e84811aeeb56ccbe82ac8f0
+stopped_at: Completed NW-14-01-PLAN.md
+last_updated: "2026-08-27T12:25:42.010Z"
+state_head: fa74de54a6e9ce11d2b765ca3cebb09ec2aa5ce3
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 15
-  completed_plans: 10
+  completed_plans: 11
 last_activity: 2026-08-25
 last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 ---
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-13 — TIF Algorithm Extensions
+**Current focus:** Phase NW-14 — TIF Metrics, Accuracy & Chart Fixes
 
 ## Current Position
 
-Phase: NW-14 (tif-metrics-accuracy-chart-fixes) — READY TO EXECUTE
+Phase: NW-14 (TIF Metrics, Accuracy & Chart Fixes) — EXECUTING
 Next phase: NW-13 (TIF Algorithm Extensions) — not yet planned
-Status: Ready to execute
+Status: Executing Phase NW-14
 
 ## Phases
 
@@ -72,6 +72,7 @@ Status: Ready to execute
 | Phase NW-13 P02 | 8 | 3 tasks | 2 files |
 | Phase NW-13 P03 | 5 | 3 tasks | 2 files |
 | Phase NW-13 P04 | 7 | 3 tasks | 2 files |
+| Phase NW-14 P01 | 4 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Status: Ready to execute
 - [Phase 13]: Phase 13 Plan 02: trimmedMinMax returns { min, max, median }; buildPrediction central = avg(window medians)
 - [Phase 13]: Phase 13 Plan 03: MA/sleep ratio band uses actBeforeNap/sleepDuration projected by todaySleepDuration; MA/nap ratio band uses actBeforeNap/napDuration projected by todayMA; both guarded against null and division-by-zero
 - [Phase 13]: Phase 13 Plan 04: isYesterdayNoNap derived from window[-2] inside tifForecast; noNapDayWindow/postNoNapWindow pre-computed before per-event band building
+- [Phase 14]: D-12: dayToSleepFactor=dayLength/sleepDuration; napFraction=napDuration/combinedSleepNap; amPmSplit=activityBeforeNap/activityAfterNap — all null on missing/zero denominators
+- [Phase 14]: D-14: sleepAfterActivityFactor removed from aggregateMetrics avg/min/max; stays exported and in per-row data for backward compat
 
 ### Quick Tasks Completed
 
@@ -118,9 +121,9 @@ None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix conf
 
 ## Session Continuity
 
-Last session: 2026-08-27T10:17:29.019Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/NW-14-tif-metrics-accuracy-chart-fixes/14-CONTEXT.md
+Last session: 2026-08-27T12:25:41.119Z
+Stopped at: Completed NW-14-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
