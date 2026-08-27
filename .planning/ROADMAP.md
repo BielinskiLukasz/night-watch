@@ -36,7 +36,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 
 - [x] **Phase 12: Prediction Logic Refinements** - Classic forecaster contextual rules (time-of-day bedtime, duration-band wake, intense-day flag, missed-nap bedtime shift, nap probability score) plus Today screen card ordering fix — completed 2026-08-25
 - [x] **Phase 13: TIF Algorithm Extensions** - Ratio-based windows for nap-start/nap-end, rolling-window variant with MA/AA preference, per-window medians, and no-nap-day substitution logic — completed 2026-08-27
-- [ ] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix
+- [x] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix (completed 2026-08-27)
 
 </details>
 
@@ -131,7 +131,7 @@ Plans:
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
 | 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
-| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | In Progress|  |
+| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete    | 2026-08-27 |
 
 ## Backlog
 
