@@ -721,8 +721,8 @@ describe('validateSettings — tifRollingDays (TIF-13)', () => {
       'Expected error for tifRollingDays field when below min');
   });
 
-  it('rejects 31 (above max=30) in mode:\'save\'', () => {
-    const result = validateSettings(valid({ tifRollingDays: 31 }), { mode: 'save' });
+  it('rejects 31 (above max=90) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ tifRollingDays: 91 }), { mode: 'save' });
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
       'Expected error for tifRollingDays field when above max');
