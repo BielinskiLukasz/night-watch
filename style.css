@@ -1722,6 +1722,10 @@ button[data-log] {
   font-weight: 700;
 }
 
+.metricsTable tbody.metrics-summary-tbody tr.metrics-tif-row {
+  background-color: #eef2ff;
+}
+
 /* ── Rejected day rows (dimmed, D11-05) ────────────────────────────────– */
 
 .metricsTable tr.rejected td {
