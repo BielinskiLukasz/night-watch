@@ -35,7 +35,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 <summary>🚧 v1.3 Prediction & TIF Enhancements — PLANNING</summary>
 
 - [x] **Phase 12: Prediction Logic Refinements** - Classic forecaster contextual rules (time-of-day bedtime, duration-band wake, intense-day flag, missed-nap bedtime shift, nap probability score) plus Today screen card ordering fix — completed 2026-08-25
-- [ ] **Phase 13: TIF Algorithm Extensions** - Ratio-based windows for nap-start/nap-end, rolling-window variant with MA/AA preference, per-window medians, and no-nap-day substitution logic
+- [x] **Phase 13: TIF Algorithm Extensions** - Ratio-based windows for nap-start/nap-end, rolling-window variant with MA/AA preference, per-window medians, and no-nap-day substitution logic — completed 2026-08-27
 - [ ] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix
 
 </details>
@@ -89,6 +89,8 @@ Plans:
 - [x] 13-03-PLAN.md — TDD: ratio-based windows for nap-start (MA/sleep) and nap-end (MA/nap) (TIF-12)
 - [x] 13-04-PLAN.md — TDD: no-nap-day substitution (filtered bands for bedtime/wake, post-no-nap nap-start pattern) (TIF-16)
 
+**Completed**: 2026-08-27
+
 ### Phase 14: TIF Metrics, Accuracy & Chart Fixes
 
 **Goal**: The Metrics and Accuracy screens expose TIF-specific data and updated ratio metrics; the Wake & Bedtime Bands chart correctly displays all four event series without post-midnight duplicate dots
@@ -114,8 +116,8 @@ Plans:
 | 9. UX Polish | v1.1 | 6/6 | Complete | 2026-07-10 |
 | 10. TIF Algorithm & Settings | v1.2 | 5/5 | Complete | 2026-07-13 |
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
-| 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete    | 2026-08-25 |
-| 13. TIF Algorithm Extensions | v1.3 | 4/4 | In Progress|  |
+| 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
+| 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 0/? | Not started | — |
 
 ## Backlog
