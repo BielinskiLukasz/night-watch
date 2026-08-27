@@ -105,13 +105,13 @@ Plans:
   5. The Metrics screen historical aggregates section shows `min-TIF`, `median-TIF`, and `max-TIF` rows per event type when TIF is active, derived from TIF window parameters
   6. The Wake & Bedtime Bands chart Y-axis is inverted (earlier times at bottom), shows nap-start and nap-end as two additional colored series with an updated legend, and renders each post-midnight event exactly once at its subjective-night time position
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 14-01-PLAN.md — TDD: dayToSleepFactor, napFraction, amPmSplit new ratio metrics + aggregateMetrics SAA removal (MET-07, MET-09, MET-10, D-12, D-14)
-- [ ] 14-02-PLAN.md — TDD: accuracy-tif.js (computeTifBoundsHistory, computeTifAccuracy) + sw.js PRECACHE_LIST (TIF-14, MET-08, MET-11)
+- [x] 14-02-PLAN.md — TDD: accuracy-tif.js (computeTifBoundsHistory, computeTifAccuracy) + sw.js PRECACHE_LIST (TIF-14, MET-08, MET-11)
 - [ ] 14-05-PLAN.md — Execute: buildTimeBandSeries 4-slot shape + charts-screen 4-series + inverted Y-axis + tests (UI-08, UI-09, UI-10)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -131,7 +131,7 @@ Plans:
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
 | 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
-| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 1/5 | In Progress|  |
+| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 2/5 | In Progress|  |
 
 ## Backlog
 

@@ -5,14 +5,14 @@ milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 14
 current_phase_name: TIF Metrics, Accuracy & Chart Fixes
 status: executing
-stopped_at: Completed NW-14-01-PLAN.md
-last_updated: "2026-08-27T12:25:42.010Z"
-state_head: fa74de54a6e9ce11d2b765ca3cebb09ec2aa5ce3
+stopped_at: Completed NW-14-02-PLAN.md
+last_updated: "2026-08-27T12:49:37.702Z"
+state_head: c073ada77493a6b98dd7a042066636e45c914c3a
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
 last_activity: 2026-08-25
 last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 ---
@@ -73,6 +73,7 @@ Status: Executing Phase NW-14
 | Phase NW-13 P03 | 5 | 3 tasks | 2 files |
 | Phase NW-13 P04 | 7 | 3 tasks | 2 files |
 | Phase NW-14 P01 | 4 | 3 tasks | 2 files |
+| Phase NW-14 P02 | 8 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Status: Executing Phase NW-14
 - [Phase 13]: Phase 13 Plan 04: isYesterdayNoNap derived from window[-2] inside tifForecast; noNapDayWindow/postNoNapWindow pre-computed before per-event band building
 - [Phase 14]: D-12: dayToSleepFactor=dayLength/sleepDuration; napFraction=napDuration/combinedSleepNap; amPmSplit=activityBeforeNap/activityAfterNap — all null on missing/zero denominators
 - [Phase 14]: D-14: sleepAfterActivityFactor removed from aggregateMetrics avg/min/max; stays exported and in per-row data for backward compat
+- [Phase 14]: accuracy-tif.js imports only forecast-tif.js and forecast.js — never metrics.js (circular-import guard per CLAUDE.md)
+- [Phase 14]: [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
 
 ### Quick Tasks Completed
 
@@ -121,8 +124,8 @@ None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix conf
 
 ## Session Continuity
 
-Last session: 2026-08-27T12:25:41.119Z
-Stopped at: Completed NW-14-01-PLAN.md
+Last session: 2026-08-27T12:49:36.923Z
+Stopped at: Completed NW-14-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
