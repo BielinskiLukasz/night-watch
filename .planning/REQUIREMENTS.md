@@ -35,9 +35,9 @@
 ### UI Polish & Bug Fixes
 
 - [x] **UI-07**: On the Today screen, prediction cards are ordered wake → nap start → nap end → bedtime in the vertical (mobile) layout; bedtime card no longer appears before the nap cards
-- [ ] **UI-08**: The Wake & Bedtime Bands chart Y-axis is inverted so that earlier times (morning) appear at the bottom and later times (evening) appear at the top; Y-axis tick labels update accordingly
-- [ ] **UI-09**: The Wake & Bedtime Bands chart displays nap-start and nap-end dots alongside the existing wake and bedtime dots, each in a distinct color with the legend updated to show all four series; days with no nap show a gap in the nap series
-- [ ] **UI-10**: The Wake & Bedtime Bands chart renders each event as exactly one dot per day — post-midnight events (e.g. bedtime at 00:30) are plotted only once, at their subjective-night time position relative to the cutover hour, eliminating the duplicate-dot bug
+- [x] **UI-08**: The Wake & Bedtime Bands chart Y-axis is inverted so that earlier times (morning) appear at the bottom and later times (evening) appear at the top; Y-axis tick labels update accordingly
+- [x] **UI-09**: The Wake & Bedtime Bands chart displays nap-start and nap-end dots alongside the existing wake and bedtime dots, each in a distinct color with the legend updated to show all four series; days with no nap show a gap in the nap series
+- [x] **UI-10**: The Wake & Bedtime Bands chart renders each event as exactly one dot per day — post-midnight events (e.g. bedtime at 00:30) are plotted only once, at their subjective-night time position relative to the cutover hour, eliminating the duplicate-dot bug
 
 ---
 
@@ -91,9 +91,9 @@ Items remaining in backlog after v1.3 scope was set:
 | MET-09 | Phase 14 | Complete |
 | MET-10 | Phase 14 | Complete |
 | MET-11 | Phase 14 | Pending |
-| UI-08 | Phase 14 | Pending |
-| UI-09 | Phase 14 | Pending |
-| UI-10 | Phase 14 | Pending |
+| UI-08 | Phase 14 | Complete |
+| UI-09 | Phase 14 | Complete |
+| UI-10 | Phase 14 | Complete |
 
 **Coverage:**
 
