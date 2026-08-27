@@ -415,6 +415,22 @@ function buildPrediction(labelledWindows, precisionTarget) {
  *   { isColdStart, wake, bedtime, napStart, napEnd }
  * with each prediction carrying extended TIF metadata (D10-05).
  *
+ * **No-nap-day substitution (TIF-16 / D-15 through D-19):**
+ * When `isNoNapDay=true` (caller-resolved: eveningHour passed and today's napStart is null),
+ * three substitutions apply if the filtered sub-window is deep enough (≥ settings.minDays):
+ *
+ *   D-16 bedtime: 'Day-length band' is replaced by 'Day-length band (no-nap days)' — built
+ *     from day-lengths of historical no-nap days only. Falls back to 'Day-length band' when
+ *     the no-nap sub-window is too thin (D-19).
+ *
+ *   D-17 wake: 'Sleep-length band' is replaced by 'Post-no-nap sleep-length band' — built
+ *     from sleep durations on nights that immediately followed a historical no-nap day.
+ *     The 'Sleep + nap combined band' (Window 3) is skipped entirely on no-nap days.
+ *
+ *   D-18 napStart: When the second-to-last day in the window had napStart=null
+ *     (isYesterdayNoNap), a 'Post-no-nap nap-start pattern' window is added alongside
+ *     the existing nap-start windows. This applies regardless of isNoNapDay.
+ *
  * @param {object[]} dayRecords    pre-bucketed day records
  * @param {object}   settings      settings object
  * @param {object}   [activityLog] optional map keyed by 'YYYY-MM-DD' date string;
@@ -422,6 +438,8 @@ function buildPrediction(labelledWindows, precisionTarget) {
  *                                 overrides activityBeforeNap(d) for that day (D-09, D-10).
  * @param {boolean}  [isNoNapDay]  caller-resolved flag: true when eveningHour has passed
  *                                 and today's napStart is null (D-15). Defaults to false.
+ *                                 Must NOT be re-derived inside tifForecast — the caller owns
+ *                                 this decision (today-screen.js).
  * @returns {object}
  */
 export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay = false) {
