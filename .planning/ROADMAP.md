@@ -108,12 +108,16 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 14-01-PLAN.md — TDD: dayToSleepFactor, napFraction, amPmSplit new ratio metrics + aggregateMetrics SAA removal (MET-07, MET-09, MET-10, D-12, D-14)
 - [ ] 14-02-PLAN.md — TDD: accuracy-tif.js (computeTifBoundsHistory, computeTifAccuracy) + sw.js PRECACHE_LIST (TIF-14, MET-08, MET-11)
+- [ ] 14-05-PLAN.md — Execute: buildTimeBandSeries 4-slot shape + charts-screen 4-series + inverted Y-axis + tests (UI-08, UI-09, UI-10)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 14-03-PLAN.md — Execute: metrics-screen.js COLUMNS 16-col overhaul + TIF inline columns + TIF aggregate rows (MET-07, MET-08, MET-09, MET-10, MET-11)
 - [ ] 14-04-PLAN.md — Execute: accuracy-screen.js isTif branch + buildTifAccuracyGrid (TIF-14)
-- [ ] 14-05-PLAN.md — Execute: buildTimeBandSeries 4-slot shape + charts-screen 4-series + inverted Y-axis + tests (UI-08, UI-09, UI-10)
 
 **UI hint**: yes
 
