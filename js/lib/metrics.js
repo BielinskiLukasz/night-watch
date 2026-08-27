@@ -152,6 +152,47 @@ export function sleepAfterActivityFactor(day, prevDay) {
 }
 
 /**
+ * Day-to-sleep factor (D-12 / MET-07): dayLength(day) / sleepDuration(day).
+ * Returns null when either component is null or sleepDuration is 0.
+ * @param {object} day day record (with wake, bedtime slots)
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function dayToSleepFactor(day) {
+  const dl = dayLength(day);
+  const sd = sleepDuration(day);
+  if (dl == null || sd == null || sd === 0) return null;
+  return dl / sd;
+}
+
+/**
+ * Nap fraction (D-12 / MET-09): napDuration(day) / combinedSleepNap(day).
+ * Returns null on no-nap days (napStart or napEnd null) or when combinedSleepNap is null or 0.
+ * @param {object} day day record (with wake, bedtime, napStart, napEnd slots)
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function napFraction(day) {
+  const nd = napDuration(day);
+  const cs = combinedSleepNap(day);
+  if (nd == null || cs == null || cs === 0) return null;
+  return nd / cs;
+}
+
+/**
+ * AM/PM split (D-12 / MET-10): activityBeforeNap(day) / activityAfterNap(day).
+ * Returns null on no-nap days (both napStart and napEnd null) or when either activity
+ * segment is absent or activityAfterNap is 0.
+ * @param {object} day day record (with wake, bedtime, napStart, napEnd slots)
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function amPmSplit(day) {
+  const before = activityBeforeNap(day);
+  const after  = activityAfterNap(day);
+  if (day.napStart == null && day.napEnd == null) return null;
+  if (before == null || after == null || after === 0) return null;
+  return before / after;
+}
+
+/**
  * Aggregate metrics across multiple day records.
  * Returns { rows, avg, min, max } where:
  *   - rows: array of per-day records with all metric values + raw times
@@ -243,6 +284,10 @@ export function aggregateMetrics(dayRecords) {
       // Ratios
       activityAfterSleepFactor: activityAfterSleepFactor(day),
       sleepAfterActivityFactor: sleepAfterActivityFactor(day, prevDay),
+      // D-12 new ratio fields
+      dayToSleepFactor: dayToSleepFactor(day),
+      napFraction: napFraction(day),
+      amPmSplit: amPmSplit(day),
       // Metadata
       rejected: day.rejected || false,
     });
@@ -308,10 +353,9 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('activityBeforeNap', napRows);
   aggregateMetric('activityAfterNap', napRows);
   aggregateMetric('activityAfterSleepFactor', validRows);
-
-  // SAA: exclude first row, include only rows with both sleep and prev activity
-  const saaRows = validRows.filter((r, i) => i > 0 && r.sleepAfterActivityFactor !== null);
-  aggregateMetric('sleepAfterActivityFactor', saaRows);
+  aggregateMetric('dayToSleepFactor', validRows);
+  aggregateMetric('napFraction', napRows);
+  aggregateMetric('amPmSplit', napRows);
 
   return { rows, avg, min, max };
 }
