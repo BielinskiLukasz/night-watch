@@ -21,7 +21,7 @@
 - [x] **TIF-12**: When TIF is active, nap-start predictions include an additional ratio window derived from `(activityBeforeNap / sleepDuration)` applied to the wake anchor; nap-end predictions include a ratio window derived from `(activityBeforeNap / napDuration)` applied to nap-start anchor
 - [x] **TIF-13**: When TIF is active, each historical window includes a rolling-window variant (last N days, configurable via `tifRollingDays` setting); when MA/AA values are recorded on a day, those are used in preference to derived timestamp differences
 - [x] **TIF-15**: When TIF is active, each window computes a median in addition to its min/max bounds; the central predicted time for each event type is the average of the medians across all active windows (the min/max band bounds continue to use intersection/union of window ranges unchanged)
-- [ ] **TIF-16**: On no-nap days (no nap-start logged by the threshold hour), TIF substitutes day-length (wake→bedtime) bands from historical no-nap days in place of activity-after-nap windows for bedtime prediction; tonight's predicted sleep duration uses historical sleep-duration patterns from nights following no-nap days; tomorrow's predicted nap start and nap duration use patterns from days immediately following a no-nap day
+- [x] **TIF-16**: On no-nap days (no nap-start logged by the threshold hour), TIF substitutes day-length (wake→bedtime) bands from historical no-nap days in place of activity-after-nap windows for bedtime prediction; tonight's predicted sleep duration uses historical sleep-duration patterns from nights following no-nap days; tomorrow's predicted nap start and nap duration use patterns from days immediately following a no-nap day
 
 ### TIF Metrics & Accuracy
 
@@ -84,7 +84,7 @@ Items remaining in backlog after v1.3 scope was set:
 | TIF-12 | Phase 13 | Complete |
 | TIF-13 | Phase 13 | Complete |
 | TIF-15 | Phase 13 | Complete |
-| TIF-16 | Phase 13 | Pending |
+| TIF-16 | Phase 13 | Complete |
 | TIF-14 | Phase 14 | Pending |
 | MET-07 | Phase 14 | Pending |
 | MET-08 | Phase 14 | Pending |
