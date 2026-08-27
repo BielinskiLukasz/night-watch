@@ -25,6 +25,7 @@
 
 import { computeAccuracy } from '../lib/accuracy.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
+import { computeTifBoundsHistory, computeTifAccuracy } from '../lib/accuracy-tif.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants (Object.freeze per CLAUDE.md convention)
@@ -231,6 +232,41 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
   root.replaceChildren(stageBadge, gridRoot);
 
   /**
+   * Render the classic accuracy grid (existing path).
+   * Restores the permanent structure (stageBadge + gridRoot) if it was replaced
+   * by a cold-start or TIF render, then renders stage badge + accuracy grid.
+   *
+   * @param {HTMLElement} root
+   * @param {object} accuracy   AccuracyResult from computeAccuracy
+   * @param {object} snap       settings snapshot
+   */
+  function renderAccuracy(root, accuracy, snap) {
+    // Restore permanent structure if it was replaced by cold-start or TIF rendering.
+    if (!root.contains(gridRoot)) {
+      root.replaceChildren(stageBadge, gridRoot);
+    }
+    // Stage badge (D7-18): show/hide with stage.name via textContent.
+    renderStageBadge(stageBadge, snap);
+    // Populate the grid (clears gridRoot internally).
+    buildAccuracyGrid(gridRoot, accuracy, snap);
+  }
+
+  /**
+   * Render the TIF accuracy grid (stub — replaced in Task 2 with full implementation).
+   *
+   * @param {HTMLElement} root
+   * @param {object} tifStats   TifAccuracyResult from computeTifAccuracy
+   * @param {object} snap       settings snapshot
+   */
+  function renderTifAccuracy(root, tifStats, snap) {
+    const section = document.createElement('section');
+    const h2 = document.createElement('h2');
+    h2.textContent = 'TIF Accuracy';
+    section.appendChild(h2);
+    root.replaceChildren(section);
+  }
+
+  /**
    * Re-render the accuracy grid from current store state.
    *
    * Called: on mount, on eventLog change, on settings change.
@@ -255,22 +291,20 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
       return;
     }
 
-    // Above cold-start threshold: restore permanent structure if it was replaced
-    // by a previous cold-start render. This handles the case where the user logs
-    // enough data to cross the threshold while on this screen.
-    if (!root.contains(gridRoot)) {
-      root.replaceChildren(stageBadge, gridRoot);
+    // TIF/classic branch (D-01): show algorithm-specific accuracy grid.
+    const isTif = snap.forecastAlgorithm === 'tif';
+    if (isTif) {
+      // D-01: TIF active — compute retroactive TIF bounds and render TIF accuracy grid.
+      // activityLog obtained via eventLog.getActivityLog() (ASSUMPTION TIF-14 activityLog).
+      const activityLog = eventLog.getActivityLog();
+      const tifBoundsHistory = computeTifBoundsHistory(days, snap, activityLog);
+      const tifStats = computeTifAccuracy(tifBoundsHistory, days);
+      renderTifAccuracy(root, tifStats, snap);
+    } else {
+      // Classic path: compute accuracy and delegate DOM updates to renderAccuracy.
+      const accuracy = computeAccuracy(days, snap);
+      renderAccuracy(root, accuracy, snap);
     }
-
-    // Stage badge (D7-18): show/hide with stage.name via textContent.
-    renderStageBadge(stageBadge, snap);
-
-    // Pure backtesting computation — all day records (no cold-start limit here;
-    // computeAccuracy handles its own internal loop bounds).
-    const result = computeAccuracy(days, snap);
-
-    // Populate the grid (clears gridRoot internally).
-    buildAccuracyGrid(gridRoot, result, snap);
   };
 
   // Initial render.
