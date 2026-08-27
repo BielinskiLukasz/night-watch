@@ -1,8 +1,10 @@
 // js/ui/metrics-screen.js
-// Phase 11, metrics-screen component (Plan 02)
+// Phase 11, metrics-screen component (Plan 02); updated Phase 14 Plan 03
 // Decisions: D11-01 (single table), D11-02 (column order), D11-03 (most-recent-first),
 // D11-04 (no-nap em-dash), D11-05 (rejected dimming), D11-09 (stage badge),
 // D11-17..D11-19 (sticky headers/columns), D11-20..D11-22 (formatting).
+// Phase 14: D-09 (16-column order), D-11 (12 TIF inline columns), D-13 (isRatio for new cols),
+//           D-14 (SAA removed), MET-07/08/09/10/11.
 //
 // mountMetricsScreen({ root, eventLog, settings }) — full table rendering with
 // stage filtering, summary aggregates, per-day metrics rows, and reactive lifecycle.
@@ -13,15 +15,7 @@
 //   - No user input interpolated into dynamic HTML injection anywhere in this module
 
 import {
-  sleepDuration,
-  napDuration,
-  dayLength,
-  combinedSleepNap,
-  totalActivity,
-  activityBeforeNap,
-  activityAfterNap,
   activityAfterSleepFactor,
-  sleepAfterActivityFactor,
   aggregateMetrics,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
@@ -32,25 +26,34 @@ import { formatTime, formatDuration } from '../lib/time.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Column definitions for the 14-column metrics table.
- * Order matches D11-02: Date, Wake, Bedtime, Nap Start, Nap End, Sleep, Nap,
- * Combined, Day Length, Act→Nap, Nap→Bed, Activity, AAS, SAA.
+ * Column definitions for the 16-column metrics table (D-09 order).
+ * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
+ *        Comb | Day Len | Day/Sleep | →Nap | Nap→ | Act | AM/PM | AAS
+ *
+ * Changes from 14-column layout (D-09, D-13, D-14):
+ *   - SAA (sleepAfterActivityFactor) removed per D-14/MET-07
+ *   - Nap Frac (napFraction, isRatio) inserted at index 7 per MET-09
+ *   - Day/Sleep (dayToSleepFactor, isRatio) inserted at index 10 per MET-07
+ *   - AM/PM (amPmSplit, isRatio) inserted at index 14 per MET-10
  */
 const COLUMNS = Object.freeze([
-  { key: 'date', label: 'Date', isTime: false, isRatio: false, sticky: true },
-  { key: 'wake', label: 'Wake', isTime: true, isRatio: false },
-  { key: 'napStart', label: 'Nap Start', isTime: true, isRatio: false },
-  { key: 'napEnd', label: 'Nap End', isTime: true, isRatio: false },
-  { key: 'bedtime', label: 'Bedtime', isTime: true, isRatio: false },
-  { key: 'sleepDuration', label: 'Sleep', isTime: false, isRatio: false },
-  { key: 'napDuration', label: 'Nap', isTime: false, isRatio: false },
-  { key: 'combinedSleepNap', label: 'Comb', isTime: false, isRatio: false },
-  { key: 'dayLength', label: 'Day Len', isTime: false, isRatio: false },
-  { key: 'activityBeforeNap', label: '→Nap', isTime: false, isRatio: false },
-  { key: 'activityAfterNap', label: 'Nap→', isTime: false, isRatio: false },
-  { key: 'totalActivity', label: 'Act', isTime: false, isRatio: false },
-  { key: 'activityAfterSleepFactor', label: 'AAS', isTime: false, isRatio: true },
-  { key: 'sleepAfterActivityFactor', label: 'SAA', isTime: false, isRatio: true },
+  { key: 'date',                    label: 'Date',      isTime: false, isRatio: false, sticky: true },
+  { key: 'wake',                    label: 'Wake',      isTime: true,  isRatio: false },
+  { key: 'napStart',                label: 'Nap Start', isTime: true,  isRatio: false },
+  { key: 'napEnd',                  label: 'Nap End',   isTime: true,  isRatio: false },
+  { key: 'bedtime',                 label: 'Bedtime',   isTime: true,  isRatio: false },
+  { key: 'sleepDuration',           label: 'Sleep',     isTime: false, isRatio: false },
+  { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
+  { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
+  { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
+  { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
+  { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
+  { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
+  { key: 'activityAfterNap',        label: 'Nap→',      isTime: false, isRatio: false },
+  { key: 'totalActivity',           label: 'Act',       isTime: false, isRatio: false },
+  { key: 'amPmSplit',               label: 'AM/PM',     isTime: false, isRatio: true  }, // NEW MET-10
+  { key: 'activityAfterSleepFactor', label: 'AAS',      isTime: false, isRatio: true  },
+  // SAA (sleepAfterActivityFactor) removed from COLUMNS per D-14/MET-07
 ]);
 
 // ---------------------------------------------------------------------------
