@@ -479,6 +479,11 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // step and the activity-before-nap band is skipped (acceptable degradation).
   // -------------------------------------------------------------------------
 
+  // No-nap-day pre-computation: filtered sub-windows for substitution logic (D-16, D-17, D-18)
+  const noNapDayWindow   = window.filter(d => extractTime(d.napStart) === null);
+  const postNoNapWindow  = window.filter((d, i) => i > 0 && extractTime(window[i - 1].napStart) === null);
+  const isYesterdayNoNap = window.length >= 2 && extractTime(window[window.length - 2].napStart) === null;
+
   const tifPredictions = {};
 
   // ---- Nap-start prediction ----
@@ -493,6 +498,16 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   if (wakeAnchorForNap !== null) {
     const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, 0);
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
+  }
+
+  // Post-no-nap nap-start window (D-18): add alongside existing windows when yesterday was a no-nap day.
+  if (isYesterdayNoNap) {
+    const postNoNapNapStartTimes = postNoNapWindow
+      .map(d => extractTime(d.napStart))
+      .filter(Boolean)
+      .map(timeToMinutes);
+    const postNoNapBand = buildHistoricBand(postNoNapNapStartTimes, trimPct, 0);
+    if (postNoNapBand != null) napStartLabelledWindows.push({ label: 'Post-no-nap nap-start pattern', ...postNoNapBand });
   }
 
   // MA/sleep ratio band: ratio_i = actBeforeNap_i / sleepDuration_i; projected = ratio_i * todaySleepDuration; anchored to wake
@@ -560,13 +575,22 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
 
   // Window 2: sleep-length band (bedtime + sleep).
+  // When isNoNapDay=true and enough post-no-nap history exists (D-17), use only nights
+  // that followed a no-nap day; otherwise use the full sleep duration array.
   // Raw result exceeds 1440 (crosses midnight) — wrap to same reference frame
   // as the historic wake band so computeIntersection works correctly.
   if (bedtimeAnchor !== null) {
-    const sleepBandRaw = buildDurationBand(sleepDurations, bedtimeAnchor, trimPct, 0);
+    const postNoNapSleepDurations = postNoNapWindow.map(d => sleepDuration(d)).filter(v => v != null);
+    const srcSleepDurations = (isNoNapDay && postNoNapSleepDurations.length >= settings.minDays)
+      ? postNoNapSleepDurations
+      : sleepDurations;
+    const sleepBandLabel = (isNoNapDay && postNoNapSleepDurations.length >= settings.minDays)
+      ? 'Post-no-nap sleep-length band'
+      : 'Sleep-length band';
+    const sleepBandRaw = buildDurationBand(srcSleepDurations, bedtimeAnchor, trimPct, 0);
     if (sleepBandRaw) {
       wakeLabelledWindows.push({
-        label:  'Sleep-length band',
+        label:  sleepBandLabel,
         min:    wrapToDay(sleepBandRaw.min),
         max:    wrapToDay(sleepBandRaw.max),
         median: sleepBandRaw.median != null ? wrapToDay(sleepBandRaw.median) : null,
@@ -578,7 +602,8 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // band represents the expected night-sleep duration anchored to bedtime.
   // Formula: bedtime + historical_combined − today_nap = expected_wake.
   // Uses actual nap when logged; predicted nap otherwise (resolveTodayNapDuration).
-  if (bedtimeAnchor !== null && todayNapDuration !== null) {
+  // Skipped on no-nap days (D-17): nap duration is irrelevant when no nap occurred.
+  if (!isNoNapDay && bedtimeAnchor !== null && todayNapDuration !== null) {
     const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
     if (combinedBandRaw) {
       wakeLabelledWindows.push({
@@ -603,8 +628,17 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   if (histBedtime) bedtimeLabelledWindows.push({ label: 'Historic bedtime band', ...histBedtime });
 
   if (wakeAnchor2 !== null) {
-    const dayLenBand = buildDurationBand(dayLengths, wakeAnchor2, trimPct, 0);
-    if (dayLenBand) bedtimeLabelledWindows.push({ label: 'Day-length band', ...dayLenBand });
+    // When isNoNapDay=true and enough no-nap history exists (D-16), use day-lengths
+    // from no-nap days only; fall back to full window when history is thin (D-19).
+    const noNapDayLengths = noNapDayWindow.map(d => dayLength(d)).filter(v => v != null);
+    const srcLengths = (isNoNapDay && noNapDayLengths.length >= settings.minDays)
+      ? noNapDayLengths
+      : dayLengths;
+    const dayLengthLabel = (isNoNapDay && noNapDayLengths.length >= settings.minDays)
+      ? 'Day-length band (no-nap days)'
+      : 'Day-length band';
+    const dayLenBand = buildDurationBand(srcLengths, wakeAnchor2, trimPct, 0);
+    if (dayLenBand) bedtimeLabelledWindows.push({ label: dayLengthLabel, ...dayLenBand });
   }
 
   if (napEndAnchor !== null) {
