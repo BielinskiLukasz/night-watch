@@ -212,34 +212,61 @@ describe('chart-data transforms — UI-04, D7-05..D7-11', () => {
       assert.strictEqual(result[0].wakeMinutes, null, 'missing wake → wakeMinutes should be null');
     });
 
-    it('two bedtimes on same calendar date → both in bedtimesMinutes', () => {
-      // Real scenario: parent logs bedtime at 00:10 (late-night) and bedtime
-      // at 22:00 (next evening) on the same calendar date (June 17).
-      // Calendar-date grouping puts both on the June 17 chart column.
-      const days = [{
-        date: '2025-01-16',  // subjective night date (irrelevant for calendar grouping)
-        wake: null,
-        bedtime: null,
-        napStart: null,
-        napEnd: null,
-        rejected: false,
-        allEvents: [
-          { id: 'b1', type: 'bedtime', at: '2025-01-17T00:10' },
-          { id: 'w1', type: 'wake',    at: '2025-01-17T07:35' },
-          { id: 'b2', type: 'bedtime', at: '2025-01-17T22:00' },
-        ],
-      }];
+    it('nap day: napStartMinutes and napEndMinutes correct (UI-10, D-16)', () => {
+      // napStart at 13:00 = 780 min; napEnd at 14:30 = 870 min.
+      const days = [
+        makeDay('2025-01-01', {
+          wake:     makeEvent('2025-01-01T07:00'),
+          bedtime:  makeEvent('2025-01-01T22:00'),
+          napStart: makeEvent('2025-01-01T13:00'),
+          napEnd:   makeEvent('2025-01-01T14:30'),
+        }),
+      ];
 
       const result = buildTimeBandSeries(days);
 
-      // Calendar-date grouping: all three events are on 2025-01-17 → one entry.
-      assert.strictEqual(result.length, 1, 'one calendar date → one entry');
-      assert.strictEqual(result[0].date, '2025-01-17');
-      assert.strictEqual(result[0].bedtimesMinutes.length, 2, 'both bedtimes included');
-      assert.strictEqual(result[0].bedtimesMinutes[0], 10,   '00:10 = 10 min');
-      assert.strictEqual(result[0].bedtimesMinutes[1], 1320, '22:00 = 1320 min');
-      assert.strictEqual(result[0].wakeMinutes, 455, '07:35 = 455 min');
-      assert.strictEqual(result[0].bedtimeMinutes, 10, 'backward-compat scalar = first bedtime');
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].napStartMinutes, 780,  'napStart at 13:00 = 780 min');
+      assert.strictEqual(result[0].napEndMinutes,   870,  'napEnd at 14:30 = 870 min');
+    });
+
+    it('no-nap day: napStartMinutes and napEndMinutes are null (D-16)', () => {
+      const days = [
+        makeDay('2025-01-01', {
+          wake:    makeEvent('2025-01-01T07:00'),
+          bedtime: makeEvent('2025-01-01T22:00'),
+          napStart: null,
+          napEnd:   null,
+        }),
+      ];
+
+      const result = buildTimeBandSeries(days);
+
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].napStartMinutes, null, 'no nap → napStartMinutes null');
+      assert.strictEqual(result[0].napEndMinutes,   null, 'no nap → napEndMinutes null');
+      assert.notStrictEqual(result[0].wakeMinutes,    null, 'wake still present');
+      assert.notStrictEqual(result[0].bedtimeMinutes, null, 'bedtime still present');
+    });
+
+    it('two day records → exactly 2 entries (subjective-night dedup, D-17)', () => {
+      // Each day record maps to exactly one entry — no calendar-date duplication.
+      const days = [
+        makeDay('2025-06-01', {
+          wake:    makeEvent('2025-06-01T07:00'),
+          bedtime: makeEvent('2025-06-01T22:00'),
+        }),
+        makeDay('2025-06-02', {
+          wake:    makeEvent('2025-06-02T06:45'),
+          bedtime: makeEvent('2025-06-02T21:30'),
+        }),
+      ];
+
+      const result = buildTimeBandSeries(days);
+
+      assert.strictEqual(result.length, 2, 'two day records → two entries');
+      assert.strictEqual(result[0].date, '2025-06-01');
+      assert.strictEqual(result[1].date, '2025-06-02');
     });
   });
 
