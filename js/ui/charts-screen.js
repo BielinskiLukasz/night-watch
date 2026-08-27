@@ -332,7 +332,10 @@ function renderTimeBandChart(sectionEl, days, snap) {
   sectionEl.appendChild(h2);
 
   const timeSeries = buildTimeBandSeries(days);
-  const hasData = timeSeries.some((p) => p.wakeMinutes !== null || p.bedtimesMinutes.length > 0);
+  const hasData = timeSeries.some(
+    (p) => p.wakeMinutes !== null || p.bedtimeMinutes !== null
+      || p.napStartMinutes !== null || p.napEndMinutes !== null,
+  );
 
   const W = TIME_BAND_SVG.w;
   const H = TIME_BAND_SVG.h;
@@ -352,8 +355,8 @@ function renderTimeBandChart(sectionEl, days, snap) {
     if (timeSeries.length <= 1) return M.left;
     return M.left + (i / (timeSeries.length - 1)) * plotW;
   };
-  // Y-axis: 0h (midnight) at top, 24h at bottom (minutes → pixels)
-  const yScale = (minutes) => M.top + (minutes / (24 * 60)) * plotH;
+  // Y-axis: 0h (midnight) at bottom, 24h at top — earlier times higher on screen (D-15)
+  const yScale = (minutes) => M.top + plotH - (minutes / (24 * 60)) * plotH;
 
   // Y-axis ticks (0, 6, 12, 18, 24h)
   for (const hourTick of [0, 6, 12, 18, 24]) {
@@ -373,31 +376,38 @@ function renderTimeBandChart(sectionEl, days, snap) {
     stroke: '#e2e8f0', 'stroke-width': '1',
   }));
 
-  // Data points
+  // 4-series dot rendering (UI-09, D-16): wake, napStart, napEnd, bedtime
+  const TIME_BAND_SERIES = [
+    { key: 'wakeMinutes',     color: '#4f46e5', label: 'Wake'      },
+    { key: 'napStartMinutes', color: '#f59e0b', label: 'Nap Start' },
+    { key: 'napEndMinutes',   color: '#fb923c', label: 'Nap End'   },
+    { key: 'bedtimeMinutes',  color: '#94a3b8', label: 'Bedtime'   },
+  ];
+
   for (let i = 0; i < timeSeries.length; i++) {
     const p = timeSeries[i];
     const x = xScale(i);
-    if (p.wakeMinutes !== null) {
+    for (const s of TIME_BAND_SERIES) {
+      const minutes = p[s.key];
+      if (minutes == null) continue;  // no-nap days skip nap series (T-14-05-03)
       svg.appendChild(svgEl('circle', {
-        cx: x, cy: yScale(p.wakeMinutes), r: '3',
-        fill: '#4f46e5', opacity: '0.8',
-      }));
-    }
-    for (const bedMin of p.bedtimesMinutes) {
-      svg.appendChild(svgEl('circle', {
-        cx: x, cy: yScale(bedMin), r: '3',
-        fill: '#94a3b8', opacity: '0.8',
+        cx: x, cy: yScale(minutes), r: '3',
+        fill: s.color, opacity: '0.8',
       }));
     }
   }
 
-  // Legend
+  // Legend — 4 rows (UI-09, D-16)
   const legendX = W - M.right - 70;
   const legendY = M.top + 8;
-  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY, r: '3', fill: '#4f46e5' }));
-  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 4, 'font-size': '9', fill: '#334155' }, 'Wake'));
-  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY + 14, r: '3', fill: '#94a3b8' }));
-  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 18, 'font-size': '9', fill: '#334155' }, 'Bedtime'));
+  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY,      r: '3', fill: '#4f46e5' }));
+  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 4,      'font-size': '9', fill: '#334155' }, 'Wake'));
+  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY + 14, r: '3', fill: '#f59e0b' }));
+  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 18,    'font-size': '9', fill: '#334155' }, 'Nap Start'));
+  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY + 28, r: '3', fill: '#fb923c' }));
+  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 32,    'font-size': '9', fill: '#334155' }, 'Nap End'));
+  svg.appendChild(svgEl('circle', { cx: legendX, cy: legendY + 42, r: '3', fill: '#94a3b8' }));
+  svg.appendChild(svgText({ x: legendX + 6, y: legendY + 46,    'font-size': '9', fill: '#334155' }, 'Bedtime'));
 
   sectionEl.appendChild(svg);
 }
