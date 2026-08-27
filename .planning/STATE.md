@@ -5,14 +5,14 @@ milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
 current_phase: 14
 current_phase_name: TIF Metrics, Accuracy & Chart Fixes
 status: executing
-stopped_at: Completed NW-14-05-PLAN.md
-last_updated: "2026-08-27T13:07:46.576Z"
-state_head: 2009e585e0ceea7d2638e3c8772b85d104d2dde7
+stopped_at: Completed NW-14-03-PLAN.md
+last_updated: "2026-08-27T15:52:07.952Z"
+state_head: d66bb00fd5e600a4fe33e6c63cec7f8a8ead4a5c
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 last_activity: 2026-08-25
 last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
 ---
@@ -75,6 +75,7 @@ Status: Executing Phase NW-14
 | Phase NW-14 P01 | 4 | 3 tasks | 2 files |
 | Phase NW-14 P02 | 8 | 3 tasks | 3 files |
 | Phase NW-14 P05 | 9 | 2 tasks | 3 files |
+| Phase NW-14 P03 | 9 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Status: Executing Phase NW-14
 - [Phase 14]: accuracy-tif.js imports only forecast-tif.js and forecast.js — never metrics.js (circular-import guard per CLAUDE.md)
 - [Phase 14]: [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
 - [Phase 14]: D-15/D-16/D-17: chart fixes — yScale inverted, 4-series nap/wake/bedtime dots, buildTimeBandSeries uses dayRecords.map
+- [Phase 14]: D-09: 16-column order with napFraction/dayToSleepFactor/amPmSplit added, SAA removed
+- [Phase 14]: TIF inline columns (12) and aggregate rows (3) use el.hidden = !isTif pattern
 
 ### Quick Tasks Completed
 
@@ -126,8 +129,8 @@ None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix conf
 
 ## Session Continuity
 
-Last session: 2026-08-27T13:05:38.479Z
-Stopped at: Completed NW-14-05-PLAN.md
+Last session: 2026-08-27T15:52:06.842Z
+Stopped at: Completed NW-14-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

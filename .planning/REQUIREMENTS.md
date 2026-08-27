@@ -30,7 +30,7 @@
 - [x] **MET-08**: When TIF is active, the Metrics screen shows the raw unclipped `[finalStart, finalEnd]` bounds and confidence score per event type for the selected day
 - [x] **MET-09**: Metrics screen includes a Nap Fraction column (`napDuration / combinedSleepNap`), shown as a decimal; null on no-nap days
 - [x] **MET-10**: Metrics screen includes an AM/PM Split column (`activityBeforeNap / activityAfterNap`), shown as a decimal; null on no-nap days or when either activity segment is absent
-- [ ] **MET-11**: When TIF is active, the Metrics screen historical aggregates section shows three additional rows alongside the existing min/max rows: `min-TIF`, `median-TIF`, and `max-TIF` — computed from the TIF algorithm's window parameters (trimmed lower bound, per-window median, trimmed upper bound) for each event type
+- [x] **MET-11**: When TIF is active, the Metrics screen historical aggregates section shows three additional rows alongside the existing min/max rows: `min-TIF`, `median-TIF`, and `max-TIF` — computed from the TIF algorithm's window parameters (trimmed lower bound, per-window median, trimmed upper bound) for each event type
 
 ### UI Polish & Bug Fixes
 
@@ -90,7 +90,7 @@ Items remaining in backlog after v1.3 scope was set:
 | MET-08 | Phase 14 | Complete |
 | MET-09 | Phase 14 | Complete |
 | MET-10 | Phase 14 | Complete |
-| MET-11 | Phase 14 | Pending |
+| MET-11 | Phase 14 | Complete |
 | UI-08 | Phase 14 | Complete |
 | UI-09 | Phase 14 | Complete |
 | UI-10 | Phase 14 | Complete |
