@@ -298,9 +298,14 @@ function computeTifTrimmedStats(rows, snap) {
     const col = COLUMNS[i];
 
     if (col.isTime) {
-      // Collect as minutes, sort, apply trimmedMinMax, convert back.
+      // rows store full ISO strings ('YYYY-MM-DDTHH:MM'); extract 'HH:MM' before converting.
       const mins = window
-        .map(r => r[col.key] != null ? timeToMinutes(r[col.key]) : null)
+        .map(r => {
+          const raw = r[col.key];
+          if (raw == null) return null;
+          const hhmm = raw.length > 5 ? raw.slice(11) : raw;
+          return timeToMinutes(hhmm);
+        })
         .filter(v => v !== null);
       mins.sort((a, b) => a - b);
       const result = trimmedMinMax(mins, trimPct, 0);
