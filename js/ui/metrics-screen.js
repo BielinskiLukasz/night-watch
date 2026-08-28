@@ -52,6 +52,7 @@ const COLUMNS = Object.freeze([
   { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
   { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
   { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
+  { key: 'maSleepRatio',            label: 'MA/Sl',     isTime: false, isRatio: true  },
   { key: 'activityAfterNap',        label: 'Nap→',      isTime: false, isRatio: false },
   { key: 'totalActivity',           label: 'Act',       isTime: false, isRatio: false },
   { key: 'amPmSplit',               label: 'AM/PM',     isTime: false, isRatio: true  }, // NEW MET-10

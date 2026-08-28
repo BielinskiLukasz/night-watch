@@ -178,6 +178,21 @@ export function napFraction(day) {
 }
 
 /**
+ * MA/sleep ratio: activityBeforeNap(day) / sleepDuration(day).
+ * Mirrors the per-day ratio used by the TIF MA/sleep ratio band.
+ * Returns null on no-nap days or when either component is absent or sleepDuration is 0.
+ * @param {object} day day record
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function maSleepRatio(day) {
+  if (day.napStart == null && day.napEnd == null) return null;
+  const abn = activityBeforeNap(day);
+  const sd  = sleepDuration(day);
+  if (abn == null || sd == null || sd === 0) return null;
+  return abn / sd;
+}
+
+/**
  * AM/PM split (D-12 / MET-10): activityBeforeNap(day) / activityAfterNap(day).
  * Returns null on no-nap days (both napStart and napEnd null) or when either activity
  * segment is absent or activityAfterNap is 0.
@@ -288,6 +303,7 @@ export function aggregateMetrics(dayRecords) {
       dayToSleepFactor: dayToSleepFactor(day),
       napFraction: napFraction(day),
       amPmSplit: amPmSplit(day),
+      maSleepRatio: maSleepRatio(day),
       // Metadata
       rejected: day.rejected || false,
     });
@@ -356,6 +372,7 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('dayToSleepFactor', validRows);
   aggregateMetric('napFraction', napRows);
   aggregateMetric('amPmSplit', napRows);
+  aggregateMetric('maSleepRatio', napRows);
 
   return { rows, avg, min, max };
 }
