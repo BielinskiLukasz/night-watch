@@ -12,8 +12,8 @@ progress:
   completed_phases: 2
   total_plans: 15
   completed_plans: 15
-last_activity: 2026-08-25
-last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
+last_activity: 2026-08-28
+last_activity_desc: Quick task 260828-ikl — fix TIF aggregate rows in metrics screen with per-column trimmed stats
 ---
 
 # Project State
@@ -119,6 +119,7 @@ Status: All phases complete
 | 2026-08-03 | fix-saa-calculation-in-metrics-js-to-inc | Fix SAA calculation in metrics.js to include days without naps |
 | 2026-08-03 | move-add-event-button-to-line-up-with-ot | Move 'Add events' button into quickLog row and rename |
 | 2026-08-24 | update-phase-10-planning-artifacts-mark- | Update Phase 10 planning artifacts: mark TIF-01–TIF-11 [x] in REQUIREMENTS.md, update ROADMAP.md Phase 10 row to [x] Complete with 5/5 plans |
+| 2026-08-28 | fix-tif-aggregate-rows-in-metrics-screen | Fix TIF aggregate rows in metrics screen: replace averages of algMin/algMax with per-column trimmedMinMax over the TIF rolling window, skipping rejected rows, covering all 16 metric columns not just event types |
 
 ### Pending Todos
 
