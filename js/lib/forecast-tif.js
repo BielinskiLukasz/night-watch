@@ -221,11 +221,55 @@ function wrapToDay(m) {
 }
 
 // ---------------------------------------------------------------------------
+// findBedtimeDayRecord — internal
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the day record that contains the most recently logged bedtime event.
+ * Returns null when no bedtime has been logged (prediction-only case).
+ *
+ * @param {object[]} dayRecords  all pre-bucketed day records
+ * @returns {object|null}
+ */
+function findBedtimeDayRecord(dayRecords) {
+  let latestAt = null;
+  let result   = null;
+
+  for (const day of dayRecords) {
+    if (Array.isArray(day.allEvents) && day.allEvents.length > 0) {
+      for (const ev of day.allEvents) {
+        if (ev.type === 'bedtime' && ev.at && (latestAt === null || ev.at > latestAt)) {
+          latestAt = ev.at;
+          result   = day;
+        }
+      }
+    } else {
+      const slot = day.bedtime;
+      if (slot == null) continue;
+      const atStr = (typeof slot === 'object' && slot.at) ? slot.at : null;
+      if (atStr) {
+        if (latestAt === null || atStr > latestAt) {
+          latestAt = atStr;
+          result   = day;
+        }
+      } else if (extractTime(slot) !== null) {
+        // bare 'HH:MM' — no cross-day ordering possible; last such record wins
+        result = day;
+      }
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // resolveTodayNapDuration — internal
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve today's nap duration (minutes) for the combined-band correction.
+ * Resolve the nap duration (minutes) for a given day record, used for the
+ * combined-band correction. The caller must pass the day record that matches
+ * the bedtime anchor (same sleep cycle), not always today's record.
  *
  * Priority:
  *   1. Both napStart and napEnd are logged → actual duration.
@@ -234,17 +278,16 @@ function wrapToDay(m) {
  *
  * Returns null when insufficient data is available.
  *
- * @param {object[]} dayRecords   all pre-bucketed day records
+ * @param {object}   dayRecord    the day record whose nap to resolve
  * @param {object}   napStartPred TIF prediction for napStart
  * @param {object}   napEndPred   TIF prediction for napEnd
  * @returns {number|null}
  */
-function resolveTodayNapDuration(dayRecords, napStartPred, napEndPred) {
-  const today = dayRecords[dayRecords.length - 1];
-  if (!today) return null;
+function resolveTodayNapDuration(dayRecord, napStartPred, napEndPred) {
+  if (!dayRecord) return null;
 
-  const actualStart = extractTime(today.napStart);
-  const actualEnd   = extractTime(today.napEnd);
+  const actualStart = extractTime(dayRecord.napStart);
+  const actualEnd   = extractTime(dayRecord.napEnd);
 
   if (actualStart !== null && actualEnd !== null) {
     return timeToMinutes(actualEnd) - timeToMinutes(actualStart);
@@ -583,8 +626,12 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   tifPredictions.napEnd = napEndPred;
 
   // ---- Wake prediction ----
-  const bedtimeAnchor    = resolveAnchor('bedtime', dayRecords, tifPredictions);
-  const todayNapDuration = resolveTodayNapDuration(dayRecords, napStartPred, napEndPred);
+  const bedtimeAnchor = resolveAnchor('bedtime', dayRecords, tifPredictions);
+  // Use the nap from the same day as the bedtime anchor (not always today):
+  // when bedtime was logged yesterday, yesterday's nap must be subtracted.
+  // Falls back to today's record when no bedtime is logged yet (predicted anchor).
+  const bedtimeDayRecord = findBedtimeDayRecord(dayRecords) ?? (dayRecords[dayRecords.length - 1] ?? null);
+  const todayNapDuration = resolveTodayNapDuration(bedtimeDayRecord, napStartPred, napEndPred);
 
   const wakeLabelledWindows = [];
 
@@ -616,9 +663,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     }
   }
 
-  // Window 3: combined (sleep + nap) band, with today's nap subtracted so the
-  // band represents the expected night-sleep duration anchored to bedtime.
-  // Formula: bedtime + historical_combined − today_nap = expected_wake.
+  // Window 3: combined (sleep + nap) band, with the nap from the bedtime's day
+  // subtracted so the band represents the expected night-sleep duration anchored
+  // to bedtime. Formula: bedtime + historical_combined − nap_same_day = expected_wake.
   // Uses actual nap when logged; predicted nap otherwise (resolveTodayNapDuration).
   // Skipped on no-nap days (D-17): nap duration is irrelevant when no nap occurred.
   if (!isNoNapDay && bedtimeAnchor !== null && todayNapDuration !== null) {
