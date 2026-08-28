@@ -102,21 +102,25 @@ export function parseLocalISO(s) {
 // ---------------------------------------------------------------------------
 
 /**
- * Format a canonical 'YYYY-MM-DDTHH:MM' wall-clock string for display.
+ * Format a time string for display. Accepts two input formats:
+ *   - Full canonical 'YYYY-MM-DDTHH:MM' wall-clock (event .at values)
+ *   - Bare 'HH:MM' (TIF prediction outputs from minutesToTime)
  *
  *   formatTime('2026-05-01T03:50', '24h') === '03:50'
  *   formatTime('2026-05-01T00:00', '12h') === '12:00 AM'
  *   formatTime('2026-05-01T12:00', '12h') === '12:00 PM'
+ *   formatTime('07:30', '24h') === '07:30'
  *
  * String-slice only — no Date construction (Pitfall #3).
  *
- * @param {string} at         canonical 'YYYY-MM-DDTHH:MM' wall-clock
+ * @param {string} at         'YYYY-MM-DDTHH:MM' wall-clock or bare 'HH:MM'
  * @param {'24h'|'12h'} timeFormat
  * @returns {string}
  */
 export function formatTime(at, timeFormat) {
-  const hh = at.slice(11, 13);
-  const mm = at.slice(14, 16);
+  const isBareHHMM = at.length === 5 && at[2] === ':';
+  const hh = isBareHHMM ? at.slice(0, 2) : at.slice(11, 13);
+  const mm = isBareHHMM ? at.slice(3, 5) : at.slice(14, 16);
   if (timeFormat === '24h') return `${hh}:${mm}`;
   const { h12, ampm } = to12h(parseInt(hh, 10));
   return `${h12}:${mm} ${ampm}`;
