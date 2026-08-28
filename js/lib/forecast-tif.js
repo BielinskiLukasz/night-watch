@@ -601,7 +601,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     if (napLenBand) napEndLabelledWindows.push({ label: 'Nap-length band', ...napLenBand });
   }
 
-  // MA/nap ratio band: ratio_i = actBeforeNap_i / napDuration_i; projected = ratio_i * todayMA; anchored to napStart
+  // MA/nap ratio band: ratio_i = actBeforeNap_i / napDuration_i; projected = todayMA / ratio_i; anchored to napStart
   const todayActualNapStart = extractTime(dayRecords[dayRecords.length - 1].napStart);
   const todayActualWake = extractTime(dayRecords[dayRecords.length - 1].wake);
   let todayMA = null;
@@ -615,9 +615,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     for (let i = 0; i < window.length; i++) {
       const abn = actBeforeNapPerDay[i];
       const nd = napDuration(window[i]);
-      if (abn != null && nd != null && nd > 0) napRatios.push(abn / nd);
+      if (abn != null && abn > 0 && nd != null && nd > 0) napRatios.push(abn / nd);
     }
-    const projectedNapDurations = napRatios.map(r => r * todayMA);
+    const projectedNapDurations = napRatios.map(r => todayMA / r);
     const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, 0);
     if (napRatioBandResult != null) napEndLabelledWindows.push({ label: 'MA/nap ratio band', ...napRatioBandResult });
   }
