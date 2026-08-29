@@ -495,40 +495,29 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // 2. Slice to tifRollingDays (TIF-13 / D-06: TIF uses its own rolling window, not windowDays)
   const tifRollingDays = settings.tifRollingDays ?? 7;
   const window = dayRecords.slice(-tifRollingDays);
+  const acceptedWindow  = window.filter(d => !d.rejected);
 
   const trimPct         = settings.trimPct ?? 10;
   const precisionTarget = settings.precisionTarget ?? 60;
 
-  // 3. Helper: count manually rejected days that have a non-null value for a given slot.
-  function manualExcludedCount(slotFn) {
-    return window.filter(d => d.rejected && slotFn(d) !== null).length;
-  }
+  // 3. Collect raw time-minutes for each event type from accepted (non-rejected) days only.
+  const wakeMinutes     = acceptedWindow.map(d => extractTime(d.wake))    .filter(Boolean).map(timeToMinutes);
+  const napStartMinutes = acceptedWindow.map(d => extractTime(d.napStart)).filter(Boolean).map(timeToMinutes);
+  const napEndMinutes   = acceptedWindow.map(d => extractTime(d.napEnd))  .filter(Boolean).map(timeToMinutes);
+  const bedtimeMinutes  = acceptedWindow.map(d => extractTime(d.bedtime)) .filter(Boolean).map(timeToMinutes);
 
-  // 4. Collect raw time-minutes for each event type from ALL days in the window.
-  //    Rejected days are included (TIF trims them, not pre-filters them — B-021 Step 1).
-  const wakeMinutes     = window.map(d => extractTime(d.wake))    .filter(Boolean).map(timeToMinutes);
-  const napStartMinutes = window.map(d => extractTime(d.napStart)).filter(Boolean).map(timeToMinutes);
-  const napEndMinutes   = window.map(d => extractTime(d.napEnd))  .filter(Boolean).map(timeToMinutes);
-  const bedtimeMinutes  = window.map(d => extractTime(d.bedtime)) .filter(Boolean).map(timeToMinutes);
-
-  // 5. Collect duration metrics for each day in the window.
-  const sleepDurations    = window.map(sleepDuration)      .filter(v => v !== null);
-  const napDurations      = window.map(napDuration)        .filter(v => v !== null);
-  // actBeforeNapPerDay: index-aligned with window[]; activityLog[d.date] overrides
+  // 4. Collect duration metrics for each accepted day in the window.
+  const sleepDurations    = acceptedWindow.map(sleepDuration)      .filter(v => v !== null);
+  const napDurations      = acceptedWindow.map(napDuration)        .filter(v => v !== null);
+  // actBeforeNapPerDay: index-aligned with acceptedWindow[]; activityLog[d.date] overrides
   // activityBeforeNap(d) when non-null (TIF-13 / D-09, D-10).
-  const actBeforeNapPerDay = window.map(d =>
+  const actBeforeNapPerDay = acceptedWindow.map(d =>
     activityLog[d.date] != null ? activityLog[d.date] : activityBeforeNap(d)
   );
   const actBeforeNap      = actBeforeNapPerDay.filter(v => v !== null);
-  const actAfterNap       = window.map(activityAfterNap)   .filter(v => v !== null);
-  const dayLengths        = window.map(dayLength)          .filter(v => v !== null);
-  const combinedDurations = window.map(combinedSleepNap)   .filter(v => v !== null);
-
-  // Manual excluded counts per slot
-  const manualExWake     = manualExcludedCount(d => extractTime(d.wake));
-  const manualExNapStart = manualExcludedCount(d => extractTime(d.napStart));
-  const manualExNapEnd   = manualExcludedCount(d => extractTime(d.napEnd));
-  const manualExBedtime  = manualExcludedCount(d => extractTime(d.bedtime));
+  const actAfterNap       = acceptedWindow.map(activityAfterNap)   .filter(v => v !== null);
+  const dayLengths        = acceptedWindow.map(dayLength)          .filter(v => v !== null);
+  const combinedDurations = acceptedWindow.map(combinedSleepNap)   .filter(v => v !== null);
 
   // -------------------------------------------------------------------------
   // Predictions are built in dependency order:
@@ -541,9 +530,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // -------------------------------------------------------------------------
 
   // No-nap-day pre-computation: filtered sub-windows for substitution logic (D-16, D-17, D-18)
-  const noNapDayWindow   = window.filter(d => extractTime(d.napStart) === null);
-  const postNoNapWindow  = window.filter((d, i) => i > 0 && extractTime(window[i - 1].napStart) === null);
-  const isYesterdayNoNap = window.length >= 2 && extractTime(window[window.length - 2].napStart) === null;
+  const noNapDayWindow   = acceptedWindow.filter(d => extractTime(d.napStart) === null);
+  const postNoNapWindow  = acceptedWindow.filter((d, i) => i > 0 && extractTime(acceptedWindow[i - 1].napStart) === null);
+  const isYesterdayNoNap = acceptedWindow.length >= 2 && extractTime(acceptedWindow[acceptedWindow.length - 2].napStart) === null;
 
   const tifPredictions = {};
 
@@ -553,7 +542,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napStartLabelledWindows = [];
 
-  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, manualExNapStart);
+  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, 0);
   if (histNapStart) napStartLabelledWindows.push({ label: 'Historic nap-start band', ...histNapStart });
 
   if (wakeAnchorForNap !== null) {
@@ -575,9 +564,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   const todaySleepDuration = sleepDuration(dayRecords[dayRecords.length - 1]);
   if (wakeAnchorForNap != null && todaySleepDuration != null && todaySleepDuration > 0) {
     const ratios = [];
-    for (let i = 0; i < window.length; i++) {
+    for (let i = 0; i < acceptedWindow.length; i++) {
       const abn = actBeforeNapPerDay[i];
-      const sd = sleepDuration(window[i]);
+      const sd = sleepDuration(acceptedWindow[i]);
       if (abn != null && sd != null && sd > 0) ratios.push(abn / sd);
     }
     const projectedDurations = ratios.map(r => r * todaySleepDuration);
@@ -593,7 +582,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napEndLabelledWindows = [];
 
-  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, manualExNapEnd);
+  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, 0);
   if (histNapEnd) napEndLabelledWindows.push({ label: 'Historic nap-end band', ...histNapEnd });
 
   if (napStartAnchor !== null) {
@@ -612,9 +601,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   }
   if (napStartAnchor != null && todayMA != null) {
     const napRatios = [];
-    for (let i = 0; i < window.length; i++) {
+    for (let i = 0; i < acceptedWindow.length; i++) {
       const abn = actBeforeNapPerDay[i];
-      const nd = napDuration(window[i]);
+      const nd = napDuration(acceptedWindow[i]);
       if (abn != null && abn > 0 && nd != null && nd > 0) napRatios.push(abn / nd);
     }
     const projectedNapDurations = napRatios.map(r => todayMA / r);
@@ -636,7 +625,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   const wakeLabelledWindows = [];
 
   // Window 1: historic wake-up band
-  const histWake = buildHistoricBand(wakeMinutes, trimPct, manualExWake);
+  const histWake = buildHistoricBand(wakeMinutes, trimPct, 0);
   if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
 
   // Window 2: sleep-length band (bedtime + sleep).
@@ -689,7 +678,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const bedtimeLabelledWindows = [];
 
-  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, manualExBedtime);
+  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, 0);
   if (histBedtime) bedtimeLabelledWindows.push({ label: 'Historic bedtime band', ...histBedtime });
 
   if (wakeAnchor2 !== null) {
