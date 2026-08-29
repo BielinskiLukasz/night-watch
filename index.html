@@ -254,29 +254,38 @@
       <!-- Group 3: Forecast & Prediction — CFG-02..07 -->
       <fieldset>
         <legend>Forecast &amp; Prediction</legend>
-        <label class="checkboxRow">
-          <input type="checkbox" name="autoOutlier">
-          Auto outlier detection
-        </label>
         <label>
-          Max delta (minutes)
-          <input type="number" name="maxDelta" min="5" max="120">
+          Forecast algorithm
+          <select name="forecastAlgorithm">
+            <option value="classic">Classic</option>
+            <option value="tif">TIF</option>
+          </select>
         </label>
+        <div id="classicOptions">
+          <label class="checkboxRow">
+            <input type="checkbox" name="autoOutlier">
+            Auto outlier detection
+          </label>
+          <label>
+            Max delta (minutes)
+            <input type="number" name="maxDelta" min="5" max="120">
+          </label>
+          <label>
+            Rolling window (days)
+            <input type="number" name="windowDays" min="3" max="90">
+          </label>
+          <label>
+            Statistical blend
+            <select name="statBlend">
+              <option value="median">Median</option>
+              <option value="mean">Mean</option>
+              <option value="blend">Blend</option>
+            </select>
+          </label>
+        </div>
         <label>
           Min days of history
           <input type="number" name="minDays" min="1" max="90">
-        </label>
-        <label>
-          Rolling window (days)
-          <input type="number" name="windowDays" min="3" max="90">
-        </label>
-        <label>
-          Statistical blend
-          <select name="statBlend">
-            <option value="median">Median</option>
-            <option value="mean">Mean</option>
-            <option value="blend">Blend</option>
-          </select>
         </label>
         <label>
           Evening hour (0–23)
@@ -287,27 +296,17 @@
           <input type="number" id="noNapBedtimeOffsetMinutes" name="noNapBedtimeOffsetMinutes"
                  min="0" max="120" step="5">
         </label>
-        <div class="tif-subsection">
-          <p class="tif-subsection-label">TIF Algorithm</p>
+        <div id="tifOptions" hidden>
           <label>
-            Forecast algorithm
-            <select name="forecastAlgorithm">
-              <option value="classic">Classic</option>
-              <option value="tif">TIF</option>
-            </select>
+            Auto-trim percentage (0–40)
+            <input type="number" name="trimPct" min="0" max="40" step="1">
           </label>
-          <div id="tifOptions" hidden>
-            <label>
-              Auto-trim percentage (0–40)
-              <input type="number" name="trimPct" min="0" max="40" step="1">
-            </label>
-            <label for="tifRollingDays">TIF history window (days)</label>
-            <input type="number" id="tifRollingDays" name="tifRollingDays" min="3" max="90" step="1">
-            <label>
-              Precision target (minutes)
-              <input type="number" name="precisionTarget" min="1">
-            </label>
-          </div>
+          <label for="tifRollingDays">TIF history window (days)</label>
+          <input type="number" id="tifRollingDays" name="tifRollingDays" min="3" max="90" step="1">
+          <label>
+            Precision target (minutes)
+            <input type="number" name="precisionTarget" min="1">
+          </label>
         </div>
       </fieldset>
 
