@@ -92,6 +92,8 @@ export function openSettings({ settings, eventLog, storage, id }) {
     if (noNapOffsetEl) noNapOffsetEl.value = String(s.noNapBedtimeOffsetMinutes ?? 30);
     const tifOptionsEl = document.getElementById('tifOptions');
     if (tifOptionsEl) tifOptionsEl.hidden = (s.forecastAlgorithm !== 'tif');
+    const classicOptionsEl = document.getElementById('classicOptions');
+    if (classicOptionsEl) classicOptionsEl.hidden = (s.forecastAlgorithm === 'tif');
   }
 
   populateForm(snap);
@@ -104,7 +106,10 @@ export function openSettings({ settings, eventLog, storage, id }) {
       forecastAlgorithmEl.removeEventListener('change', _forecastAlgorithmChangeHandler);
     }
     _forecastAlgorithmChangeHandler = () => {
-      tifOptionsEl.hidden = (forecastAlgorithmEl.value !== 'tif');
+      const isTif = forecastAlgorithmEl.value === 'tif';
+      tifOptionsEl.hidden = !isTif;
+      const classicEl = document.getElementById('classicOptions');
+      if (classicEl) classicEl.hidden = isTif;
     };
     forecastAlgorithmEl.addEventListener('change', _forecastAlgorithmChangeHandler);
   }
