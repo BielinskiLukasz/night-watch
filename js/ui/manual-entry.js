@@ -328,6 +328,18 @@ export function openManualEntry({ mode, existing, onSave, clock, settings, saveM
     // existing value (browser-preserved across opens) alone in add mode.
   }
 
+  // PRED-10 / D-04: Pre-check the intense-day checkbox based on whether the
+  // event's calendar date is already in settings.intenseDays.
+  // For edit mode: derive from existing.at (the canonical date being edited).
+  // For add mode: derive from the date input's current value (today by default).
+  // Read-before-check: always call settings.get() fresh to avoid stale snapshot.
+  const intenseDayCheck = form.elements.namedItem('intenseDay');
+  if (intenseDayCheck && settings) {
+    const openDate = existing ? existing.at.slice(0, 10) : dateInput.value;
+    const currentIntense = settings.get().intenseDays || [];
+    intenseDayCheck.checked = openDate ? currentIntense.includes(openDate) : false;
+  }
+
   // Resolve the clock for validate(): prefer the injected one (call sites
   // can pass clock from the composition root); fall back to the `today`
   // value already read above via the gsd:allow-ui-clock exemption. The
@@ -389,6 +401,33 @@ export function openManualEntry({ mode, existing, onSave, clock, settings, saveM
 
       if (result.ok) {
         onSave({ type: result.type, at: result.atString });
+
+        // PRED-10 / D-04: Mutate settings.intenseDays based on checkbox state.
+        // savedDate is taken from the form's date input (the canonical date the user
+        // entered, not the at-string which may have rounded across midnight for
+        // 23:58 edge cases — the checkbox records the calendar date the user selected).
+        // Read-before-write: call settings.get() fresh immediately before mutating
+        // to avoid stale reference (the store also does internal read-before-write).
+        // Guard: only call settings.update when state actually changed to avoid
+        // spurious subscriber notifications.
+        if (settings) {
+          const savedDateEl = form.elements.namedItem('date');
+          const intenseDayEl = form.elements.namedItem('intenseDay');
+          if (savedDateEl && intenseDayEl) {
+            const savedDate = savedDateEl.value;
+            const current = settings.get().intenseDays || [];
+            if (intenseDayEl.checked) {
+              if (!current.includes(savedDate)) {
+                settings.update({ intenseDays: [...current, savedDate] });
+              }
+            } else {
+              if (current.includes(savedDate)) {
+                settings.update({ intenseDays: current.filter((d) => d !== savedDate) });
+              }
+            }
+          }
+        }
+
         return;
       }
 

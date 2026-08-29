@@ -55,6 +55,7 @@ const defaultSettings = {
   windowDays:      30,
   trimPct:         10,
   precisionTarget: 60,
+  tifRollingDays:  7,
   forecastAlgorithm: 'tif',
 };
 

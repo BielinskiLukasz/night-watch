@@ -58,6 +58,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
   forecastAlgorithm: 'classic', // TIF-01 / D10-11: 'classic' | 'tif' algorithm toggle
   trimPct:           10,        // TIF-02 / D10-13: auto-trim percentage 0–40 (default 10)
   precisionTarget:   60,        // TIF-03 / D10-13: desired max window width in minutes
+  tifRollingDays:    7,         // TIF-13 / D-07: rolling window length for TIF algorithm (valid: 3–30 days)
+  intenseDays:               [],  // PRED-10 / D-01: day-of-week names for "intense days" scheduling
+  eveningHour:               18,  // PRED-08 / D-06: hour (0–23) at which bedtime takes priority over nap
+  noNapBedtimeOffsetMinutes: 30,  // PRED-11 / D-08: minutes to shift bedtime on no-nap days
+  intenseDayOffsetMinutes:   30,  // PRED-10 / D-08: minutes to shift bedtime on intense days
 });
 
 /**
@@ -119,6 +124,23 @@ export function migrateV1ToV2(blob, defaultSettings) {
     }
     if (blob.settings && !('precisionTarget' in blob.settings)) {
       blob.settings.precisionTarget = 60;
+    }
+    // Phase 12 forward-compat: inject prediction-refinement settings
+    if (blob.settings && !Array.isArray(blob.settings.intenseDays)) {
+      blob.settings.intenseDays = [];
+    }
+    if (blob.settings && !('eveningHour' in blob.settings)) {
+      blob.settings.eveningHour = 18;
+    }
+    if (blob.settings && !('noNapBedtimeOffsetMinutes' in blob.settings)) {
+      blob.settings.noNapBedtimeOffsetMinutes = 30;
+    }
+    if (blob.settings && !('intenseDayOffsetMinutes' in blob.settings)) {
+      blob.settings.intenseDayOffsetMinutes = 30;
+    }
+    // Phase 13 forward-compat: inject tifRollingDays for blobs predating Phase 13
+    if (blob.settings && !('tifRollingDays' in blob.settings)) {
+      blob.settings.tifRollingDays = 7;
     }
     return blob;
   }

@@ -1,8 +1,10 @@
 // js/ui/metrics-screen.js
-// Phase 11, metrics-screen component (Plan 02)
+// Phase 11, metrics-screen component (Plan 02); updated Phase 14 Plan 03
 // Decisions: D11-01 (single table), D11-02 (column order), D11-03 (most-recent-first),
 // D11-04 (no-nap em-dash), D11-05 (rejected dimming), D11-09 (stage badge),
 // D11-17..D11-19 (sticky headers/columns), D11-20..D11-22 (formatting).
+// Phase 14: D-09 (16-column order), D-11 (12 TIF inline columns), D-13 (isRatio for new cols),
+//           D-14 (SAA removed), MET-07/08/09/10/11.
 //
 // mountMetricsScreen({ root, eventLog, settings }) — full table rendering with
 // stage filtering, summary aggregates, per-day metrics rows, and reactive lifecycle.
@@ -13,44 +15,69 @@
 //   - No user input interpolated into dynamic HTML injection anywhere in this module
 
 import {
-  sleepDuration,
-  napDuration,
-  dayLength,
-  combinedSleepNap,
-  totalActivity,
-  activityBeforeNap,
-  activityAfterNap,
   activityAfterSleepFactor,
-  sleepAfterActivityFactor,
   aggregateMetrics,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
+import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
+import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants (Object.freeze per CLAUDE.md convention)
 // ---------------------------------------------------------------------------
 
 /**
- * Column definitions for the 14-column metrics table.
- * Order matches D11-02: Date, Wake, Bedtime, Nap Start, Nap End, Sleep, Nap,
- * Combined, Day Length, Act→Nap, Nap→Bed, Activity, AAS, SAA.
+ * Column definitions for the 16-column metrics table (D-09 order).
+ * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
+ *        Comb | Day Len | Day/Sleep | →Nap | Nap→ | Act | AM/PM | AAS
+ *
+ * Changes from 14-column layout (D-09, D-13, D-14):
+ *   - SAA (sleepAfterActivityFactor) removed per D-14/MET-07
+ *   - Nap Frac (napFraction, isRatio) inserted at index 7 per MET-09
+ *   - Day/Sleep (dayToSleepFactor, isRatio) inserted at index 10 per MET-07
+ *   - AM/PM (amPmSplit, isRatio) inserted at index 14 per MET-10
  */
 const COLUMNS = Object.freeze([
-  { key: 'date', label: 'Date', isTime: false, isRatio: false, sticky: true },
-  { key: 'wake', label: 'Wake', isTime: true, isRatio: false },
-  { key: 'napStart', label: 'Nap Start', isTime: true, isRatio: false },
-  { key: 'napEnd', label: 'Nap End', isTime: true, isRatio: false },
-  { key: 'bedtime', label: 'Bedtime', isTime: true, isRatio: false },
-  { key: 'sleepDuration', label: 'Sleep', isTime: false, isRatio: false },
-  { key: 'napDuration', label: 'Nap', isTime: false, isRatio: false },
-  { key: 'combinedSleepNap', label: 'Comb', isTime: false, isRatio: false },
-  { key: 'dayLength', label: 'Day Len', isTime: false, isRatio: false },
-  { key: 'activityBeforeNap', label: '→Nap', isTime: false, isRatio: false },
-  { key: 'activityAfterNap', label: 'Nap→', isTime: false, isRatio: false },
-  { key: 'totalActivity', label: 'Act', isTime: false, isRatio: false },
-  { key: 'activityAfterSleepFactor', label: 'AAS', isTime: false, isRatio: true },
-  { key: 'sleepAfterActivityFactor', label: 'SAA', isTime: false, isRatio: true },
+  { key: 'date',                    label: 'Date',      isTime: false, isRatio: false, sticky: true },
+  { key: 'wake',                    label: 'Wake',      isTime: true,  isRatio: false },
+  { key: 'napStart',                label: 'Nap Start', isTime: true,  isRatio: false },
+  { key: 'napEnd',                  label: 'Nap End',   isTime: true,  isRatio: false },
+  { key: 'bedtime',                 label: 'Bedtime',   isTime: true,  isRatio: false },
+  { key: 'sleepDuration',           label: 'Sleep',     isTime: false, isRatio: false },
+  { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
+  { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
+  { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
+  { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
+  { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
+  { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
+  { key: 'activityAfterNap',        label: 'Nap→',      isTime: false, isRatio: false },
+  { key: 'totalActivity',           label: 'Act',       isTime: false, isRatio: false },
+  { key: 'amPmSplit',               label: 'AM/PM',     isTime: false, isRatio: true  }, // NEW MET-10
+  { key: 'activityAfterSleepFactor', label: 'AAS',      isTime: false, isRatio: true  },
+  // SAA (sleepAfterActivityFactor) removed from COLUMNS per D-14/MET-07
+]);
+
+/**
+ * TIF inline column definitions (MET-08, D-11).
+ * 12 columns for 4 event types × 3 fields: algMin (time), algMax (time), precisionScore (ratio).
+ * All entries carry tif:true; columns are hidden when TIF is not the active algorithm.
+ * Labels abbreviated per Claude's Discretion: W=Wake, NS=Nap Start, NE=Nap End, B=Bedtime.
+ * Appended at the far right of the metrics table header (after COLUMNS).
+ */
+const TIF_COLUMNS = Object.freeze([
+  { key: 'wake_tif_min',      label: 'W-min',   isTime: true,  isRatio: false, tif: true },
+  { key: 'wake_tif_max',      label: 'W-max',   isTime: true,  isRatio: false, tif: true },
+  { key: 'wake_tif_conf',     label: 'W-conf',  isTime: false, isRatio: true,  tif: true },
+  { key: 'napStart_tif_min',  label: 'NS-min',  isTime: true,  isRatio: false, tif: true },
+  { key: 'napStart_tif_max',  label: 'NS-max',  isTime: true,  isRatio: false, tif: true },
+  { key: 'napStart_tif_conf', label: 'NS-conf', isTime: false, isRatio: true,  tif: true },
+  { key: 'napEnd_tif_min',    label: 'NE-min',  isTime: true,  isRatio: false, tif: true },
+  { key: 'napEnd_tif_max',    label: 'NE-max',  isTime: true,  isRatio: false, tif: true },
+  { key: 'napEnd_tif_conf',   label: 'NE-conf', isTime: false, isRatio: true,  tif: true },
+  { key: 'bedtime_tif_min',   label: 'B-min',   isTime: true,  isRatio: false, tif: true },
+  { key: 'bedtime_tif_max',   label: 'B-max',   isTime: true,  isRatio: false, tif: true },
+  { key: 'bedtime_tif_conf',  label: 'B-conf',  isTime: false, isRatio: true,  tif: true },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -159,11 +186,13 @@ function buildCell(value, colDef, snap, minMaxDate = null) {
 /**
  * Build a table row (tr) for a day record.
  *
- * @param {object} dayMetrics the metrics row from aggregateMetrics
- * @param {object} snap settings snapshot
+ * @param {object}  dayMetrics    the metrics row from aggregateMetrics
+ * @param {object}  snap          settings snapshot
+ * @param {Map}     tifBoundsMap  Map<date, TifBoundsEntry> from computeTifBoundsHistory
+ * @param {boolean} isTif         true when TIF is the active forecast algorithm
  * @returns {HTMLTableRowElement}
  */
-function buildDayRow(dayMetrics, snap) {
+function buildDayRow(dayMetrics, snap, tifBoundsMap, isTif) {
   const tr = document.createElement('tr');
 
   if (dayMetrics.rejected) {
@@ -177,11 +206,34 @@ function buildDayRow(dayMetrics, snap) {
   dateCell.textContent = dateStr;
   tr.appendChild(dateCell);
 
-  // Remaining columns
+  // Remaining base columns
   for (let i = 1; i < COLUMNS.length; i++) {
     const col = COLUMNS[i];
     const value = dayMetrics[col.key];
     const td = buildCell(value, col, snap);
+    tr.appendChild(td);
+  }
+
+  // TIF inline cells (MET-08, D-11) — T-11-05: textContent only
+  const tifEntry = tifBoundsMap ? tifBoundsMap.get(dayMetrics.date) : null;
+  for (const col of TIF_COLUMNS) {
+    const td = document.createElement('td');
+    td.hidden = !isTif;
+    let cellText = '—';
+    if (tifEntry) {
+      // col.key format: '{eventType}_tif_{field}' e.g. 'wake_tif_min', 'napStart_tif_conf'
+      // split('_tif_') → [eventType, field]; works for all keys including 'napStart_tif_min'
+      const parts = col.key.split('_tif_');
+      const eventType = parts[0]; // 'wake', 'napStart', 'napEnd', 'bedtime'
+      const field     = parts[1]; // 'min', 'max', 'conf'
+      const bounds = tifEntry[eventType];
+      if (bounds) {
+        if (field === 'min')       cellText = formatTime(bounds.algMin, snap.timeFormat);
+        else if (field === 'max')  cellText = formatTime(bounds.algMax, snap.timeFormat);
+        else if (field === 'conf') cellText = bounds.precisionScore != null ? bounds.precisionScore.toFixed(2) : '—';
+      }
+    }
+    td.textContent = cellText; // T-11-05: textContent only
     tr.appendChild(td);
   }
 
@@ -215,6 +267,55 @@ function buildAggregateRow(label, aggregateData, snap) {
     const minMaxVal = (typeof value === 'object' && value !== null && 'value' in value) ? value : null;
 
     const td = buildCell(value, col, snap, minMaxVal);
+    tr.appendChild(td);
+  }
+
+  return tr;
+}
+
+// TIF event-type columns (the 4 base columns that receive TIF aggregate averages)
+const TIF_EVENT_TYPES = new Set(['wake', 'napStart', 'napEnd', 'bedtime']);
+
+/**
+ * Build a TIF aggregate row (min-TIF, median-TIF, or max-TIF).
+ *
+ * Shows average TIF bounds (algMin / central / algMax) for each event-type column.
+ * All non-event-type base columns and all TIF inline columns render '—'.
+ * The whole row is hidden by the caller (tr.hidden = !isTif) — D-06.
+ *
+ * T-11-05: all cell content via textContent.
+ *
+ * @param {string} label        row label ('min-TIF', 'median-TIF', 'max-TIF')
+ * @param {object} tifAvgs      { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null
+ * @param {object} snap         settings snapshot (for timeFormat)
+ * @returns {HTMLTableRowElement}
+ */
+function buildTifAggregateRow(label, tifAvgs, snap) {
+  const tr = document.createElement('tr');
+  tr.classList.add('metrics-summary-row', 'metrics-tif-row');
+
+  // First cell: label (sticky left)
+  const labelCell = document.createElement('td');
+  labelCell.classList.add('sticky-col');
+  labelCell.textContent = label;
+  tr.appendChild(labelCell);
+
+  // Base COLUMNS (indices 1-15): show average for event-type columns; '—' for the rest
+  for (let i = 1; i < COLUMNS.length; i++) {
+    const col = COLUMNS[i];
+    const td = document.createElement('td');
+    if (tifAvgs && TIF_EVENT_TYPES.has(col.key) && tifAvgs[col.key] != null) {
+      td.textContent = formatTime(tifAvgs[col.key], snap.timeFormat); // T-11-05: textContent
+    } else {
+      td.textContent = '—';
+    }
+    tr.appendChild(td);
+  }
+
+  // TIF inline columns — render '—' in aggregate rows (individual bounds not repeated here)
+  for (let j = 0; j < TIF_COLUMNS.length; j++) {
+    const td = document.createElement('td');
+    td.textContent = '—';
     tr.appendChild(td);
   }
 
@@ -301,6 +402,31 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const metricsResult = aggregateMetrics([...days].reverse());
     const { rows, avg, min, max } = metricsResult;
 
+    // TIF inline columns — compute retroactive bounds map when TIF is active (MET-08, D-11)
+    const isTif = snap.forecastAlgorithm === 'tif';
+    const activityLog = isTif ? eventLog.getActivityLog() : {};
+    const tifBoundsArray = isTif ? computeTifBoundsHistory(days, snap, activityLog) : [];
+    const tifBoundsMap = new Map(tifBoundsArray.map(e => [e.date, e]));
+
+    // TIF aggregate rows helper: average a specific TIF bounds field across all days (MET-11, D-07)
+    // Returns { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null when no non-null entries.
+    // Uses timeToMinutes/minutesToTime from forecast.js (wall-clock strings, no DST issues — CLAUDE.md).
+    function computeTifRowAvg(field) {
+      const result = {};
+      for (const type of ['wake', 'napStart', 'napEnd', 'bedtime']) {
+        const vals = tifBoundsArray
+          .map(e => (e[type] && e[type][field] != null) ? timeToMinutes(e[type][field]) : null)
+          .filter(v => v !== null);
+        result[type] = vals.length > 0
+          ? minutesToTime(Math.round(vals.reduce((s, v) => s + v, 0) / vals.length))
+          : null;
+      }
+      return result;
+    }
+    const tifMinAvgs    = computeTifRowAvg('algMin');
+    const tifMedianAvgs = computeTifRowAvg('central');
+    const tifMaxAvgs    = computeTifRowAvg('algMax');
+
     // Build table
     const table = document.createElement('table');
     table.className = 'metricsTable';
@@ -312,6 +438,13 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
       const th = document.createElement('th');
       if (col.sticky) th.classList.add('sticky-col');
       th.textContent = col.label;
+      headerRow.appendChild(th);
+    }
+    // TIF inline column headers (MET-08, D-11) — hidden when TIF is off
+    for (const col of TIF_COLUMNS) {
+      const th = document.createElement('th');
+      th.textContent = col.label; // static string — T-11-05 safe
+      th.hidden = !isTif;
       headerRow.appendChild(th);
     }
     thead.appendChild(headerRow);
@@ -329,12 +462,24 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(minRow);
     summaryTbody.appendChild(maxRow);
+
+    // TIF aggregate rows (MET-11, D-06, D-07, D-08) — hidden when TIF is off
+    const minTifRow    = buildTifAggregateRow('min-TIF',    tifMinAvgs,    snap);
+    const medianTifRow = buildTifAggregateRow('median-TIF', tifMedianAvgs, snap);
+    const maxTifRow    = buildTifAggregateRow('max-TIF',    tifMaxAvgs,    snap);
+    minTifRow.hidden    = !isTif;
+    medianTifRow.hidden = !isTif;
+    maxTifRow.hidden    = !isTif;
+    summaryTbody.appendChild(minTifRow);
+    summaryTbody.appendChild(medianTifRow);
+    summaryTbody.appendChild(maxTifRow);
+
     table.appendChild(summaryTbody);
 
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
     const daysTbody = document.createElement('tbody');
     for (let i = rows.length - 1; i >= 0; i--) {
-      const dayRow = buildDayRow(rows[i], snap);
+      const dayRow = buildDayRow(rows[i], snap, tifBoundsMap, isTif);
       daysTbody.appendChild(dayRow);
     }
     table.appendChild(daysTbody);

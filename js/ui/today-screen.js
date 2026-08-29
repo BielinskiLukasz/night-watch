@@ -41,7 +41,7 @@
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
-import { forecast, selectNextEvent } from '../lib/forecast.js';
+import { forecast, selectNextEvent, napProbability } from '../lib/forecast.js';
 import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -163,6 +163,13 @@ function renderNextEventCard(prediction, timeFormat) {
         textContent: `Precision: ${Math.round(prediction.precisionScore)}%`,
       }));
     }
+    // PRED-12 / D-15: nap probability score on napStart hero card
+    if (prediction.type === 'napStart' && prediction.napProbabilityScore != null && !prediction.isMissed) {
+      const napScoreText = prediction.napProbabilityScore === 0
+        ? '0% — nap window closed'
+        : `${prediction.napProbabilityScore}% chance of nap today`;
+      card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
+    }
   }
 
   // Missed label (D3-11)
@@ -273,6 +280,13 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
         className: 'time-band',
         textContent: `${formatHHMM(prediction.min, timeFormat)} – ${formatHHMM(prediction.max, timeFormat)}`,
       }));
+    }
+    // PRED-12 / D-14: nap probability score on napStart prediction card (not shown when missed)
+    if (eventType === 'napStart' && prediction.napProbabilityScore != null && !isMissed) {
+      const napScoreText = prediction.napProbabilityScore === 0
+        ? '0% — nap window closed'
+        : `${prediction.napProbabilityScore}% chance of nap today`;
+      card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
 
@@ -503,7 +517,7 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
   coldStartMsg.style.display = 'none';
 
   // Next-event hero (D3-10)
-  const nextEvt = selectNextEvent(predictions, dayRecords);
+  const nextEvt = selectNextEvent(predictions, dayRecords, settingsSnap);
   const heroEl = renderNextEventCard(nextEvt, timeFormat);
   if (heroEl) {
     nextEventCard.appendChild(heroEl);
@@ -512,8 +526,8 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
     nextEventCard.style.display = 'none';
   }
 
-  // Four prediction cards in fixed order (D3-08)
-  const EVENT_TYPES = ['wake', 'bedtime', 'napStart', 'napEnd'];
+  // Four prediction cards in fixed order (D3-08, UI-07 / D-16: bedtime last)
+  const EVENT_TYPES = ['wake', 'napStart', 'napEnd', 'bedtime'];
   for (const type of EVENT_TYPES) {
     const pred = predictions[type];
     if (!pred) continue;
@@ -876,9 +890,53 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
       }
     }
 
+    // PRED-10 / PRED-11: build context for contextual bedtime modifiers.
+    // todayDayRecord: the day record whose date matches today's calendar date.
+    // todayNapStart: whether any napStart event was logged for today's sleep day.
+    const todayAllDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // gsd:allow-ui-clock — display-only context: we need today's local date to find today's record.
+    const todayDateStr = new Date().toISOString().slice(0, 10); // gsd:allow-ui-clock
+    const todayDayRecord = todayAllDays.find(d => d.date === todayDateStr);
+    const todayNapStart = todayDayRecord
+      ? (todayDayRecord.allEvents || []).find(e => e.type === 'napStart')
+      : null;
+    const forecastContext = {
+      isIntenseToday:  todayDayRecord ? todayDayRecord.intense === true : false,
+      napStartLogged:  todayNapStart != null,
+      // gsd:allow-ui-clock — display-only scheduling heuristic for PRED-11 (not domain logic)
+      currentHour:     new Date().getHours(), // gsd:allow-ui-clock
+    };
+    const activityLog = eventLog.getActivityLog();
+    const isNoNapDay = (forecastContext.currentHour >= snap.eveningHour) && (todayDayRecord?.napStart == null);
     const predictions = snap.forecastAlgorithm === 'tif'
-      ? tifForecast(forecastDays, snap)
-      : forecast(forecastDays, snap);
+      ? tifForecast(forecastDays, snap, activityLog, isNoNapDay)
+      : forecast(forecastDays, snap, forecastContext);
+
+    // PRED-12: Compute nap probability score and attach to napStart prediction.
+    // Inline getSlotTime: extractTime is not exported from forecast.js — per D-13.
+    // gsd:allow-ui-clock — scheduling heuristic for current minute (display-only).
+    if (predictions.napStart && !predictions.isColdStart) {
+      const _getSlotTime = slot => (slot == null ? null : (typeof slot === 'object' ? slot.at?.slice(11) : slot));
+      // todayWakeHHMM: 'HH:MM' part of today's wake event, or null if not yet logged.
+      const todayWakeHHMM = _getSlotTime(todayDayRecord?.wake ?? null);
+      // napStreak: consecutive recent days (most recent first, skip today at index 0) without napStart.
+      let napStreak = 0;
+      for (let i = 1; i < forecastDays.length; i++) {
+        if (_getSlotTime(forecastDays[i].napStart) == null) {
+          napStreak++;
+        } else {
+          break;
+        }
+      }
+      const currentMinute = new Date().getMinutes(); // gsd:allow-ui-clock
+      predictions.napStart.napProbabilityScore = napProbability(forecastDays, snap, {
+        currentHour:   forecastContext.currentHour,
+        currentMinute,
+        napStreak,
+        todayWakeHHMM,
+      });
+    }
+
     renderForecastSection(predictions, snap, forecastDays, nextEventCard, coldStartMsg, forecastCards);
   }
 }

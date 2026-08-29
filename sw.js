@@ -33,6 +33,7 @@ const PRECACHE_LIST = Object.freeze([
   './js/adapters/clock-system.js',
   './js/adapters/storage-local.js',
   // Pure-logic lib
+  './js/lib/accuracy-tif.js',
   './js/lib/accuracy.js',
   './js/lib/chart-data.js',
   './js/lib/csv-parse.js',

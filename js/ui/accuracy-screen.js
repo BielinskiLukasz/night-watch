@@ -25,6 +25,7 @@
 
 import { computeAccuracy } from '../lib/accuracy.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
+import { computeTifBoundsHistory, computeTifAccuracy } from '../lib/accuracy-tif.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants (Object.freeze per CLAUDE.md convention)
@@ -56,6 +57,28 @@ const ACCURACY_COLS = Object.freeze([
  * Used to determine when to show "—" for insufficient nap data (D7-15).
  */
 const NAP_TYPES = Object.freeze(new Set(['napStart', 'napEnd']));
+
+/**
+ * Row definitions for the TIF 4×3 accuracy grid (TIF-14, D-04).
+ * One row per event type; key matches TifAccuracyResult property names.
+ */
+const TIF_ACCURACY_ROWS = Object.freeze([
+  { key: 'wake',     label: 'Wake'      },
+  { key: 'napStart', label: 'Nap Start' },
+  { key: 'napEnd',   label: 'Nap End'   },
+  { key: 'bedtime',  label: 'Bedtime'   },
+]);
+
+/**
+ * Column definitions for the TIF 4×3 accuracy grid (TIF-14, D-04, D-05).
+ * windowHit/highConf: { count, pct } — rendered as 'N%'.
+ * avgWidthMin: number — rendered as '±N min'.
+ */
+const TIF_ACCURACY_COLS = Object.freeze([
+  { key: 'windowHit',  label: 'Win Hit %'  },
+  { key: 'avgWidthMin', label: 'Avg Width' },
+  { key: 'highConf',   label: 'High Conf %' },
+]);
 
 // ---------------------------------------------------------------------------
 // Private rendering helpers
@@ -184,6 +207,103 @@ function buildAccuracyGrid(gridEl, result, snap) {
   }
 }
 
+/**
+ * Build the TIF accuracy table element (D-04, D-05, TIF-14).
+ *
+ * Returns a <table> with one header row (Event + 3 stat columns) and
+ * four data rows (one per TIF_ACCURACY_ROWS entry).
+ *
+ * Cell formatting (D-11):
+ *   windowHit / highConf : extracted as .pct → 'N%'   (T-07-06-01: textContent only)
+ *   avgWidthMin           : '±N min' (Math.round)
+ *   null / missing        : '—'
+ *
+ * @param {object} stats  TifAccuracyResult from computeTifAccuracy:
+ *   { wake, napStart, napEnd, bedtime } each with
+ *   { windowHit: {count,pct}, avgWidthMin: number, highConf: {count,pct} }
+ * @param {object} snap   settings snapshot (accepted for future extension — not used now)
+ * @returns {HTMLTableElement}
+ */
+function buildTifAccuracyGrid(stats, snap) {
+  const table = document.createElement('table');
+
+  // ---- thead: 'Event' + one th per stat column ----
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  const eventTh = document.createElement('th');
+  // T-07-06-01: textContent only — static string.
+  eventTh.textContent = 'Event';
+  headerRow.appendChild(eventTh);
+
+  for (const col of TIF_ACCURACY_COLS) {
+    const th = document.createElement('th');
+    // T-07-06-01: textContent only — static column label.
+    th.textContent = col.label;
+    headerRow.appendChild(th);
+  }
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // ---- tbody: one tr per event type ----
+  const tbody = document.createElement('tbody');
+
+  for (const row of TIF_ACCURACY_ROWS) {
+    const tr = document.createElement('tr');
+
+    // Row label (th for accessibility).
+    const labelTh = document.createElement('th');
+    // T-07-06-01: textContent only — static row label.
+    labelTh.textContent = row.label;
+    tr.appendChild(labelTh);
+
+    // stats[row.key] may be absent/null when no data exists for this event type.
+    const eventStats = (stats && stats[row.key]) != null ? stats[row.key] : null;
+
+    for (const col of TIF_ACCURACY_COLS) {
+      const td = document.createElement('td');
+
+      // Extract the cell value from eventStats.
+      // windowHit and highConf are { count, pct } objects — we render .pct.
+      // avgWidthMin is a plain number.
+      let cellValue = null;
+      if (eventStats !== null) {
+        if (col.key === 'avgWidthMin') {
+          // Plain number; null means no data (not expected from current impl,
+          // but guarded for robustness).
+          cellValue = eventStats.avgWidthMin != null ? eventStats.avgWidthMin : null;
+        } else {
+          // windowHit or highConf: { count, pct } — extract pct.
+          const raw = eventStats[col.key];
+          cellValue = (raw != null && raw.pct != null) ? raw.pct : null;
+        }
+      }
+
+      if (cellValue === null) {
+        // No data — D-08 / ASSUMPTION TIF-14 no-nap.
+        // T-07-06-01: textContent only.
+        td.textContent = '—';
+      } else if (col.key === 'avgWidthMin') {
+        // D-11: Avg Width formatted as '±N min'.
+        // T-07-06-01: textContent only — computed integer.
+        td.textContent = '±' + Math.round(cellValue) + ' min';
+      } else {
+        // D-11: Win Hit % and High Conf % formatted as 'N%'.
+        // T-07-06-01: textContent only — computed integer 0-100.
+        td.textContent = cellValue + '%';
+      }
+
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  return table;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -231,6 +351,48 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
   root.replaceChildren(stageBadge, gridRoot);
 
   /**
+   * Render the classic accuracy grid (existing path).
+   * Restores the permanent structure (stageBadge + gridRoot) if it was replaced
+   * by a cold-start or TIF render, then renders stage badge + accuracy grid.
+   *
+   * @param {HTMLElement} root
+   * @param {object} accuracy   AccuracyResult from computeAccuracy
+   * @param {object} snap       settings snapshot
+   */
+  function renderAccuracy(root, accuracy, snap) {
+    // Restore permanent structure if it was replaced by cold-start or TIF rendering.
+    if (!root.contains(gridRoot)) {
+      root.replaceChildren(stageBadge, gridRoot);
+    }
+    // Stage badge (D7-18): show/hide with stage.name via textContent.
+    renderStageBadge(stageBadge, snap);
+    // Populate the grid (clears gridRoot internally).
+    buildAccuracyGrid(gridRoot, accuracy, snap);
+  }
+
+  /**
+   * Render the TIF accuracy grid (full implementation — TIF-14, D-01, D-04).
+   *
+   * Replaces root content with a section containing the TIF 4×3 accuracy table.
+   * Separates from the classic path — no stageBadge/gridRoot used here.
+   *
+   * @param {HTMLElement} root
+   * @param {object} tifStats   TifAccuracyResult from computeTifAccuracy
+   * @param {object} snap       settings snapshot
+   */
+  function renderTifAccuracy(root, tifStats, snap) {
+    const section = document.createElement('section');
+    section.className = 'accuracy-section';
+    const h2 = document.createElement('h2');
+    // T-07-06-01: textContent only — static string.
+    h2.textContent = 'TIF Accuracy';
+    section.appendChild(h2);
+    const grid = buildTifAccuracyGrid(tifStats, snap);
+    section.appendChild(grid);
+    root.replaceChildren(section);
+  }
+
+  /**
    * Re-render the accuracy grid from current store state.
    *
    * Called: on mount, on eventLog change, on settings change.
@@ -255,22 +417,20 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
       return;
     }
 
-    // Above cold-start threshold: restore permanent structure if it was replaced
-    // by a previous cold-start render. This handles the case where the user logs
-    // enough data to cross the threshold while on this screen.
-    if (!root.contains(gridRoot)) {
-      root.replaceChildren(stageBadge, gridRoot);
+    // TIF/classic branch (D-01): show algorithm-specific accuracy grid.
+    const isTif = snap.forecastAlgorithm === 'tif';
+    if (isTif) {
+      // D-01: TIF active — compute retroactive TIF bounds and render TIF accuracy grid.
+      // activityLog obtained via eventLog.getActivityLog() (ASSUMPTION TIF-14 activityLog).
+      const activityLog = eventLog.getActivityLog();
+      const tifBoundsHistory = computeTifBoundsHistory(days, snap, activityLog);
+      const tifStats = computeTifAccuracy(tifBoundsHistory, days);
+      renderTifAccuracy(root, tifStats, snap);
+    } else {
+      // Classic path: compute accuracy and delegate DOM updates to renderAccuracy.
+      const accuracy = computeAccuracy(days, snap);
+      renderAccuracy(root, accuracy, snap);
     }
-
-    // Stage badge (D7-18): show/hide with stage.name via textContent.
-    renderStageBadge(stageBadge, snap);
-
-    // Pure backtesting computation — all day records (no cold-start limit here;
-    // computeAccuracy handles its own internal loop bounds).
-    const result = computeAccuracy(days, snap);
-
-    // Populate the grid (clears gridRoot internally).
-    buildAccuracyGrid(gridRoot, result, snap);
   };
 
   // Initial render.

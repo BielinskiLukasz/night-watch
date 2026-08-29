@@ -325,6 +325,105 @@ export function detectColdStart(dayRecords, minDays) {
 }
 
 // ---------------------------------------------------------------------------
+// PRED-09 (D-10): Duration-band helper for wake prediction
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a wake duration-band from rolling night sleep durations + lastBedtime.
+ *
+ * Night sleep duration per day = wake - bedtime (minutes-since-midnight), normalized
+ * for midnight crossover: if dur < 0 then dur += 24*60 (D-10).
+ *
+ * Returns {min, max} in minutes-since-midnight (normalized to [0, 1440)), or null
+ * if no window days have both wake and bedtime, or if lastBedtimeHHMM is null.
+ *
+ * Values are normalized via % 1440 before return so they are directly comparable
+ * with hour-band values (which are always in [0, 1440)) — without normalization,
+ * lastBedtime + duration for overnight sleep exceeds 1440, causing incorrect
+ * Math.min/max comparisons against the hour-band (backstop invariant D-11).
+ *
+ * @param {object[]} window           rolling window of day records (post-slice)
+ * @param {string|null} lastBedtimeHHMM  'HH:MM' of the most recent bedtime, or null
+ * @returns {{min: number, max: number}|null}
+ */
+function computeDurationBand(window, lastBedtimeHHMM) {
+  if (!lastBedtimeHHMM) return null;
+  const lastBedtimeMin = timeToMinutes(lastBedtimeHHMM);
+
+  // Collect valid night sleep durations from window days that have both wake and bedtime
+  const durations = [];
+  for (const day of window) {
+    const wakeStr = extractTime(day.wake);
+    const bedStr = extractTime(day.bedtime);
+    if (!wakeStr || !bedStr) continue;
+    let dur = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    // T-12-04-01: normalize midnight crossover (e.g., wake=06:30, bedtime=22:00 → dur=-930+1440=510)
+    if (dur < 0) dur += 24 * 60;
+    durations.push(dur);
+  }
+  // T-12-04-02: empty durations → return null so caller falls back to hour-band
+  if (durations.length === 0) return null;
+
+  durations.sort((a, b) => a - b);
+  const p10 = percentile(durations, FORECAST_CONFIG.P_LOW);
+  const p90 = percentile(durations, FORECAST_CONFIG.P_HIGH);
+  if (p10 === null || p90 === null) return null;
+
+  // Normalize to [0, 1440) so values are directly comparable with hour-band minutes.
+  // Without this, lastBedtime(22:00=1320) + duration(540) = 1860, which compares
+  // as "larger" than hourBand.max(420) but minutesToTime(1860)='07:00' could be
+  // earlier than hourBand.max='07:30' after wrapping — violating the backstop invariant.
+  const DAY_MINUTES = 24 * 60;
+  return {
+    min: ((lastBedtimeMin + p10) % DAY_MINUTES + DAY_MINUTES) % DAY_MINUTES,
+    max: ((lastBedtimeMin + p90) % DAY_MINUTES + DAY_MINUTES) % DAY_MINUTES,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PRED-10 / PRED-11: sub-window bedtime helper (D-03 / D-08)
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a bedtime band from a filtered sub-window of day records.
+ *
+ * If the sub-window has >= minDays records with bedtime data, use their own
+ * P10/P50/P90 percentiles (calculatePercentiles on sub-window).
+ * If the sub-window has < minDays records, shift the full-window P50 bedtime
+ * by -fallbackOffsetMinutes and apply the same offset to min/max.
+ *
+ * Returns { central, min, max } as numeric minute values (NOT HH:MM strings),
+ * or null if the full window has no bedtime data at all (caller falls through
+ * to the normal forecastEvent path).
+ *
+ * D-03 / D-08 pattern.
+ *
+ * @param {object[]} window                   rolling window of day records (post-slice)
+ * @param {Function} filterFn                 predicate to select the sub-population (e.g. d => d.intense === true)
+ * @param {number}   fallbackOffsetMinutes    minutes to subtract from full-window P50 when sub-window is thin
+ * @param {object}   settings                 settings snapshot (needs .minDays)
+ * @returns {{ central: number, min: number, max: number }|null}
+ */
+function subWindowBedtime(window, filterFn, fallbackOffsetMinutes, settings) {
+  const { minDays } = settings;
+  const subWin = window.filter(filterFn);
+
+  if (subWin.length >= minDays) {
+    // Enough history in the sub-window — use its own percentiles
+    return calculatePercentiles(subWin, d => extractTime(d.bedtime));
+  }
+
+  // Thin history — shift full-window percentiles by fixed offset (D-03 fallback)
+  const base = calculatePercentiles(window, d => extractTime(d.bedtime));
+  if (base === null) return null;
+  return {
+    central: base.central - fallbackOffsetMinutes,
+    min:     base.min    - fallbackOffsetMinutes,
+    max:     base.max    - fallbackOffsetMinutes,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main forecast function
 // ---------------------------------------------------------------------------
 
@@ -369,6 +468,17 @@ function extractTime(slot) {
  *   4. Convert numeric minutes back to 'HH:MM' strings (5-minute precision)
  *   5. If no days have that event → { central: null, min: null, max: null }
  *
+ * PRED-09 wake band (D-10, D-11, D-12):
+ *   The wake prediction min/max is the outer union of two independent signals:
+ *   - Hour-band: P10/P90 of historical wake hours (circadian rhythm signal)
+ *   - Duration-band: most recent bedtime + P10/P90 of rolling night sleep durations
+ *     (sleep-cycle length signal). Computed by computeDurationBand().
+ *   Union: final_min = min(hourBand.min, durBand.min),
+ *          final_max = max(hourBand.max, durBand.max).
+ *   Central stays P50 of wake hours — unchanged by the duration-band (D-11).
+ *   When lastBedtime is unavailable (null), falls back to the hour-band only.
+ *   bedtime/napStart/napEnd are NOT affected by the duration-band (D-12).
+ *
  * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
  *   Each record is expected to have:
  *     - wake      {string|null}  'HH:MM' or null
@@ -376,9 +486,16 @@ function extractTime(slot) {
  *     - napStart  {string|null}  'HH:MM' or null
  *     - napEnd    {string|null}  'HH:MM' or null
  *     - rejected  {boolean}      true if day is flagged as outlier
+ *     - intense   {boolean}      true if day is flagged as an intense-activity day (PRED-10)
  *
  * @param {object} settings  settings snapshot from settings.get()
- *   Expected fields: minDays, maxDelta, statBlend, windowDays
+ *   Expected fields: minDays, maxDelta, statBlend, windowDays,
+ *   eveningHour, intenseDayOffsetMinutes, noNapBedtimeOffsetMinutes
+ *
+ * @param {object} [context={}]  today's contextual state for bedtime modifiers
+ * @param {boolean} [context.isIntenseToday=false]   true when today is an intense day (PRED-10)
+ * @param {boolean} [context.napStartLogged=false]   true when a nap-start was logged today (PRED-11)
+ * @param {number}  [context.currentHour=0]          current local hour 0–23 (PRED-11 threshold check)
  *
  * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd? }}
  *   When isColdStart=true: no prediction fields present.
@@ -386,7 +503,7 @@ function extractTime(slot) {
  *     { central: string|null, min: string|null, max: string|null } (low uncertainty)
  *     or { probabilityBand: [{time, prob}, ...] } (high uncertainty, D3-04)
  */
-export function forecast(dayRecords, settings) {
+export function forecast(dayRecords, settings, context = {}) {
   const { windowDays, minDays, maxDelta } = settings;
 
   // D3-06: Cold-start gate — check BEFORE slicing window so we count ALL available history
@@ -433,10 +550,115 @@ export function forecast(dayRecords, settings) {
     };
   }
 
+  // Destructure context for PRED-10 / PRED-11 contextual bedtime modifiers (D-03 / D-08)
+  const { isIntenseToday = false, napStartLogged = false, currentHour = 0 } = context;
+  const eveningHour = settings.eveningHour ?? 18;
+
+  // PRED-09 (D-10): find the most recent bedtime in the window for duration-band
+  let lastBedtimeHHMM = null;
+  for (let i = window.length - 1; i >= 0; i--) {
+    const b = extractTime(window[i].bedtime);
+    if (b) { lastBedtimeHHMM = b; break; }
+  }
+
+  // PRED-09 (D-11): compute wake prediction as outer union of hour-band and duration-band.
+  // The hour-band captures circadian rhythm; the duration-band captures sleep-cycle length.
+  // Unioning them produces a conservative wider window that accommodates both signals.
+  const wakePred = (() => {
+    const wakeHourResult = calculatePercentiles(window, d => extractTime(d.wake));
+    if (wakeHourResult === null) {
+      return { central: null, min: null, max: null };
+    }
+
+    const durBand = computeDurationBand(window, lastBedtimeHHMM);
+    // Union: final band is the outer envelope of both bands.
+    // When durBand is null (no lastBedtime or no valid durations), use hour-band only (D-11 fallback).
+    const finalMin = durBand
+      ? Math.min(wakeHourResult.min, durBand.min)
+      : wakeHourResult.min;
+    const finalMax = durBand
+      ? Math.max(wakeHourResult.max, durBand.max)
+      : wakeHourResult.max;
+
+    // D3-04: Check probability-band fallback on the final (possibly wider) band.
+    const validWakeTimes = window
+      .filter(d => extractTime(d.wake) != null)
+      .map(d => timeToMinutes(extractTime(d.wake)))
+      .sort((a, b) => a - b);
+    const band = generateProbabilityBand(validWakeTimes, finalMin, finalMax, maxDelta);
+    if (band !== null) {
+      return { probabilityBand: band };
+    }
+
+    // D-11: central stays P50 of wake hours — the duration-band does not alter the central prediction.
+    return {
+      central: minutesToTime(wakeHourResult.central),
+      min:     minutesToTime(finalMin),
+      max:     minutesToTime(finalMax),
+    };
+  })();
+
+  // PRED-10 / PRED-11: compute contextual bedtime prediction.
+  // PRED-11 takes precedence over PRED-10 when both conditions are met.
+  const bedtimePred = (() => {
+    // PRED-11: no-nap-day shift — fires when evening arrived and no nap logged today
+    const noNapFired = !napStartLogged && currentHour >= eveningHour;
+    if (noNapFired) {
+      // Sub-window: days where no napStart was recorded (null napStart slot)
+      const noNapResult = subWindowBedtime(
+        window,
+        d => extractTime(d.napStart) == null,
+        settings.noNapBedtimeOffsetMinutes ?? 30,
+        settings,
+      );
+      if (noNapResult !== null) {
+        // D3-04: check probability-band fallback
+        const bedtimeTimes = window
+          .filter(d => extractTime(d.bedtime) != null)
+          .map(d => timeToMinutes(extractTime(d.bedtime)))
+          .sort((a, b) => a - b);
+        const band = generateProbabilityBand(bedtimeTimes, noNapResult.min, noNapResult.max, maxDelta);
+        if (band) return { probabilityBand: band };
+        return {
+          central: minutesToTime(noNapResult.central),
+          min:     minutesToTime(noNapResult.min),
+          max:     minutesToTime(noNapResult.max),
+        };
+      }
+      // noNapResult null (no bedtime data at all) → fall through to normal bedtime
+    }
+
+    // PRED-10: intense-day modifier — fires when today is an intense day
+    if (isIntenseToday) {
+      const intenseResult = subWindowBedtime(
+        window,
+        d => d.intense === true,
+        settings.intenseDayOffsetMinutes ?? 30,
+        settings,
+      );
+      if (intenseResult !== null) {
+        const bedtimeTimes = window
+          .filter(d => extractTime(d.bedtime) != null)
+          .map(d => timeToMinutes(extractTime(d.bedtime)))
+          .sort((a, b) => a - b);
+        const band = generateProbabilityBand(bedtimeTimes, intenseResult.min, intenseResult.max, maxDelta);
+        if (band) return { probabilityBand: band };
+        return {
+          central: minutesToTime(intenseResult.central),
+          min:     minutesToTime(intenseResult.min),
+          max:     minutesToTime(intenseResult.max),
+        };
+      }
+    }
+
+    // Normal bedtime — no contextual modifier applies
+    return forecastEvent(d => extractTime(d.bedtime));
+  })();
+
   return {
     isColdStart: false,
-    wake:     forecastEvent(d => extractTime(d.wake)),
-    bedtime:  forecastEvent(d => extractTime(d.bedtime)),
+    wake:     wakePred,
+    bedtime:  bedtimePred,
     napStart: forecastEvent(d => extractTime(d.napStart)),
     napEnd:   forecastEvent(d => extractTime(d.napEnd)),
   };
@@ -483,7 +705,7 @@ export function forecast(dayRecords, settings) {
  *   - All other fields from the prediction (central, min, max or probabilityBand)
  *   Returns null when no events have been logged or no predictions are available.
  */
-export function selectNextEvent(predictions, dayRecords) {
+export function selectNextEvent(predictions, dayRecords, settings = {}) {
   // ── Step 1: Find the most-recently-logged event across all day records ────
   // allEvents lists within each day record hold the raw events in insertion
   // order. We collect every event and pick the latest by at-string (ISO sort).
@@ -501,7 +723,57 @@ export function selectNextEvent(predictions, dayRecords) {
   // No events logged → cold start; UI suppresses the next-event card
   if (lastEvent === null) return null;
 
-  // ── Step 2: Determine cycle-aware priority order (D3-10) ─────────────────
+  // ── Inner helper: walk a priority list and return the first available prediction ─
+  // Shared by both the PRED-08 early-return path and the switch-based path.
+  function buildResult(preds, priorityList) {
+    for (const eventType of priorityList) {
+      const pred = preds[eventType];
+      // Skip tiers with no prediction (event type never recorded in history)
+      if (!pred) continue;
+
+      // D3-11: Detect "missed" predictions.
+      // A prediction is missed when its central time has passed today.
+      // We compare using minutes-since-midnight only (no date arithmetic needed —
+      // the prediction is always relative to "today's" schedule).
+      // NOTE: this uses performance-time-safe approach — only for UI flagging,
+      // not for sorting. The clock seam (D-07) is not threaded here because
+      // selectNextEvent is pure logic; the UI layer may override this with a
+      // real clock if needed.
+      let isMissed = false;
+      if (pred.central) {
+        // Wall-clock "now" in minutes — safe since we only compare HH:MM
+        // This is the only place in forecast.js that reads wall-clock time.
+        // Phase 8 can inject a clock seam if stricter testability is needed.
+        // gsd:allow-ui-clock — non-domain UI prefill: isMissed is display-only metadata (D3-11).
+        const nowDate = new Date(); // gsd:allow-ui-clock
+        const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+        const centralMinutes = timeToMinutes(pred.central);
+        isMissed = centralMinutes < nowMinutes;
+      }
+
+      return {
+        type: eventType,
+        isMissed,
+        ...pred,
+      };
+    }
+    // All prediction tiers exhausted with no match
+    return null;
+  }
+
+  // ── Step 2: PRED-08 (D-07) evening-hour override ─────────────────────────
+  // When the current hour is at or past eveningHour AND the last logged event
+  // was a wake, skip the nap-start priority and surface bedtime instead.
+  // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic
+  const nowHour = new Date().getHours(); // gsd:allow-ui-clock
+  const eveningHour = (settings && typeof settings.eveningHour === 'number')
+    ? settings.eveningHour
+    : 18;
+  if (lastEvent.type === 'wake' && nowHour >= eveningHour) {
+    return buildResult(predictions, ['bedtime', 'napEnd', 'napStart', 'wake']);
+  }
+
+  // ── Step 3: Determine cycle-aware priority order (D3-10) ─────────────────
   // The priority array encodes "what naturally comes next in the sleep cycle"
   // based on the most recently logged event type.
   let priority;
@@ -527,41 +799,115 @@ export function selectNextEvent(predictions, dayRecords) {
       priority = ['wake', 'bedtime', 'napStart', 'napEnd'];
   }
 
-  // ── Step 3: Walk the priority list and return the first available prediction ─
-  for (const eventType of priority) {
-    const pred = predictions[eventType];
-    // Skip tiers with no prediction (event type never recorded in history)
-    if (!pred) continue;
+  return buildResult(predictions, priority);
+}
 
-    // D3-11: Detect "missed" predictions.
-    // A prediction is missed when its central time has passed today.
-    // We compare using minutes-since-midnight only (no date arithmetic needed —
-    // the prediction is always relative to "today's" schedule).
-    // NOTE: this uses performance-time-safe approach — only for UI flagging,
-    // not for sorting. The clock seam (D-07) is not threaded here because
-    // selectNextEvent is pure logic; the UI layer may override this with a
-    // real clock if needed.
-    let isMissed = false;
-    if (pred.central) {
-      // Wall-clock "now" in minutes — safe since we only compare HH:MM
-      // This is the only place in forecast.js that reads wall-clock time.
-      // Phase 8 can inject a clock seam if stricter testability is needed.
-      // gsd:allow-ui-clock — non-domain UI prefill: isMissed is display-only metadata (D3-11).
-      const nowDate = new Date(); // gsd:allow-ui-clock
-      const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-      const centralMinutes = timeToMinutes(pred.central);
-      isMissed = centralMinutes < nowMinutes;
+// ---------------------------------------------------------------------------
+// PRED-12: Nap probability score (D-13)
+// ---------------------------------------------------------------------------
+
+/**
+ * Relative weights for the four nap-probability signals.
+ * Must sum to 1.0. Object.freeze prevents accidental mutation.
+ *
+ * Signal 1 — napFrequency   (40%): fraction of recent days that had a nap
+ * Signal 2 — elapsedWakeTime(30%): elapsed fraction of the napStart P10–P90 window
+ * Signal 3 — noNapStreak   (20%): consecutive days without a nap (penalty)
+ * Signal 4 — windowPassed  (10%): 1 if current time is still inside the nap window
+ *
+ * @type {Readonly<{napFrequency:number, elapsedWakeTime:number, noNapStreak:number, windowPassed:number}>}
+ */
+export const NAP_SCORE_WEIGHTS = Object.freeze({
+  napFrequency:    0.40,
+  elapsedWakeTime: 0.30,
+  noNapStreak:     0.20,
+  windowPassed:    0.10,
+});
+
+/**
+ * Compute a nap-probability score for today.
+ *
+ * Returns:
+ *   null  — cold-start or insufficient data (cannot produce a meaningful estimate)
+ *   0     — the nap window has already passed (distinct from null)
+ *   1–100 — integer probability percentage
+ *
+ * @param {Array<{napStart: string|null, rejected?: boolean}>} dayRecords
+ *   Stage-filtered day records. Each record may have a `napStart` field ('HH:MM' or null).
+ * @param {{minDays: number, windowDays: number, maxDelta: number}} settings
+ * @param {{currentHour: number, currentMinute?: number, napStreak?: number, todayWakeHHMM?: string|null}} context
+ * @returns {number|null}
+ */
+export function napProbability(dayRecords, settings, context) {
+  // Cold-start gate: insufficient history
+  if (!dayRecords || dayRecords.length < (settings.minDays || 1)) return null;
+
+  const {
+    currentHour    = 0,
+    currentMinute  = 0,
+    napStreak      = 0,
+    todayWakeHHMM  = null,
+  } = context || {};
+
+  const nowMins = currentHour * 60 + currentMinute;
+
+  // Helper: extract 'HH:MM' from a dayRecord.napStart field.
+  // dayRecord fields in this module can be bare 'HH:MM' strings (test helpers) or null.
+  const getSlotTime = slot => (slot == null ? null : (typeof slot === 'object' ? slot.at?.slice(11) : slot));
+
+  // --- Signal 1: napFrequency (40%) ---
+  const napDays = dayRecords.filter(d => getSlotTime(d.napStart) !== null).length;
+  const sig1 = napDays / dayRecords.length;
+
+  // --- napStart percentiles for signals 2 and 4 ---
+  // calculatePercentiles expects getTimeFn to return 'HH:MM' (not minutes); it calls
+  // timeToMinutes internally. Its return shape is { min, central, max } in minutes.
+  const napStartResult = calculatePercentiles(
+    dayRecords,
+    d => getSlotTime(d.napStart),  // returns 'HH:MM' string or null
+  );
+
+  // --- Signal 4: windowPassed (10%) ---
+  // If P90 of napStart is known and current time is past it → return 0 (window closed).
+  let sig4 = 1;
+  if (napStartResult !== null) {
+    const p90_ns = napStartResult.max; // calculatePercentiles returns { min, central, max }
+    if (p90_ns !== null && nowMins > p90_ns) {
+      return 0; // window closed — hard collapse
     }
+  }
+  // sig4 remains 1 (window open or unknown)
 
-    return {
-      type: eventType,
-      isMissed,
-      ...pred,
-    };
+  // --- Signal 2: elapsedWakeTime (30%) ---
+  let sig2 = 0;
+  if (
+    todayWakeHHMM !== null &&
+    napStartResult !== null &&
+    napStartResult.min !== null &&
+    napStartResult.max !== null &&
+    napStartResult.max > napStartResult.min
+  ) {
+    const wakeMins   = timeToMinutes(todayWakeHHMM);
+    const windowEnd  = napStartResult.max;
+    const denominator = windowEnd - wakeMins;
+    if (denominator > 0) {
+      const elapsed = Math.max(0, Math.min(nowMins - wakeMins, denominator));
+      sig2 = Math.max(0, Math.min(1, elapsed / denominator));
+    }
   }
 
-  // All prediction tiers exhausted with no match
-  return null;
+  // --- Signal 3: noNapStreak (20%) ---
+  const streak = typeof napStreak === 'number' ? napStreak : 0;
+  const sig3 = Math.max(0, 1 - streak / 5);
+
+  // --- Weighted sum → integer score ---
+  const raw =
+    NAP_SCORE_WEIGHTS.napFrequency    * sig1 +
+    NAP_SCORE_WEIGHTS.elapsedWakeTime * sig2 +
+    NAP_SCORE_WEIGHTS.noNapStreak     * sig3 +
+    NAP_SCORE_WEIGHTS.windowPassed    * sig4;
+
+  return Math.round(raw * 100);
 }
 
 // ---------------------------------------------------------------------------

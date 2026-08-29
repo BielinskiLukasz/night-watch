@@ -57,6 +57,11 @@ export const RULES = Object.freeze({
   forecastAlgorithm: { type: 'enum', values: new Set(['classic', 'tif']) },  // TIF-01 / D10-11
   trimPct:           { type: 'integer', min: 0, max: 40 },                   // TIF-02 / D10-13
   precisionTarget:   { type: 'integer', min: 1, max: 300 },                  // TIF-03 / D10-13
+  tifRollingDays:    { type: 'integer', min: 3, max: 30 },                   // TIF-13 / D-07
+  intenseDays:               { type: 'string[]' },                            // PRED-10: day-of-week names
+  eveningHour:               { type: 'integer', min: 0, max: 23 },           // PRED-08 / D-06
+  noNapBedtimeOffsetMinutes: { type: 'integer', min: 0, max: 120 },          // PRED-11 / D-08
+  intenseDayOffsetMinutes:   { type: 'integer', min: 0, max: 120 },          // PRED-10 / D-08
 });
 
 // ---------------------------------------------------------------------------

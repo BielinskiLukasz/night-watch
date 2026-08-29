@@ -2,7 +2,7 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-25 (added B-036 — missing ratio columns in metrics screen; B-037 — TIF use of recorded MA/AA and rolling windows)
+Last updated: 2026-08-25 (removed B-021, B-026 — shipped in v1.2; promoted B-004–007, B-031, B-033–037 → v1.3)
 Last assigned ID: **B-037** — next new item must be **B-038**
 
 ---
@@ -133,7 +133,7 @@ These four items improve the accuracy and adaptability of the forecasting engine
 ### B-004 · Time-based bedtime rule
 
 **Source:** user input (2026-06-04)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 12) · not yet planned
 **Earliest sensible slot:** post-Phase 3 (after baseline forecaster ships) — can be a quick refinement plan
 
 **What:** When the current time hour is >= 18 and the previous event is "wake", predict bedtime as the next event (not nap start). This rule reflects the intuition that late-afternoon wakes naturally lead to bedtime, not a nap.
@@ -156,7 +156,7 @@ These four items improve the accuracy and adaptability of the forecasting engine
 ### B-005 · Duration-based prediction
 
 **Source:** user input (2026-06-04)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 12) · not yet planned
 **Earliest sensible slot:** post-Phase 3, paired with B-004 as a refinement bundle
 
 **What:** Predict wake times not only from hour-of-day patterns, but also from typical sleep-duration patterns. E.g., if the child typically sleeps 10.5–11.5 hours and goes down at 22:00, predict wake at ~08:30–09:30. Calculate predictions separately for both duration and hour patterns, then union them for a robust forecast.
@@ -181,7 +181,7 @@ These four items improve the accuracy and adaptability of the forecasting engine
 ### B-006 · Intense day checkbox
 
 **Source:** user input (2026-06-04)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 12) · not yet planned
 **Earliest sensible slot:** post-Phase 4 (history edit/delete lands) — or bundled with B-004 & B-005 if kept together
 
 **What:** Add a boolean "intense day" flag in the event-entry form (quick-log or manual entry). Store this flag in the history record and include it as contextual metadata in the prediction algorithm. E.g., if the child had an "intense day", expect later bedtime or longer nap.
@@ -207,7 +207,7 @@ These four items improve the accuracy and adaptability of the forecasting engine
 ### B-007 · Missing nap impact on bedtime
 
 **Source:** user input (2026-06-04)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 12) · not yet planned
 **Earliest sensible slot:** post-Phase 3, with B-004 & B-005 as a prediction-refinement bundle
 
 **What:** When predicting bedtime after a wake event (i.e., previous event = "wake"), check the historical record to detect how sleep behavior changes when the child skips their typical nap. Use this pattern to adjust the bedtime prediction (earlier bedtime? longer sleep? earlier nap next day?).
@@ -503,120 +503,6 @@ These four items were surfaced during Phase 7 UAT and post-launch review.
 
 ---
 
-## Prediction algorithm (specified 2026-07-12)
-
-### B-021 · Trimmed Intersection Forecast (TIF) algorithm
-
-**Source:** user input (2026-06-30, fully specified 2026-07-12)
-**Status:** captured · not scheduled — **target: v1.2**
-**Earliest sensible slot:** v1.2 milestone — replaces or runs alongside the Phase 3 forecaster
-
-**Algorithm name:** Trimmed Intersection Forecast (TIF). Suggested module: `js/lib/forecast-tif.js`, same return shape as `js/lib/forecast.js` so it slots in as an alternate strategy.
-
----
-
-**Step 1 — Percentile trim (configurable)**
-
-User configures a trim percentage `trimPct` in Settings (e.g. 10 means "remove 10% of extreme values"). For each event type independently:
-
-- Count total events in history: `N`
-- Count manually excluded events already removed: `manualExcluded`
-- Remaining auto-trim budget = `floor(N × trimPct / 100) − manualExcluded` (minimum 0)
-- Split budget symmetrically: remove the earliest `floor(budget / 2)` and latest `ceil(budget / 2)` events
-- This trim is applied **per event type**, not per day — a day is only fully excluded if all its event types are trimmed away
-
-Example: 10% of 500 events = 50 to trim. 20 already manually excluded → auto-trim 30 more (15 earliest, 15 latest).
-
----
-
-**Step 2 — Multi-source windows and intersection**
-
-For each event type, the algorithm computes several independent **windows** (a min and a max time, in minutes-from-midnight). Then it combines them into one final range:
-
-- **Final start** = `max` of all window starts (latest of the lower bounds)
-- **Final end** = `min` of all window ends (earliest of the upper bounds)
-
-This is the intersection: the region where **all** windows agree the event could occur.
-
-If intersection is empty (start > end), fall back to the union (min of starts, max of ends) and flag a "low confidence" state.
-
-Excluded events (manual + auto-trim) are not included in any window calculation.
-
----
-
-**Step 3 — Windows per event type**
-
-For each window that derives from a duration metric (sleep length, nap length, etc.), that metric is also subject to the same percentile trim independently before its min/max is computed.
-
-**Anchor rule:** when computing a derived window, the algorithm needs an anchor time (the "other endpoint"):
-- If the anchoring event **is** the latest logged observation → use its actual logged time
-- If the anchoring event **has not been logged yet** → use the midpoint (average) of that event's own TIF prediction
-
-**Wake-up windows:**
-1. **Historic wake-up band** — min and max of trimmed historic wake times
-2. **Sleep-length band** — trimmed min/max of night-sleep duration; project onto wake time using `bedtime_anchor + [minSleep, maxSleep]` where `bedtime_anchor` follows the anchor rule above
-3. **Sleep + same-day nap combined band** — trimmed min/max of (night-sleep + nap duration for that day); project onto wake time using the same `bedtime_anchor`
-
-**Nap-start windows:**
-1. **Historic nap-start band** — min and max of trimmed historic nap-start times
-2. **Activity-before-nap band** — trimmed min/max of (nap-start − wake) durations; project onto nap time using `wake_anchor + [minActivity, maxActivity]` where `wake_anchor` follows the anchor rule
-
-**Nap-end windows:**
-1. **Historic nap-end band** — min and max of trimmed historic nap-end times
-2. **Nap-length band** — trimmed min/max of nap durations; project onto nap-end using `napStart_anchor + [minNap, maxNap]` where `napStart_anchor` follows the anchor rule
-
-**Bedtime windows:**
-1. **Historic bedtime band** — min and max of trimmed historic bedtime times
-2. **Day-length band** — trimmed min/max of day length (wake → bedtime); project onto bedtime using `napEnd_anchor + [minDay − napDuration, maxDay − napDuration]` — or more simply: `wake_anchor + [minDayLength, maxDayLength]`
-3. **Activity-after-nap band** — trimmed min/max of (bedtime − nap-end) durations; project onto bedtime using `napEnd_anchor + [minActivityAfterNap, maxActivityAfterNap]`
-
-**Additional windows to consider (suggested for planning):**
-- **Wake-up**: activity-after-sleep factor band — trimmed min/max of `activityTime / sleepDuration`; if this ratio is stable, it can constrain wake time given a known bedtime
-- **All event types**: stage-scoped window — compute the same historic min/max but filtered to only events within the current active stage; useful when behaviour changed significantly at stage transitions
-- **All event types**: rolling-window variant — last 14 or 30 days only, weighted against the all-time window (gives the algorithm recency bias as the child grows)
-- **Bedtime**: combined sleep+nap band — trimmed min/max of `sleepDuration + napDuration` per day; project onto bedtime from wake anchor (complements day-length band with nap context)
-
----
-
-**Step 4 — Precision scoring and display**
-
-User configures a `precisionTarget` in minutes (e.g. 60 = ±30 min window, or explicitly a window width).
-
-Let `algRange = finalEnd − finalStart` (in minutes).
-
-**Metric (confidence score):**
-- If `algRange ≤ precisionTarget` → score = 100%
-- If `algRange > precisionTarget` → score = `precisionTarget / algRange × 100%`
-
-**Display window:**
-- If `algRange ≤ precisionTarget` → show the algorithm's window as-is
-- If `algRange > precisionTarget` → compute center = `(finalStart + finalEnd) / 2`; display `center − precisionTarget/2` to `center + precisionTarget/2`; show the confidence score alongside
-
----
-
-**Why:** The spreadsheet workflow applies systematic exclusion of outliers and uses multiple independent timing anchors (sleep length, activity time, nap length) to triangulate predictions rather than relying on a single hour-of-day distribution. The TIF algorithm codifies these heuristics explicitly, makes them configurable, and adds a precision metric so users can see how confident the algorithm is in its own output.
-
-**Open questions when this gets planned:**
-
-- Should TIF **replace** the Phase 3 forecaster or run alongside it as an opt-in mode? Opt-in toggle in Settings is the safer v1.2 path.
-- Empty intersection fallback: union with a "low confidence" flag, or show all individual windows separately?
-- Should `trimPct` be a single global setting or per-event-type?
-- Should `precisionTarget` be expressed as a window width (minutes) or a ±half-width (minutes each side)?
-- Stage-scoped and rolling-window variants: build in from the start or add in a later iteration?
-- How should the algorithm behave on cold-start (fewer than N days of data)? Disable trim? Use wider precision band?
-- Should the confidence score appear on the prediction cards, the hero card, or both?
-
-**Implementation notes:**
-
-- New module `js/lib/forecast-tif.js` — pure function `tifForecast(eventLog, settings)` → same return shape as `forecast.js`
-- Settings additions: `trimPct: number` (0–40, step 1, default 10), `precisionTarget: number` (minutes, default 60), `forecastAlgorithm: 'classic' | 'tif'` toggle
-- Depends on `js/lib/metrics.js` (B-026) for duration calculations (sleepDuration, napDuration, activityBeforeNap, activityAfterNap, dayLength, combined)
-- Percentile trim helper: `trimmedMinMax(values, trimPct, manualExcludedCount)` → `{ min, max }`; reusable across all window types
-- Anchor resolution helper: `resolveAnchor(eventType, eventLog, tifPredictions)` → actual logged time or midpoint of TIF prediction for that type
-- Unit-test each window builder independently; integration-test the intersection logic with known fixtures; E2E-test that TIF prediction cards render when the toggle is enabled
-
----
-
 ## More charts and sleep-length calculation audit (captured 2026-07-03)
 
 ### B-025 · More diagrams + verify sleep length calculation
@@ -650,64 +536,6 @@ Let `algRange = finalEnd − finalStart` (in minutes).
 - Audit: read `js/lib/chart-data.js` `buildSleepLengthSeries`, compare against `js/lib/day-bucket.js` day-length derivation and the spreadsheet's `Długość snu` column (PROJECT.md Context). Write a unit test that pins the formula with known inputs including midnight-crossings and rejected days.
 - New charts: each follows the existing pattern in `charts-screen.js` — `buildXxx(days)` in chart-data.js + `renderXxxChart(sectionEl, days, snap)` in charts-screen.js + a new `sectionN` div in `mountChartsScreen`. Unit-test the data transform; E2E-test that the chart section renders.
 - Stage-boundary annotations: require passing `stages` and `activeStageId` to the render functions (not currently threaded through all chart renderers).
-
----
-
-### B-026 · Calculated sleep & activity metrics dashboard
-
-**Source:** user input (2026-07-03, extended 2026-07-12)
-**Status:** captured · not scheduled — **target: v1.2**
-**Earliest sensible slot:** v1.2 milestone — dedicated Metrics phase
-
-**What:** Add a new metrics display section (cards, table, or dedicated screen) that shows calculated daily and historical sleep/activity statistics:
-
-**Daily metrics (per day):**
-- Sleep duration (night sleep: bedtime → wake, in hours:minutes)
-- Nap duration (nap-end − nap-start, in hours:minutes)
-- Day length (wake → next bedtime — total waking window, in hours:minutes)
-- Activity time = day length − nap duration (non-sleep, non-nap awake time)
-- Activity before nap (wake → nap-start)
-- Activity after nap (nap-end → bedtime)
-- Sleep + nap combined for current day (total rest: night sleep + nap)
-- Sleep + nap combined for previous day (carry-forward for same-day context)
-
-**Ratio / factor metrics:**
-- Activity-after-sleep factor = activity time ÷ sleep duration (how much activity relative to the preceding night's sleep)
-- Sleep-after-activity factor = sleep duration ÷ previous day's activity time (how much night sleep relative to prior activity)
-
-**Historical aggregates (weekly, monthly, or full history):**
-- Average sleep duration, nap duration, combined duration, activity time
-- Min/max sleep and nap durations (with dates)
-- Average before-nap and after-nap activity windows
-- Average and range of ratio metrics
-
-**Why:** These metrics are derived from the existing event log but not currently surfaced in the app. Parents need these values to:
-- Track whether a child's sleep quantity is improving/regressing
-- Understand the balance between night sleep and naps
-- Detect when activity periods extend beyond normal
-- Validate stage transitions (e.g., "when nap duration dropped below 30 min, we switched to single-nap stage")
-- Spot correlations between previous-day activity and next-night sleep quality
-
-Today these calculations are done mentally or in the spreadsheet; exposing them as real-time values removes friction from decision-making.
-
-**Open questions when this gets planned:**
-
-- Should metrics appear on the History screen (as totals per row), the Charts screen (as a summary card), or a new dedicated Metrics tab?
-- Which metrics are highest priority — full set or a curated subset?
-- Should metrics be filterable by date range or stage?
-- For ratio metrics: should the app highlight anomalies (e.g., "activity factor 2× your average today")?
-- Should metrics include percentiles (e.g., "nap 45 min today; typical range is 40–60 min based on stage history")?
-- Should the previous-day carry-forward metrics (sleep + prev-day nap, sleep-after-activity factor) reference calendar-day boundaries or sleep-cycle boundaries (cutoverHour)?
-
-**Implementation notes:**
-
-- Data transforms: add calculation functions to `js/lib/day-bucket.js` or a new `js/lib/metrics.js`:
-  - `dayMetrics(day, prevDay?)` → returns object with all duration and ratio fields above
-  - `aggregateMetrics(days)` → returns averages, min/max, percentiles
-- UI: render as a card grid (each metric = one card with value + trend arrow/color) or a summary table
-- Ratio metrics need `prevDay` passed to `dayMetrics` — requires looking back one record in the sorted day list
-- Interaction with stages: pass `activeStageId` to metric functions so aggregates reflect only the current stage's data when requested
-- No data shape changes — all computed from existing events
 
 ---
 
@@ -802,7 +630,7 @@ Today these calculations are done mentally or in the spreadsheet; exposing them 
 ### B-031 · TIF accuracy on the Accuracy screen
 
 **Source:** user input (2026-07-13)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 14) · not yet planned
 **Earliest sensible slot:** after B-021 (TIF algorithm) is promoted and shipped — requires TIF to be live and `forecastAlgorithm: 'tif'` toggle active
 
 **What:** Extend the Accuracy screen to display TIF-specific backtesting metrics alongside (or instead of) the existing classic-forecaster accuracy grid. When TIF is the active algorithm, show a TIF accuracy section that measures how often TIF's predicted window contained the actual event time — i.e. “actual event fell inside the TIF window” as the primary hit metric. The section should also show the average window width (precision) per event type so users can see the trade-off between confidence and breadth.
@@ -901,7 +729,7 @@ Possible layout options (to decide at planning time):
 ### B-033 · TIF ratio-based windows: activity/sleep → nap-start; activity/nap → nap-end
 
 **Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 13) · not yet planned
 **Earliest sensible slot:** after B-021 (TIF algorithm) is promoted and implemented — extends `js/lib/forecast-tif.js`
 
 **What:** Add two ratio-based forecast windows to the TIF algorithm (B-021) for nap prediction:
@@ -934,7 +762,7 @@ Both ratios must be trimmed with the same `trimPct` setting as other TIF windows
 ### B-034 · Replace SAA metric with day-length / sleep-duration factor
 
 **Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 14) · not yet planned
 **Earliest sensible slot:** when B-026 (metrics dashboard) is implemented — same phase
 
 **What:** Remove the SAA (Sleep After Activity) ratio — defined as `sleepDuration / activityTime` — from the metrics dashboard and replace it with a more informative compound factor. The suggested replacement is **day-length / sleep-duration** (`dayLength / sleepDuration`), which expresses how much of the total waking window is backed by the preceding night's sleep.
@@ -962,7 +790,7 @@ SAA is mathematically identical to `1 / AAS` (Activity After Sleep = `activityTi
 ### B-035 · Show TIF window bounds (min/max) on the metrics screen
 
 **Source:** ISSUES-AND-IDEAS-08-03.md (2026-08-03)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 14) · not yet planned
 **Earliest sensible slot:** after both B-021 (TIF algorithm) and B-026 (metrics dashboard) are implemented
 
 **What:** Display the TIF algorithm's computed prediction window bounds — `finalStart` and `finalEnd` for each event type — on the metrics screen (B-026). For each event type (wake, nap-start, nap-end, bedtime), show the lower and upper bound of the TIF predicted window alongside the other per-day metrics. This gives users a direct view of how wide or narrow TIF's prediction is for the current day, visible in the same place as the sleep and activity metrics.
@@ -995,7 +823,7 @@ This is distinct from the prediction cards on the Today screen (which show the d
 ### B-036 · Add nap-fraction and morning/afternoon-split ratio columns to metrics screen
 
 **Source:** METRICS-SCREEN-GAP.md + PREDICTION-FEATURES.md (2026-08-25)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 14) · not yet planned
 **Earliest sensible slot:** v1.2 — pairs naturally with the B-026 metrics dashboard phase; can also ship standalone (~1 hour of work)
 
 **What:** Add two ratio columns that are currently missing from the 14-column metrics table:
@@ -1028,7 +856,7 @@ Both columns follow the exact same pattern as the existing `activityAfterSleepFa
 ### B-037 · TIF: use recorded MA/AA as direct inputs and add rolling-window sources
 
 **Source:** PREDICTION-FEATURES.md + user confirmation that MA/AA are direct recorded inputs (2026-08-25)
-**Status:** captured · not scheduled
+**Status:** promoted → v1.3 (Phase 13) · not yet planned
 **Earliest sensible slot:** after B-021 (TIF algorithm) ships — extends `js/lib/forecast-tif.js`
 
 **What:** Two related improvements to the TIF algorithm that follow directly from PREDICTION-FEATURES.md:

@@ -217,12 +217,36 @@ function buildTable(dayRecords, timeFormat, eventLog, settings, editMode = false
  */
 function buildDayRow(day, timeFormat, eventLog, settings, editMode = false) {
   const tr = document.createElement('tr');
-  tr.className = day.rejected ? 'day-row rejected' : 'day-row';
+  // D-05: add 'intense' class to the row when day.intense === true.
+  const trClasses = ['day-row'];
+  if (day.rejected) trClasses.push('rejected');
+  if (day.intense) trClasses.push('intense');
+  tr.className = trClasses.join(' ');
   // Store the date for edit/delete wiring.
   tr.setAttribute('data-date', day.date);
 
-  // Date cell
-  appendCell(tr, 'day-date', day.date);
+  // Date cell — D-05: inject .intenseBadge button when day.intense === true.
+  const dateTd = document.createElement('td');
+  dateTd.className = 'day-date';
+  // T-04-04: textContent only — never innerHTML.
+  dateTd.textContent = day.date;
+  if (day.intense && settings) {
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.className = 'intenseBadge';
+    // XSS invariant: "Intense" is a static literal — textContent only.
+    badge.textContent = 'Intense';
+    // day.date is a YYYY-MM-DD string from settings — safe for setAttribute.
+    badge.setAttribute('aria-label', `Remove intense flag for ${day.date}`);
+    badge.setAttribute('title', 'Intense day — click to remove');
+    badge.addEventListener('click', () => {
+      // T-12-03-02: read day.date from day record (not DOM), read-before-write.
+      const current = settings.get().intenseDays || [];
+      settings.update({ intenseDays: current.filter((d) => d !== day.date) });
+    });
+    dateTd.appendChild(badge);
+  }
+  tr.appendChild(dateTd);
 
   // Time cells: wake, napStart, napEnd, bedtime
   for (const slot of ['wake', 'napStart', 'napEnd', 'bedtime']) {

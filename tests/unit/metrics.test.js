@@ -25,6 +25,9 @@ import {
   activityAfterSleepFactor,
   sleepAfterActivityFactor,
   aggregateMetrics,
+  dayToSleepFactor,
+  napFraction,
+  amPmSplit,
 } from '../../js/lib/metrics.js';
 
 import { formatDuration } from '../../js/lib/time.js';
@@ -750,5 +753,99 @@ describe('overnight sleep across calendar dates', () => {
     assert.ok(result.avg.sleepDuration !== null);
     // The average should be over non-null sleep durations
     assert.strictEqual(result.avg.sleepDuration, 540);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 13. dayToSleepFactor (MET-07, D-12)
+// ---------------------------------------------------------------------------
+
+describe('dayToSleepFactor(day)', () => {
+  it('normal nap day: dayLength/sleepDuration is a non-null number', () => {
+    // wake=07:30, bedtime=22:00, napStart=13:00, napEnd=14:30
+    // dayLength = 22:00 - 07:30 = 870 min
+    // sleepDuration = 07:30 - 22:00 (cross midnight) = 450 + 1440 - 1320 = 570 min
+    const day = makeDay('07:30', '22:00', '13:00', '14:30');
+    const result = dayToSleepFactor(day);
+    assert.ok(result !== null, 'should not be null for a full nap day');
+    assert.ok(typeof result === 'number', 'should be a number');
+    assert.ok(Math.abs(result - 870 / 570) < 0.001, `expected ~${870/570}, got ${result}`);
+  });
+
+  it('null bedtime → null', () => {
+    assert.strictEqual(dayToSleepFactor(makeDay('07:30', null, null, null)), null);
+  });
+
+  it('null wake → null', () => {
+    assert.strictEqual(dayToSleepFactor(makeDay(null, '22:00', null, null)), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. napFraction (MET-09, D-12)
+// ---------------------------------------------------------------------------
+
+describe('napFraction(day)', () => {
+  it('nap day: napDuration/combinedSleepNap is a non-null number', () => {
+    // wake=07:00, bedtime=22:00, napStart=13:00, napEnd=14:30
+    // napDuration = 90 min
+    // sleepDuration = 07:00 - 22:00 (cross midnight) = 420 + 1440 - 1320 = 540 min
+    // combinedSleepNap = 540 + 90 = 630 min
+    // napFraction = 90 / 630 ≈ 0.143
+    const day = makeDay('07:00', '22:00', '13:00', '14:30');
+    const result = napFraction(day);
+    assert.ok(result !== null, 'should not be null for a nap day');
+    assert.ok(typeof result === 'number', 'should be a number');
+    assert.ok(Math.abs(result - 90 / 630) < 0.001, `expected ~${90/630}, got ${result}`);
+  });
+
+  it('no-nap day (napStart null) → null', () => {
+    assert.strictEqual(napFraction(makeDay('07:00', '22:00', null, null)), null);
+  });
+
+  it('napEnd null → null', () => {
+    assert.strictEqual(napFraction(makeDay('07:00', '22:00', '13:00', null)), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15. amPmSplit (MET-10, D-12)
+// ---------------------------------------------------------------------------
+
+describe('amPmSplit(day)', () => {
+  it('nap day: activityBeforeNap/activityAfterNap = 0.8 for 360/450 fixture', () => {
+    // wake=07:00, bedtime=22:00, napStart=13:00, napEnd=14:30
+    // activityBeforeNap = 13:00 - 07:00 = 360 min
+    // activityAfterNap = 22:00 - 14:30 = 450 min
+    // amPmSplit = 360 / 450 = 0.8
+    const day = makeDay('07:00', '22:00', '13:00', '14:30');
+    const result = amPmSplit(day);
+    assert.ok(result !== null, 'should not be null for a nap day');
+    assert.strictEqual(result, 0.8);
+  });
+
+  it('no-nap day (napStart and napEnd both null) → null', () => {
+    assert.strictEqual(amPmSplit(makeDay('07:00', '22:00', null, null)), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16. aggregateMetrics — updated fields (D-14)
+// ---------------------------------------------------------------------------
+
+describe('aggregateMetrics — updated fields (D-14)', () => {
+  it('3-day fixture: dayToSleepFactor, napFraction, amPmSplit are aggregated; sleepAfterActivityFactor is NOT in avg', () => {
+    const days = [
+      makeDay('07:00', '22:00', '13:00', '14:30'),
+      makeDay('07:30', '21:30', '12:30', '14:00'),
+      makeDay('06:30', '22:30', '13:30', '15:00'),
+    ];
+    const result = aggregateMetrics(days);
+
+    assert.ok(typeof result.avg.dayToSleepFactor === 'number', 'dayToSleepFactor aggregated');
+    assert.ok(typeof result.avg.napFraction === 'number', 'napFraction aggregated');
+    assert.ok(typeof result.avg.amPmSplit === 'number', 'amPmSplit aggregated');
+    assert.strictEqual(result.avg.sleepAfterActivityFactor, undefined, 'SAA not in avg (D-14)');
+    assert.ok('sleepAfterActivityFactor' in result.rows[0], 'SAA still in per-row data');
   });
 });

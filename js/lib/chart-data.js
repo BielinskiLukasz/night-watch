@@ -165,49 +165,27 @@ export function buildHeatmapData(dayRecords) {
 }
 
 /**
- * Build a time-band series: wake and bedtime as minutes-since-midnight per day.
+ * Build a time-band series using subjective-night slots directly (UI-10 fix).
+ * One entry per day record — no calendar-date scatter bucketing.
+ * napStartMinutes / napEndMinutes are null on no-nap days (render as gap).
  *
- * Groups events by CALENDAR DATE (ev.at.slice(0,10)) rather than subjective
- * night, so events logged on the same clock date land on the same chart column.
- * Example: bedtime@00:10 and bedtime@22:00 both recorded on June 17 appear
- * as two dots on the June 17 column.
- *
- * @param {object[]} dayRecords  from daysBySubjectiveNight(); needs allEvents
- * @returns {Array<{ date: string, wakeMinutes: number|null, bedtimeMinutes: number|null, bedtimesMinutes: number[] }>}
+ * @param {object[]} dayRecords  from daysBySubjectiveNight()
+ * @returns {Array<{
+ *   date: string,
+ *   wakeMinutes: number|null,
+ *   bedtimeMinutes: number|null,
+ *   napStartMinutes: number|null,
+ *   napEndMinutes: number|null,
+ * }>}
  */
 export function buildTimeBandSeries(dayRecords) {
-  const byDate = new Map();
-
-  for (const d of dayRecords) {
-    // Prefer allEvents (typed, from real day-bucket records).
-    // Fall back to named slots augmented with type tags (test fixtures).
-    const events = d.allEvents || [
-      ...(d.wake    ? [{ ...d.wake,    type: 'wake'    }] : []),
-      ...(d.bedtime ? [{ ...d.bedtime, type: 'bedtime' }] : []),
-    ];
-
-    for (const ev of events) {
-      const calDate = ev.at ? ev.at.slice(0, 10) : d.date;
-      if (!byDate.has(calDate)) byDate.set(calDate, []);
-      byDate.get(calDate).push(ev);
-    }
-  }
-
-  return [...byDate.keys()].sort().map(date => {
-    const events = byDate.get(date);
-    const bedtimesMinutes = events
-      .filter(ev => ev.type === 'bedtime')
-      .map(ev => extractMinutes(ev))
-      .filter(m => m !== null);
-    const wakeEvs = events.filter(ev => ev.type === 'wake');
-
-    return {
-      date,
-      wakeMinutes:    wakeEvs.length > 0 ? extractMinutes(wakeEvs[0]) : null,
-      bedtimeMinutes: bedtimesMinutes[0] ?? null,
-      bedtimesMinutes,
-    };
-  });
+  return dayRecords.map(d => ({
+    date:            d.date,
+    wakeMinutes:     extractMinutes(d.wake),
+    bedtimeMinutes:  extractMinutes(d.bedtime),
+    napStartMinutes: extractMinutes(d.napStart),
+    napEndMinutes:   extractMinutes(d.napEnd),
+  }));
 }
 
 /**
