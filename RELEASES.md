@@ -1,5 +1,116 @@
 # Release Notes
 
+## 🟩 **v1.3.0**
+*Release date: 2026‑08‑29*
+
+Three-phase Prediction & TIF Enhancements milestone — 19 requirements satisfied, all UAT passed, no regressions.
+
+### Features
+
+**Phase 12 — Prediction Logic Refinements**
+
+- **Evening-hour bedtime rule** (PRED-08): At 18:00 or later, when no bedtime has been logged, the Today screen predicts bedtime as the next event rather than nap start. Threshold hour is configurable in Settings.
+- **Wake duration-band union** (PRED-09): The classic forecaster now derives the wake-up prediction window from two independent sources — a historic wake-hour band and a duration-band projected from the previous bedtime plus typical sleep duration — unioned into a single wider window.
+- **Intense-day flag** (PRED-10): A checkbox in the manual-entry dialog marks a day as intense. The flag is stored per day and shown as a badge in the History table. When set, the forecaster applies an earlier bedtime modifier for that day's prediction.
+- **Intense-day bedtime modifier** (PRED-10): When the day is flagged as intense, the classic forecaster shifts the bedtime prediction earlier by a configurable offset.
+- **No-nap bedtime shift** (PRED-11): When no nap-start has been logged by a configurable threshold hour, the bedtime prediction shifts earlier to reflect likely earlier tiredness on a napless day.
+- **Nap probability score** (PRED-12): The nap-start prediction card on the Today screen now shows a "% chance of nap today" score derived from stage-specific nap frequency, elapsed wake time, consecutive no-nap streak, and whether the nap window has already passed.
+- **Prediction card ordering fix** (UI-07): Forecast cards on the Today screen are now always rendered in the order wake → nap start → nap end → bedtime, in both collapsed and expanded states.
+
+**Phase 13 — TIF Algorithm Extensions**
+
+- **Ratio-based nap windows** (TIF-12): When TIF is active, nap-start predictions include an additional ratio window derived from `activityBeforeNap / sleepDuration` anchored to wake time. Nap-end predictions include a ratio window derived from `activityBeforeNap / napDuration` anchored to nap-start. Days missing either ratio component are excluded from that window.
+- **TIF rolling-window variant** (TIF-13): A new `tifRollingDays` setting (shown in Settings when TIF is active) limits TIF's historic window to the N most-recent days. When a day has explicit MA/AA values recorded, those take precedence over values derived from timestamp differences.
+- **Per-window medians as central time** (TIF-15): Each TIF event prediction now displays a central time computed as the average of per-source-window medians rather than the midpoint of the final intersection/union. Min/max bounds are unchanged.
+- **No-nap-day substitution** (TIF-16): On a day with no nap logged by the threshold hour, TIF substitutes day-length bands from historical no-nap days for the bedtime prediction and uses no-nap-day sleep/nap patterns when computing the following day's predictions.
+
+**Phase 14 — TIF Metrics, Accuracy & Chart Fixes**
+
+- **TIF accuracy grid** (TIF-14): When TIF is the active algorithm, the Accuracy screen shows a second grid with three metrics per event type: window hit rate (actual falls inside the TIF window), average window width in minutes, and percentage of days with a confidence score ≥ 80%.
+- **Day/Sleep Factor column** (MET-07): The SAA (Sleep-After-Activity) column on the Metrics screen is replaced by Day/Sleep Factor (`dayLength / sleepDuration`). All labels, tests, and aggregates referencing SAA have been updated throughout.
+- **TIF inline columns** (MET-08): When TIF is active, the Metrics table shows the raw TIF `[finalStart, finalEnd]` window bounds and confidence score per event type alongside the regular per-day columns.
+- **Nap Fraction column** (MET-09): New Metrics column showing `napDuration / combinedSleepNap`; `null` on no-nap days or when combined sleep+nap is zero.
+- **AM/PM Split column** (MET-10): New Metrics column showing `activityBeforeNap / activityAfterNap`; `null` on no-nap days or when either activity segment is absent.
+- **TIF aggregate rows** (MET-11): When TIF is active, the Metrics historical aggregates section shows `min-TIF`, `median-TIF`, and `max-TIF` rows per event type, derived from the stored TIF window parameters across all logged days.
+- **Wake & Bedtime Bands chart — Y-axis inversion** (UI-08): The time-band scatter chart now has an inverted Y-axis so earlier clock times appear at the bottom and later times at the top, matching the natural reading direction for a sleep schedule.
+- **Wake & Bedtime Bands chart — 4 series** (UI-09): Nap-start and nap-end are added as two additional colored series with an updated legend, alongside wake and bedtime.
+- **Wake & Bedtime Bands chart — post-midnight dedup** (UI-10): Post-midnight events (e.g. 01:00 bedtime) now render exactly once at their subjective-night time position, eliminating the duplicate dots that previously appeared when an event crossed midnight.
+
+### Fixes
+
+- **Metrics screen column count**: The Metrics table expands from 14 to 16 columns (added Nap Fraction, AM/PM Split; replaced SAA with Day/Sleep Factor).
+- **TIF central time accuracy**: Prior TIF central time was the midpoint of the final window; it is now the mean of per-source-window medians, producing a more data-grounded anchor.
+
+### Test suite
+
+| Layer | v1.2 baseline | v1.3 | Delta |
+|---|---|---|---|
+| Unit + Integration | 647 | 753 | +106 |
+| E2E (Playwright / Chromium) | ~111 | ~111 | — |
+| **Total** | **~758** | **~864** | **~+106** |
+
+753 unit/integration tests pass; 0 regressions against v1.2 suite.
+
+---
+
+## 🟩 **v1.2.0**
+*Release date: 2026‑08‑24*
+
+Two-phase Prediction & Metrics milestone — 17 requirements satisfied, all UAT passed, no regressions.
+
+### Features
+
+**Phase 10 — TIF Algorithm & Settings**
+
+- **Algorithm selector** (TIF-01): New "Forecast algorithm" dropdown in Settings (Classic / TIF). Choice persists across sessions; Classic remains the default.
+- **Trim percentage** (TIF-02): User can set the TIF auto-trim percentage (0–40, step 1, default 10) — controls how many extreme-value events are excluded per event type before any window is computed.
+- **Precision target** (TIF-03): User can set the maximum width of a displayed TIF prediction window in minutes (default 60). Setting persists across sessions.
+- **Multi-window wake prediction** (TIF-04): When TIF is active, wake-up forecasts derive from the intersection of three independent windows: historic wake-time band, sleep-duration band projected from bedtime anchor, and combined sleep+nap duration band.
+- **Multi-window nap-start prediction** (TIF-05): Nap-start forecast is the intersection of two windows: historic nap-start band and activity-before-nap duration projected from wake anchor.
+- **Multi-window nap-end prediction** (TIF-06): Nap-end forecast is the intersection of two windows: historic nap-end band and nap-duration projected from nap-start anchor.
+- **Multi-window bedtime prediction** (TIF-07): Bedtime forecast is the intersection of three windows: historic bedtime band, day-length projected from wake anchor, and activity-after-nap duration projected from nap-end anchor.
+- **Intersection/union fallback** (TIF-08): When the intersection of all windows is non-empty, TIF uses that range; when empty (start > end) it falls back to the union and marks the prediction "low confidence".
+- **Precision score** (TIF-09): Each TIF prediction displays a precision score: 100% when the algorithm's computed range ≤ precision target; `precisionTarget / algRange × 100%` otherwise.
+- **Window narrowing** (TIF-10): When the computed range exceeds the precision target, the displayed window is narrowed to precision-target width centered on the midpoint; the full range and score remain visible.
+- **Cold-start & outlier respect** (TIF-11): TIF predictions obey the existing cold-start gate and manual rejected-day flags; rejected events count against the trim budget before auto-trim is applied.
+
+**Phase 11 — Metrics Screen**
+
+- **Metrics tab** (MET-01): New 5th tab in the bottom navigation bar (Today | History | Charts | Accuracy | Metrics).
+- **Per-day duration metrics** (MET-02): Each logged day shows sleep duration (night only), nap duration, combined sleep+nap duration, and day length (wake→bedtime).
+- **Per-day activity breakdown** (MET-03): Each day shows total activity time (day length − nap duration), activity before nap (wake→nap-start), and activity after nap (nap-end→bedtime).
+- **Per-day ratio metrics** (MET-04): Activity-after-sleep factor (activity time ÷ night-sleep duration) and sleep-after-activity factor (night-sleep duration ÷ previous day's activity time) per day.
+- **Historical aggregates** (MET-05): Average, minimum with date, and maximum with date for every displayed metric.
+- **Stage filtering** (MET-06): When a stage is active, a toggle scopes the Metrics screen to that stage's date range — same behaviour as the Charts screen stage filter.
+
+**General**
+
+- **"Add event" button moved into the quick-log row**: The button sits alongside the four quick-log buttons rather than above the prediction cards, reducing the distance to tap when logging rapidly.
+
+### Infrastructure
+
+- **`js/lib/metrics.js` shared module** (Phase 10, plan 10-01): Six pure duration/activity helpers — `sleepDuration`, `napDuration`, `activityBeforeNap`, `activityAfterNap`, `dayLength`, `combinedSleepNap` — consumed by both `forecast-tif.js` and `metrics-screen.js` to keep formulas in one place.
+- **`chart-data.js` refactored** to reuse `sleepDuration` and `napDuration` from `metrics.js`, eliminating duplicate implementations.
+
+### Fixes
+
+- **Overnight sleep duration** (Phase 11, plan 11-06 / 11-10): Wake events now always pair with the *previous* day's bedtime for sleep-duration calculation, fixing wrong same-day pairing and ensuring date attribution matches the night the sleep actually covered.
+- **SAA on no-nap days** (Phase 11, plan 11-09): Sleep-after-activity factor is now computed using `dayLength` as the activity proxy on days with no nap logged, instead of returning `null`.
+- **Oldest-first ordering in aggregates** (Phase 11): `aggregateMetrics` now receives days in oldest-first order before accumulating; aggregate min/max dates were previously misattributed.
+- **Metrics screen display and logic** (code review CR-01, CR-03, CR-02, WR-01–WR-03): Fixed column ordering, button alignment, gutter sizing, and napDuration efficiency in the metrics-screen render path.
+
+### Test suite
+
+| Layer | v1.1 baseline | v1.2 | Delta |
+|---|---|---|---|
+| Unit + Integration | 531 | 647 | +116 |
+| E2E (Playwright / Chromium) | 104 | ~111 | ~+7 |
+| **Total** | **635** | **~758** | **~+123** |
+
+647 unit/integration tests pass; 0 regressions against v1.1 suite.
+
+---
+
 ## 🟩 **v1.1.0**
 *Release date: 2026‑07‑10*
 

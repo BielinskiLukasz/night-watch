@@ -1,7 +1,7 @@
 # Nightwatch
 
 ![Status](https://img.shields.io/badge/status-stable-brightgreen)
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -53,7 +53,12 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Feature | Description |
 |---------|-------------|
 | Forecast engine | Predicts the next four sleep events from a configurable rolling window of history using P10/P50/P90 percentiles |
-| TIF algorithm | Opt-in Trimmed Intersection Forecast — trims outlier days, computes multi-source windows per event type, intersects them, and narrows the result to a precision-target width; displayed as a precision score badge on each card |
+| Contextual rules | Evening-hour rule: at 18:00+ with no bedtime logged, predicts bedtime next instead of nap start; wake window is a union of a historic hour-band and a duration-band (bedtime + typical sleep length); intense-day flag applies an earlier bedtime modifier; no-nap bedtime shift when no nap is logged by the threshold hour |
+| Intense-day flag | Checkbox in the manual-entry dialog marks a day as intense; badge shown in History; forecaster applies an earlier bedtime modifier for flagged days |
+| Nap probability | Today screen card shows a "% chance of nap today" score derived from stage-specific nap frequency, elapsed wake time, consecutive no-nap streak, and whether the nap window has already passed |
+| TIF algorithm | Opt-in Trimmed Intersection Forecast — trims outlier days, computes multi-source windows per event type (including ratio-based windows: activity/sleep → nap-start, activity/nap → nap-end), intersects them, narrows to a precision-target width; central time is the average of per-window medians; precision score badge on each card |
+| TIF rolling variant | Optional `tifRollingDays` sub-window within TIF; days with explicit MA/AA values take precedence over derived timestamp differences |
+| TIF no-nap substitution | On days with no nap logged by the threshold hour, TIF substitutes historical no-nap-day patterns for bedtime and next-day predictions |
 | Hero card | Cycle-aware "Next Predicted Event" card — shows the single most relevant upcoming event, updated on every log action; shows precision badge when TIF is active |
 | Uncertainty-honest cards | Classic: tight band (≤ max_delta) shows `central (min – max)`; wide band (> max_delta) collapses to a compact line with chevron — tap to expand to the full probability table. TIF low-confidence (empty intersection): collapsed single line — tap to expand source windows and precision detail |
 | Cold-start gate | When history is below `min_days`, shows an explicit "N more days needed" message instead of fabricating predictions |
@@ -79,10 +84,10 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 
 | Feature | Description |
 |---------|-------------|
-| Charts | Sleep-length line chart, time-band scatter plot, nap-pattern indicator, activity-vs-sleep correlation chart |
+| Charts | Sleep-length line chart, time-band scatter plot (Wake & Bedtime Bands — 4 event series, Y-axis inverted so earlier times are at bottom, post-midnight dedup), nap-pattern indicator, activity-vs-sleep correlation chart |
 | Calendar heatmap | Sleep length by calendar day |
-| Accuracy dashboard | Three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) across all four event types |
-| Metrics screen | Dedicated 5th-tab table with 14 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), and behaviour-ratio scores (AAS, SAA); historical aggregates (average, min + date, max + date) for every column; stage-scoped filter toggle |
+| Accuracy dashboard | Three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) across all four event types; when TIF is active, a second TIF-specific grid shows per-event-type window hit rate, average window width in minutes, and percentage of days with confidence score ≥ 80% |
+| Metrics screen | Dedicated 5th-tab table with 16 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), ratio scores (AAS, Day/Sleep Factor), Nap Fraction, AM/PM Split; when TIF is active, TIF window bounds and confidence score per event are shown inline, plus min/median/max TIF aggregate rows; stage-scoped filter toggle |
 
 ### Platform
 
@@ -171,6 +176,7 @@ All settings are available in the **Settings** panel. Changes take effect immedi
 | Forecast algorithm | Classic | Algorithm used for predictions: Classic (rolling-window percentile) or TIF (Trimmed Intersection Forecast) |
 | TIF trim % | 10 | Percentage of outlier days trimmed symmetrically before computing TIF intersection windows (0–40); only shown when TIF is selected |
 | TIF precision target | 60 min | Maximum displayed window width in minutes; intersections wider than this are narrowed, centered on the midpoint; only shown when TIF is selected |
+| TIF rolling days | — | Number of most-recent days used for the TIF rolling sub-window variant; when set, each TIF window also computes a rolling variant and prefers MA/AA values over derived durations; only shown when TIF is selected |
 
 ### Life stages
 
@@ -262,6 +268,9 @@ The app targets current evergreen browsers using only baseline platform APIs (`l
 | v1.1 | 9 | UX Polish | ✅ Complete |
 | v1.2 | 10 | TIF Algorithm & Settings | ✅ Complete |
 | v1.2 | 11 | Metrics Screen | ✅ Complete |
+| v1.3 | 12 | Prediction Logic Refinements | ✅ Complete |
+| v1.3 | 13 | TIF Algorithm Extensions | ✅ Complete |
+| v1.3 | 14 | TIF Metrics, Accuracy & Chart Fixes | ✅ Complete |
 
 Full phase details and backlog in [`.planning/ROADMAP.md`](.planning/ROADMAP.md).
 
