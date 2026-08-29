@@ -56,30 +56,20 @@ export function napDuration(day) {
   return timeToMinutes(endStr) - timeToMinutes(startStr);
 }
 
-/** Active time between wake and nap start. For complete no-nap days (both napStart and napEnd null), returns 0. */
+/** Active time between wake and nap start. Returns null when there is no nap. */
 export function activityBeforeNap(day) {
   const wakeStr  = extractTime(day.wake);
   const napStr   = extractTime(day.napStart);
-  const napEndStr = extractTime(day.napEnd);
-  if (wakeStr == null) return null;
-  // Complete no-nap day: both napStart and napEnd are null → return 0
-  if (napStr == null && napEndStr == null) return 0;
-  // Otherwise use original logic: both napStart and napEnd must be present (or just napStart for synthetic tests)
-  if (napStr == null) return null;
+  if (wakeStr == null || napStr == null) return null;
   const result = timeToMinutes(napStr) - timeToMinutes(wakeStr);
   return result < 0 ? result + 24 * 60 : result;
 }
 
-/** Active time between nap end and bedtime. For complete no-nap days (both napStart and napEnd null), returns 0. */
+/** Active time between nap end and bedtime. Returns null when there is no nap. */
 export function activityAfterNap(day) {
-  const napStartStr = extractTime(day.napStart);
   const napEndStr = extractTime(day.napEnd);
   const bedStr    = extractTime(day.bedtime);
-  if (bedStr == null) return null;
-  // Complete no-nap day: both napStart and napEnd are null → return 0
-  if (napStartStr == null && napEndStr == null) return 0;
-  // Otherwise use original logic: both napStart and napEnd must be present (or just napEnd for synthetic tests)
-  if (napEndStr == null) return null;
+  if (bedStr == null || napEndStr == null) return null;
   const result = timeToMinutes(bedStr) - timeToMinutes(napEndStr);
   return result < 0 ? result + 24 * 60 : result;
 }
@@ -114,14 +104,11 @@ export function combinedSleepNap(day) {
  * (D11-23)
  */
 export function totalActivity(day) {
+  // No-nap day: total activity is the full wake-to-bedtime span.
+  if (day.napStart == null && day.napEnd == null) return dayLength(day);
   const before = activityBeforeNap(day);
   const after  = activityAfterNap(day);
   if (before == null || after == null) return null;
-  // No-nap day: activityBeforeNap and activityAfterNap return 0,
-  // but total activity is the full wake-to-bedtime span.
-  if (before === 0 && after === 0 && day.napStart == null && day.napEnd == null) {
-    return dayLength(day);
-  }
   return before + after;
 }
 

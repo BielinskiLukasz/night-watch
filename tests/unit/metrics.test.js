@@ -109,9 +109,8 @@ describe('activityBeforeNap(day)', () => {
     assert.strictEqual(activityBeforeNap(makeDay(null, null, '12:30', null)), null);
   });
 
-  it('null napStart (no-nap day) → 0', () => {
-    // No nap means no "activity before nap" segment
-    assert.strictEqual(activityBeforeNap(makeDay('07:00', null, null, null)), 0);
+  it('null napStart (no-nap day) → null', () => {
+    assert.strictEqual(activityBeforeNap(makeDay('07:00', null, null, null)), null);
   });
 });
 
@@ -125,9 +124,8 @@ describe('activityAfterNap(day)', () => {
     assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, '14:30')), 330);
   });
 
-  it('null napEnd (no-nap day) → 0', () => {
-    // No nap means no "activity after nap" segment
-    assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, null)), 0);
+  it('null napEnd (no-nap day) → null', () => {
+    assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, null)), null);
   });
 
   it('null bedtime → null', () => {
