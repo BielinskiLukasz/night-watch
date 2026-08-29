@@ -12,8 +12,8 @@ progress:
   completed_phases: 2
   total_plans: 15
   completed_plans: 15
-last_activity: 2026-08-28
-last_activity_desc: Quick task 260828-ikl — fix TIF aggregate rows in metrics screen with per-column trimmed stats
+last_activity: 2026-08-29
+last_activity_desc: Quick task 260829-w16 — move algorithm selector to top of Forecast & Prediction fieldset, show/hide classic/TIF fields
 ---
 
 # Project State
@@ -120,6 +120,7 @@ Status: All phases complete
 | 2026-08-03 | move-add-event-button-to-line-up-with-ot | Move 'Add events' button into quickLog row and rename |
 | 2026-08-24 | update-phase-10-planning-artifacts-mark- | Update Phase 10 planning artifacts: mark TIF-01–TIF-11 [x] in REQUIREMENTS.md, update ROADMAP.md Phase 10 row to [x] Complete with 5/5 plans |
 | 2026-08-28 | fix-tif-aggregate-rows-in-metrics-screen | Fix TIF aggregate rows in metrics screen: replace averages of algMin/algMax with per-column trimmedMinMax over the TIF rolling window, skipping rejected rows, covering all 16 metric columns not just event types |
+| 2026-08-29 | move-algorithm-selector-to-top-of-foreca | Move algorithm selector to top of Forecast & Prediction fieldset; show/hide classic-only and TIF-only fields based on selection |
 
 ### Pending Todos
 
