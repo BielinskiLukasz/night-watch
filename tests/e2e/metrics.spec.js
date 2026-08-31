@@ -20,12 +20,28 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
   });
 
   test('MET-02/MET-03: Table renders with correct columns and data', async ({ page }) => {
-    // Add a test event first (log a wake event today)
-    const wakeBtn = page.locator('[data-log="wake"]');
-    await wakeBtn.click();
-
-    // If manual entry dialog opens, skip it (use quick-log if available)
-    // For now, assume quick-log was used and data exists
+    // Seed a minimal database so the metrics table renders on a clean storage context.
+    // Clicking [data-log="wake"] opens a dialog and does not save an event — so this test
+    // used to rely on leftover localStorage from a previous session, which fails in CI.
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1,
+        windowDays: 7, statBlend: 'median', autoOutlier: false,
+        groupingMode: 'calendar', rejectedDays: [], stages: [],
+        activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events: [
+        { id: 'met02-wake-1',    type: 'wake',    at: '2025-06-01T08:00' },
+        { id: 'met02-bedtime-1', type: 'bedtime', at: '2025-06-01T22:00' },
+      ],
+      activityLog: {},
+    };
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
 
     // Navigate to Metrics tab
     await page.locator('[data-tab="metrics"]').click();
