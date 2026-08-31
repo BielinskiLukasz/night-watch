@@ -478,8 +478,13 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // Without this override the min-TIF/median-TIF/max-TIF event-time cells diverge
     // from the Today screen's historic band. See commit 50d491c (original fix) and
     // NW-15 plan 02 FIX-03 (which incorrectly removed it, reintroducing the bug).
+    //
+    // IMPORTANT: pass `days` (newest-first, as daysBySubjectiveNight returns it), NOT
+    // reversedDays. tifForecast uses slice(-N) internally, so it must receive the same
+    // order the Today screen passes — otherwise the rolling window covers different days
+    // and the historic band values diverge from what Today shows.
     if (isTif && tifTrimmedStats) {
-      const currentForecast = tifForecast(reversedDays, snap, activityLog);
+      const currentForecast = tifForecast(days, snap, activityLog);
       const HISTORIC_LABELS = {
         wake:     'Historic wake-up band',
         napStart: 'Historic nap-start band',
