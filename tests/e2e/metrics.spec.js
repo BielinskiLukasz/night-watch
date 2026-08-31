@@ -389,7 +389,7 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     await page.reload();
     await page.waitForSelector('[data-tab="today"]');
     await page.locator('[data-tab="metrics"]').click();
-    await page.waitForTimeout(500); // allow render to complete
+    // No waitForTimeout — toBeVisible() retries until its own timeout
 
     // metricsTable must not be present (empty state renders instead)
     const tableCount = await page.locator('.metricsTable').count();
