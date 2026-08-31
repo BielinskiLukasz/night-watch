@@ -135,7 +135,7 @@ function renderEmptyState(root) {
 function formatCellValue(value, colDef, snap) {
   if (value === null || value === undefined) return '—';
 
-  if (colDef.isTime && value) {
+  if (colDef.isTime) {
     return formatTime(value, snap.timeFormat);
   } else if (colDef.isRatio && value !== null && value !== undefined) {
     return value.toFixed(2);
