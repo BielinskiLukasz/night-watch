@@ -83,14 +83,8 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
         activeStageId: null,
       },
       events: [
-        {
-          type: 'wake',
-          at: todayISO + 'T08:00'
-        },
-        {
-          type: 'bedtime',
-          at: todayISO + 'T22:00'
-        }
+        { id: 'test-wake-1',    type: 'wake',    at: todayISO + 'T08:00' },
+        { id: 'test-bedtime-1', type: 'bedtime', at: todayISO + 'T22:00' },
       ],
       activityLog: {},
     };
@@ -188,8 +182,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     for (let i = 0; i < 8; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
       const date = '2025-01-' + dayNum;
-      events.push({ type: 'wake',    at: date + 'T08:00' });
-      events.push({ type: 'bedtime', at: date + 'T22:00' });
+      events.push({ id: 'test-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'test-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
     }
 
     const seedDb = {
@@ -241,8 +235,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     for (let i = 0; i < 6; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
       const date = '2025-02-' + dayNum;
-      events.push({ type: 'wake',    at: date + 'T08:00' });
-      events.push({ type: 'bedtime', at: date + 'T22:00' });
+      events.push({ id: 'test-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'test-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
     }
 
     const seedDb = {
@@ -283,8 +277,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     for (let i = 0; i < 13; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
       const date = '2025-03-' + dayNum;
-      events.push({ type: 'wake',    at: date + 'T08:00' });
-      events.push({ type: 'bedtime', at: date + 'T22:00' });
+      events.push({ id: 'test-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'test-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
     }
 
     const seedDb = {
@@ -322,8 +316,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     for (let i = 0; i < 15; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
       const date = '2025-04-' + dayNum;
-      events.push({ type: 'wake',    at: date + 'T08:00' });
-      events.push({ type: 'bedtime', at: date + 'T22:00' });
+      events.push({ id: 'test-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'test-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
     }
 
     const seedDb = {
@@ -398,8 +392,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     for (let i = 0; i < 8; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
       const date = '2025-05-' + dayNum;
-      events.push({ type: 'wake',    at: date + 'T08:00' });
-      events.push({ type: 'bedtime', at: date + 'T22:00' });
+      events.push({ id: 'test-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'test-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
     }
 
     const seedDb = {
