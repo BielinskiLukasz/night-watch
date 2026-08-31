@@ -18,8 +18,8 @@
 
 ### Rolling Aggregates
 
-- [ ] **MET-09**: The Metrics screen displays a 7-day rolling aggregate section (avg, min with date, max with date) for all base metric columns, computed from the 7 most recent non-rejected days in the active stage
-- [ ] **MET-10**: The Metrics screen displays a 14-day rolling aggregate section (avg, min with date, max with date) for all base metric columns, computed from the 14 most recent non-rejected days in the active stage; the two rolling sections and the existing all-time aggregate are visually distinguished
+- [x] **MET-09**: The Metrics screen displays a 7-day rolling aggregate section (avg, min with date, max with date) for all base metric columns, computed from the 7 most recent non-rejected days in the active stage
+- [x] **MET-10**: The Metrics screen displays a 14-day rolling aggregate section (avg, min with date, max with date) for all base metric columns, computed from the 14 most recent non-rejected days in the active stage; the two rolling sections and the existing all-time aggregate are visually distinguished
 
 ### Day-of-Week Patterns
 
@@ -70,8 +70,8 @@
 | FIX-03 | Phase 15 | Complete |
 | FIX-04 | Phase 15 | Complete |
 | FIX-05 | Phase 15 | Complete |
-| MET-09 | Phase 16 | Pending |
-| MET-10 | Phase 16 | Pending |
+| MET-09 | Phase 16 | Complete |
+| MET-10 | Phase 16 | Complete |
 | MET-11 | Phase 17 | Pending |
 | MET-12 | Phase 17 | Pending |
 | MET-13 | Phase 18 | Pending |

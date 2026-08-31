@@ -164,10 +164,11 @@ Plans:
   3. The 7-day, 14-day, and all-time aggregate sections are visually distinguished from each other (distinct section headings or styling)
   4. When the active stage has fewer than 7 or 14 non-rejected days respectively, the corresponding rolling section renders `—` for all cells without errors
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans executed
 
 Plans:
-- [ ] 16-01-PLAN.md — Tracer: 7-day + 14-day rolling tbodies with section headers, cold-start behavior, CSS, and Playwright boundary tests (MET-09, MET-10)
+
+- [x] 16-01-PLAN.md — Tracer: 7-day + 14-day rolling tbodies with section headers, cold-start behavior, CSS, and Playwright boundary tests (MET-09, MET-10)
 
 **UI hint**: yes
 
@@ -212,7 +213,7 @@ Plans:
 | 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete | 2026-08-27 |
 | 15. TIF Engine Bug Fixes | v1.4 | 2/2 | Complete    | 2026-08-31 |
-| 16. Rolling Window Aggregates | v1.4 | 0/TBD | Not started | - |
+| 16. Rolling Window Aggregates | v1.4 | 1/1 | In Progress|  |
 | 17. Day-of-Week Patterns | v1.4 | 0/TBD | Not started | - |
 | 18. Sleep Debt Proxy | v1.4 | 0/TBD | Not started | - |
 

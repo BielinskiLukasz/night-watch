@@ -5,16 +5,16 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 16
 current_phase_name: Rolling Window Aggregates
 status: executing
-stopped_at: Phase 16 context gathered
-last_updated: "2026-08-31T18:25:56.659Z"
+stopped_at: Completed NW-16-01-PLAN.md
+last_updated: "2026-08-31T18:47:31.235Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase NW-16 execution started
-state_head: f081dd6afafe93ec9b6f71437294075f6c4520cf
+state_head: 4708130f9c69bdf201299f1f5eccca56269f41ed
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -86,6 +86,7 @@ Last activity: 2026-08-31 — Phase NW-16 execution started
 | Phase NW-14 P04 | 7 | 2 tasks | 1 files |
 | Phase NW-15 P01 | 14 | 3 tasks | 2 files |
 | Phase NW-15 P02 | 14 | 3 tasks | 2 files |
+| Phase NW-16 P01 | 30 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Last activity: 2026-08-31 — Phase NW-16 execution started
 - [Phase 15]: FIX-04: computeTifTrimmedStats comment updated to clarify bare HH:MM and ISO string inputs both handled by raw.length > 5 guard
 - [Phase 15]: FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91
 - [Phase 15]: UAT: Metrics summary row order changed to Min / Average / Max (Average between bounds)
+- [Phase 16]: nonRejectedDays derived from stage-filtered reversedDays per D-08 prohibition
+- [Phase 16]: buildRollingSection helper encapsulates cold-start note, TIF placeholders, and section-header row per D-09/D-10/D-05
 
 ### Quick Tasks Completed
 
@@ -149,9 +152,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-31T17:39:18.501Z
-Stopped at: Phase 16 context gathered
-Resume file: .planning/phases/NW-16-rolling-window-aggregates/16-CONTEXT.md
+Last session: 2026-08-31T18:47:30.362Z
+Stopped at: Completed NW-16-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
