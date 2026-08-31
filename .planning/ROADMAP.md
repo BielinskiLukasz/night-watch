@@ -145,10 +145,11 @@ Plans:
   4. The `computeTifTrimmedStats` comment in `metrics-screen.js` accurately describes that metric rows may contain bare `HH:MM` strings, so the `raw.length > 5` guard is not mistakenly dismissed as dead code
   5. The test in `settings-validate.test.js` that covers the `tifRollingDays` upper-bound reads "rejects 91 (above max=90)" and the full test suite passes
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 Plans:
-- [ ] 15-01-PLAN.md — forecast-tif.js: fix findBedtimeDayRecord bare/ISO ordering + manualExcludedCount semantics + unit tests (FIX-01, FIX-02)
+
+- [x] 15-01-PLAN.md — forecast-tif.js: fix findBedtimeDayRecord bare/ISO ordering + manualExcludedCount semantics + unit tests (FIX-01, FIX-02)
 - [ ] 15-02-PLAN.md — metrics-screen.js: remove redundant tifForecast call, fix comment; settings-validate.test.js: fix stale test description (FIX-03, FIX-04, FIX-05)
 
 ### Phase 16: Rolling Window Aggregates
@@ -206,7 +207,7 @@ Plans:
 | 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete | 2026-08-27 |
-| 15. TIF Engine Bug Fixes | v1.4 | 0/TBD | Not started | - |
+| 15. TIF Engine Bug Fixes | v1.4 | 1/2 | In Progress|  |
 | 16. Rolling Window Aggregates | v1.4 | 0/TBD | Not started | - |
 | 17. Day-of-Week Patterns | v1.4 | 0/TBD | Not started | - |
 | 18. Sleep Debt Proxy | v1.4 | 0/TBD | Not started | - |

@@ -1,16 +1,20 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.4
-milestone_name: TIF Fixes & Metrics Depth
-status: planning
-last_updated: "2026-08-31T00:00:00.000Z"
+milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
+current_phase: 15
+current_phase_name: TIF Engine Bug Fixes
+status: executing
+stopped_at: Completed NW-15-01-PLAN.md
+last_updated: "2026-08-31T13:07:31.904Z"
 last_activity: 2026-08-31
+last_activity_desc: Phase NW-15 execution started
+state_head: 3e4d35a0a940ee73dabac1fa5aa5508d63117dc7
 progress:
-  total_phases: 4
+  total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 15 — TIF Engine Bug Fixes
+**Current focus:** Phase NW-15 — TIF Engine Bug Fixes
 
 ## Current Position
 
-Phase: 15 (not started)
-Plan: —
-Status: Roadmap defined; ready for planning
-Last activity: 2026-08-31 — Milestone v1.4 roadmap created
+Phase: NW-15 (TIF Engine Bug Fixes) — EXECUTING
+Plan: 2 of 2
+Status: Executing Phase NW-15
+Last activity: 2026-08-31 — Phase NW-15 execution started
 
 ## Phases
 
@@ -80,6 +84,7 @@ Last activity: 2026-08-31 — Milestone v1.4 roadmap created
 | Phase NW-14 P05 | 9 | 2 tasks | 3 files |
 | Phase NW-14 P03 | 9 | 3 tasks | 1 files |
 | Phase NW-14 P04 | 7 | 2 tasks | 1 files |
+| Phase NW-15 P01 | 14 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -113,6 +118,8 @@ Last activity: 2026-08-31 — Milestone v1.4 roadmap created
 - [Phase 14]: D-09: 16-column order with napFraction/dayToSleepFactor/amPmSplit added, SAA removed
 - [Phase 14]: TIF inline columns (12) and aggregate rows (3) use el.hidden = !isTif pattern
 - [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
+- [Phase 15]: FIX-01: latestAt === null guard in findBedtimeDayRecord bare-string path prevents ISO-dated selection from being displaced by later bare-string entries
+- [Phase 15]: FIX-02: rejectedInWindow = window.length - acceptedWindow.length threaded to all primary band-building calls; postNoNapNapStartTimes call retains 0
 
 ### Quick Tasks Completed
 
@@ -136,8 +143,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-31
-Stopped at: Milestone v1.4 roadmap created — Phases 15–18 defined
+Last session: 2026-08-31T13:07:31.813Z
+Stopped at: Completed NW-15-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
