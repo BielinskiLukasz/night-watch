@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
-current_phase: 16
-current_phase_name: Rolling Window Aggregates
-status: executing
-stopped_at: Completed NW-16-01-PLAN.md
-last_updated: "2026-08-31T18:47:31.235Z"
-last_activity: 2026-08-31
-last_activity_desc: Phase NW-16 execution started
-state_head: 4708130f9c69bdf201299f1f5eccca56269f41ed
+current_phase: 17
+current_phase_name: Day-of-Week Patterns
+status: planning
+stopped_at: Phase NW-16 complete, ready to plan Phase 17
+last_updated: "2026-08-31T23:05:28.135Z"
+last_activity: 2026-09-01
+last_activity_desc: Phase NW-16 complete, transitioned to Phase 17
+state_head: 00313d80d66108f329835597a611314bad932690
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
   completed_plans: 3
 ---
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: NW-16 (Rolling Window Aggregates) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase NW-16
-Last activity: 2026-08-31 — Phase NW-16 execution started
+Phase: 17 — Day-of-Week Patterns
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-01 — Phase NW-16 complete, transitioned to Phase 17
 
 ## Phases
 
@@ -153,7 +153,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-08-31T18:47:30.362Z
-Stopped at: Completed NW-16-01-PLAN.md
+Stopped at: Phase NW-16 complete, ready to plan Phase 17
 Resume file: None
 
 ## Operator Next Steps

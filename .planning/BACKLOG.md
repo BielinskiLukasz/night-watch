@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-31 (added B-038–B-042)
-Last assigned ID: **B-042** — next new item must be **B-043**
+Last updated: 2026-08-31 (added B-038–B-044)
+Last assigned ID: **B-044** — next new item must be **B-045**
 
 ---
 
@@ -1020,3 +1020,61 @@ For each existing window that uses historical distributions (e.g. activity-befor
 - Import `VERSION` in `js/ui/settings-modal.js` and append a small footer row: `<p class="version-label">Nightwatch ${VERSION}</p>`.
 - Style with existing muted-text CSS token so it does not compete visually with the settings fields.
 - `sw.js` `PRECACHE_LIST` and `tests/unit/sw-precache.test.js` must be updated to include `js/lib/version.js` if it is added as a new app-shell file.
+
+---
+
+## Metrics screen consistency follow-ups (captured 2026-08-31, deferred from NW-16 UAT)
+
+These two items were surfaced as deferred follow-ups during NW-16 (rolling-window-aggregates) UAT and are consistency improvements to the Metrics screen that make the section-header and statistics patterns uniform across all sections.
+
+### B-043 · Add metrics-section-header rows for TIF and daily-data sections
+
+**Source:** NW-16 UAT deferred follow-up (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen polish phase — or bundled with the first metrics follow-up that touches `js/ui/metrics-screen.js`
+
+**What:** NW-16 added `buildSectionHeaderRow` calls (rendering `<tr class="metrics-section-header">`) to the three new rolling-window aggregate sections (7-day, 14-day, and all-time). The TIF metrics section and the daily-data section currently lack equivalent header rows. Add `metrics-section-header` rows to both so the visual hierarchy is consistent across all sections of the metrics table.
+
+**Why:** Without a section header, the TIF section and the daily-data section start abruptly with data rows, while the three new rolling-window sections each begin with a labelled divider row. Consistent section headers make the table easier to scan and align with the UI pattern established in NW-16.
+
+**Open questions when this gets planned:**
+
+- What labels should the TIF-section header and the daily-data section header use? Candidates: "TIF Prediction" and "Daily Data" respectively — confirm with the existing section heading text.
+- Should the header rows use the same colspan and CSS as the rolling-window headers (i.e., `colspan="17"` matching the current column count)?
+- If a new phase adds columns (e.g., B-043 B-044), update the colspan in the same PR rather than leaving it stale.
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`, locate the section-building code for the TIF section and the daily-data section.
+- Call `buildSectionHeaderRow(label, columnCount)` (already exists from NW-16) at the start of each section, using the section's display label as the argument.
+- No changes to `js/lib/metrics.js` or any data layer — purely UI rendering.
+- Update `tests/e2e/metrics.spec.js` if it asserts on row count or section structure within those two sections.
+
+---
+
+### B-044 · Add event-time statistics (min/avg/max) for wake, nap start, nap end, and bedtime
+
+**Source:** NW-16 UAT deferred follow-up (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen feature phase — moderate scope, pairs naturally with B-043
+
+**What:** Add statistics rows (min, avg, max) for the four event times — wake, nap start, nap end, and bedtime — to the rolling-window sections (7-day, 14-day) and the all-time section of the Metrics screen. Currently the rolling-window sections show statistics for duration and activity metrics but not for the absolute clock times of each event. Showing min/avg/max event times gives users a direct view of how consistent (or variable) the sleep schedule is over each window.
+
+Example: "Wake time — Min: 06:45 · Avg: 07:12 · Max: 08:00" as a row in the 7-day section.
+
+**Why:** The spreadsheet workflow this app replaces tracked exact event times alongside durations. Rolling-window event-time statistics answer the parent's primary question — "is the wake time getting more consistent?" — without them having to mentally scan individual daily rows. Adding these statistics rounds out the rolling-window sections and brings the metrics screen closer to feature parity with the original spreadsheet.
+
+**Open questions when this gets planned:**
+
+- Which time format should be used for min/avg/max display — the user's configured `timeFormat` (12h/24h), the same helper used by the rest of the metrics screen?
+- For the avg calculation: average of the clock minutes since midnight (treating all times as minutes since 00:00) is correct for within-day events; confirm that no event type can span midnight in a way that breaks the average (i.e., wake time is always post-cutover, bedtime is always pre-cutover from the next day's perspective).
+- Should these rows appear only when there are enough days in the window (same `minDays` gate as the rolling aggregate sections), or always with a "—" when data is sparse?
+- Column layout: three sub-columns (Min / Avg / Max) per event type as separate cells, or a single merged cell with all three values?
+
+**Implementation notes:**
+
+- In `js/lib/metrics.js`: add helpers to compute min, avg, and max of a time series expressed in minutes-since-midnight — e.g., `eventTimeStats(days, eventField)` returning `{ min, avg, max }` in minutes. Apply the same null-filtering used by existing aggregate helpers.
+- In `js/ui/metrics-screen.js`: add row builders for each event type's stats triple in `buildRollingSection` and the all-time section. Use the existing `formatTime(minutes, timeFormat)` helper for display.
+- Column count: each event-time stats row adds cells to the existing row structure — confirm total column count remains consistent and update the `colspan` in section headers (B-043) accordingly.
+- Unit tests: one test per event type covering nap-present, nap-absent (null filtered), and single-day edge case.
+- E2E tests: add assertions in `tests/e2e/metrics.spec.js` that the event-time stats rows render in the rolling sections with the correct label text.
