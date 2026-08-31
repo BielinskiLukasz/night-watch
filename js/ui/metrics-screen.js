@@ -300,7 +300,9 @@ function computeTifTrimmedStats(rows, snap) {
     const col = COLUMNS[i];
 
     if (col.isTime) {
-      // rows store full ISO strings ('YYYY-MM-DDTHH:MM'); extract 'HH:MM' before converting.
+      // Metric rows may contain bare 'HH:MM' strings or full ISO strings ('YYYY-MM-DDTHH:MM').
+      // raw.length > 5 extracts the HH:MM slice from ISO strings and passes bare strings through
+      // unchanged — this guard handles both forms and is live code, not dead code.
       const mins = window
         .map(r => {
           const raw = r[col.key];
