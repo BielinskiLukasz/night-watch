@@ -639,6 +639,16 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const minRow = buildAggregateRow('Min', min, snap);
     const maxRow = buildAggregateRow('Max', max, snap);
 
+    // Append TIF placeholder cells to all-time aggregate rows (D-05, mirrors buildRollingSection)
+    for (const row of [minRow, avgRow, maxRow]) {
+      for (let j = 0; j < TIF_COLUMNS.length; j++) {
+        const td = document.createElement('td');
+        td.textContent = '—';
+        td.hidden = !isTif;
+        row.appendChild(td);
+      }
+    }
+
     summaryTbody.appendChild(minRow);
     summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(maxRow);
