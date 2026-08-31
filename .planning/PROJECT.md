@@ -58,6 +58,22 @@ compared to reality.
 - ✓ Today screen clarity: "Add event" button above prediction cards, hero card label — v1.1
 - ✓ Forecast E2E rewritten with 32-day 4-type fixture — v1.1
 
+**v1.3 — Prediction & TIF Enhancements (shipped 2026-08-31)**
+- ✓ Evening-hour override: when hour ≥ 18 and last event is wake, predict bedtime not nap — v1.3
+- ✓ Wake predictions unioned from hour-band and sleep-duration-band — v1.3
+- ✓ Intense-day flag per event-entry form, stored in history, used as TIF contextual modifier — v1.3
+- ✓ Missed-nap bedtime shift: no nap by threshold hour → earlier bedtime prediction — v1.3
+- ✓ Nap probability score on Today screen (frequency + time + streak + window-passed) — v1.3
+- ✓ TIF nap-start ratio window (activityBeforeNap/sleepDuration), nap-end ratio window (activityBeforeNap/napDuration) — v1.3
+- ✓ TIF rolling-window variant (tifRollingDays, configurable 3–90); MA/AA values preferred when recorded — v1.3
+- ✓ TIF per-window medians; central prediction = average of window medians — v1.3
+- ✓ TIF no-nap-day substitution: day-length bands replace activity-after-nap on no-nap days — v1.3
+- ✓ TIF Accuracy screen: per-event window hit rate, avg window width, ≥80% confidence % — v1.3
+- ✓ Day/Sleep Factor replaces SAA ratio column in Metrics screen — v1.3
+- ✓ TIF raw bounds and confidence score per event shown in Metrics screen — v1.3
+- ✓ MA/sleep ratio and MA/nap ratio columns added to Metrics screen — v1.3
+- ✓ Algorithm selector moved to top of Forecast fieldset; classic/TIF option groups show/hide — v1.3
+
 **v1.2 — Prediction & Metrics (shipped 2026-08-24)**
 - ✓ TIF algorithm opt-in toggle (forecastAlgorithm: classic | tif) persists across sessions — v1.2
 - ✓ TIF trim % (0–40) and precision target (minutes) settings with full persistence — v1.2
@@ -70,20 +86,22 @@ compared to reality.
 - ✓ Historical aggregates (avg, min with date, max with date) for all metrics — v1.2
 - ✓ Stage-scoped Metrics filtering — v1.2
 
-## Current Milestone: v1.3 Prediction & TIF Enhancements
+## Current Milestone: v1.4 TIF Fixes & Metrics Depth
 
-**Goal:** Refine the classic and TIF forecasting engines with contextual rules and ratio-based windows, and extend the Metrics + Accuracy screens to surface TIF-specific data.
+**Goal:** Fix two correctness bugs in the TIF forecast engine introduced during post-v1.3 quick tasks, then deepen the Metrics screen with rolling window aggregates, day-of-week rhythm patterns, and a sleep debt proxy signal.
 
 **Target features:**
-- Prediction logic refinements: time-based bedtime rule, duration-based prediction, intense-day flag, missing-nap impact on bedtime
-- TIF algorithm extensions: ratio-based windows (activity/sleep → nap-start, activity/nap → nap-end), rolling windows + MA/AA preference
-- TIF metrics & accuracy: TIF accuracy screen, replace SAA with day/sleep factor, TIF window bounds on Metrics screen, nap-fraction + AM/PM split columns
+- TIF bug fixes: `findBedtimeDayRecord` latestAt ordering, rejected-day pre-filter semantics, redundant tifForecast render call, misleading comment + stale test name
+- Rolling aggregates: 7-day and 14-day windowed stats across all metric columns
+- Day-of-week patterns: per-weekday averages for MA, AA, nap duration, sleep duration
+- Sleep debt proxy: rolling accumulated sleep deficit shown in Metrics and usable as TIF input
 
 ### Active
 
-- [x] Phase 12 — Prediction logic refinements (B-004, B-005, B-006, B-007) — Complete 2026-08-26
-- [ ] Phase 13 — TIF algorithm extensions (B-033, B-037)
-- [ ] Phase 14 — TIF metrics & accuracy (B-031, B-034, B-035, B-036)
+- [ ] Phase 15 — TIF bug fixes (FIX-01..FIX-05)
+- [ ] Phase 16 — Rolling aggregates (MET-09, MET-10)
+- [ ] Phase 17 — Day-of-week patterns (MET-11, MET-12)
+- [ ] Phase 18 — Sleep debt proxy (MET-13, MET-14)
 
 ### Out of Scope
 
@@ -208,4 +226,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-26 after Phase NW-12 — Prediction Logic Refinements*
+*Last updated: 2026-08-31 — Milestone v1.4 started*
