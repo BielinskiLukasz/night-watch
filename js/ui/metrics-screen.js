@@ -15,7 +15,6 @@
 //   - No user input interpolated into dynamic HTML injection anywhere in this module
 
 import {
-  activityAfterSleepFactor,
   aggregateMetrics,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
