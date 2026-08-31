@@ -624,6 +624,9 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // 7-day rolling aggregate tbody (D-06: appears first above all-time)
     const sevenDayTbody = buildRollingSection(7, '7-day rolling', nonRejectedDays, snap, isTif);
 
+    // 14-day rolling aggregate tbody (D-06: inserted between 7-day and all-time)
+    const fourteenDayTbody = buildRollingSection(14, '14-day rolling', nonRejectedDays, snap, isTif);
+
     // All-time summary tbody (Avg, Min, Max + TIF rows)
     const summaryTbody = document.createElement('tbody');
     summaryTbody.classList.add('metrics-summary-tbody');
@@ -651,10 +654,10 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(medianTifRow);
     summaryTbody.appendChild(maxTifRow);
 
-    // Table tbody append sequence (D-06, D-07):
-    // thead → 7-day rolling → all-time summary → per-day rows
-    // (14-day rolling will be inserted between 7-day and all-time in Task 2)
+    // Table tbody append sequence per D-06, D-07:
+    // thead → 7-day rolling → 14-day rolling → all-time summary → per-day rows
     table.appendChild(sevenDayTbody);
+    table.appendChild(fourteenDayTbody);
     table.appendChild(summaryTbody);
 
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
