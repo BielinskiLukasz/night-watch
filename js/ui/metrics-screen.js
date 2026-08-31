@@ -21,7 +21,7 @@ import {
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
 import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
-import { trimmedMinMax, tifForecast } from '../lib/forecast-tif.js';
+import { trimmedMinMax } from '../lib/forecast-tif.js';
 import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -461,29 +461,6 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
 
     // TIF aggregate rows: trimmed stats per column over the rolling window (MET-11)
     const tifTrimmedStats = isTif ? computeTifTrimmedStats(rows, snap) : null;
-
-    // Override the 4 event-time columns in tifTrimmedStats with historic band values
-    // sourced directly from a fresh tifForecast on current data. This guarantees
-    // min-TIF/median-TIF/max-TIF match the forecast's historic band — not the
-    // intersection (algMin/algMax) and not a parallel computation that may drift.
-    if (isTif && tifTrimmedStats) {
-      const currentForecast = tifForecast(reversedDays, snap, activityLog);
-      const HISTORIC_LABELS = {
-        wake:     'Historic wake-up band',
-        napStart: 'Historic nap-start band',
-        napEnd:   'Historic nap-end band',
-        bedtime:  'Historic bedtime band',
-      };
-      for (const [colKey, label] of Object.entries(HISTORIC_LABELS)) {
-        const pred = currentForecast[colKey];
-        if (!pred?.sourceWindows) continue;
-        const band = pred.sourceWindows.find(w => w.label === label);
-        if (!band) continue;
-        tifTrimmedStats.min[colKey]    = band.min    ?? null;
-        tifTrimmedStats.median[colKey] = band.median ?? null;
-        tifTrimmedStats.max[colKey]    = band.max    ?? null;
-      }
-    }
 
     // Build table
     const table = document.createElement('table');
