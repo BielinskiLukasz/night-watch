@@ -277,7 +277,7 @@ function buildAggregateRow(label, aggregateData, snap) {
 }
 
 /**
- * Compute trimmed min, median, and max for each base metric column (indices 1–15)
+ * Compute trimmed min, median, and max for each base metric column (indices 1–17)
  * over the TIF rolling window, skipping rejected rows (MET-11).
  *
  * @param {object[]} rows   metrics rows (oldest-first) from aggregateMetrics
@@ -355,7 +355,7 @@ function buildTifAggregateRow(label, tifStats, snap) {
   labelCell.textContent = label;
   tr.appendChild(labelCell);
 
-  // Base COLUMNS (indices 1-15): show trimmed stat for each column
+  // Base COLUMNS (indices 1-17): show trimmed stat for each column
   for (let i = 1; i < COLUMNS.length; i++) {
     const col = COLUMNS[i];
     const td = document.createElement('td');
