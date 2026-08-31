@@ -1739,6 +1739,7 @@ button[data-log] {
   padding: 6px 12px;
   letter-spacing: 0.05em;
   border-top: 2px solid #cbd5e1;
+  text-align: left;
 }
 
 /* ── Rejected day rows (dimmed, D11-05) ────────────────────────────────– */
