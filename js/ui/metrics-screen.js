@@ -482,7 +482,7 @@ function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
  * @param {{
  *   root: HTMLElement,
  *   eventLog: {
- *     daysBySubjectiveNight: (cutoverHour: number) => Array<object>,
+ *     daysBySubjectiveNight: (cutoverHour: number, limit?: number, settings?: object) => Array<object>,
  *     subscribe: (fn: () => void) => () => void,
  *   },
  *   settings: {
@@ -522,8 +522,9 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
   const render = () => {
     const snap = settings.get();
 
-    // Full history via subjective-night bucketing
-    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // Full history via subjective-night bucketing; pass snap so rejectedDays/intenseDays
+    // annotations are applied (mirrors history-screen.js pattern).
+    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour, undefined, snap);
 
     // Empty state: no days logged
     if (!allDays || allDays.length === 0) {

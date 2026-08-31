@@ -446,4 +446,73 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
 
     expect(hiddenTifCellCount).toBe(12);
   });
+
+  test('MET-10/boundary: all days rejected — rolling sections render em-dash values, no JS errors', async ({ page }) => {
+    // Seed 3 days of events but mark all three dates as rejected.
+    // Unlike the empty-events test (events:[]) this exercises the code path where
+    // nonRejectedDays is [] but the metrics table still renders (days is non-empty).
+    const events = [
+      { id: 'test-wake-01',    type: 'wake',    at: '2025-06-01T08:00' },
+      { id: 'test-bedtime-01', type: 'bedtime', at: '2025-06-01T22:00' },
+      { id: 'test-wake-02',    type: 'wake',    at: '2025-06-02T08:00' },
+      { id: 'test-bedtime-02', type: 'bedtime', at: '2025-06-02T22:00' },
+      { id: 'test-wake-03',    type: 'wake',    at: '2025-06-03T08:00' },
+      { id: 'test-bedtime-03', type: 'bedtime', at: '2025-06-03T22:00' },
+    ];
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: ['2025-06-01', '2025-06-02', '2025-06-03'],
+        stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    const consoleErrors = [];
+    page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+    page.on('pageerror', err => consoleErrors.push(err.message));
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // Both rolling tbodies must be present (table renders because days exist)
+    await expect(page.locator('.metrics-rolling-tbody').nth(0)).toBeVisible();
+    await expect(page.locator('.metrics-rolling-tbody').nth(1)).toBeVisible();
+
+    // Each rolling section must have 3 aggregate rows
+    await expect(page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-summary-row')).toHaveCount(3);
+    await expect(page.locator('.metrics-rolling-tbody').nth(1).locator('.metrics-summary-row')).toHaveCount(3);
+
+    // All value cells in rolling sections must show em-dash (aggregateMetrics([]) → all-null)
+    const emDashCheck = await page.evaluate(() => {
+      const rollingTbodies = document.querySelectorAll('.metrics-rolling-tbody');
+      const results = { total: 0, emDash: 0, other: [] };
+      for (const tbody of rollingTbodies) {
+        for (const row of tbody.querySelectorAll('.metrics-summary-row')) {
+          // Skip the label cell (first td), check all value tds that are visible
+          const tds = Array.from(row.querySelectorAll('td')).slice(1).filter(td => !td.hidden);
+          for (const td of tds) {
+            results.total++;
+            if (td.textContent === '—') results.emDash++;
+            else results.other.push(td.textContent);
+          }
+        }
+      }
+      return results;
+    });
+
+    expect(emDashCheck.other).toHaveLength(0);
+    expect(emDashCheck.emDash).toBe(emDashCheck.total);
+    expect(emDashCheck.total).toBeGreaterThan(0);
+
+    // No JS errors
+    expect(consoleErrors).toHaveLength(0);
+  });
 });
