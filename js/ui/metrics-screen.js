@@ -21,7 +21,7 @@ import {
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
 import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
-import { trimmedMinMax } from '../lib/forecast-tif.js';
+import { trimmedMinMax, tifForecast } from '../lib/forecast-tif.js';
 import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -463,6 +463,39 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
 
     // TIF aggregate rows: trimmed stats per column over the rolling window (MET-11)
     const tifTrimmedStats = isTif ? computeTifTrimmedStats(rows, snap) : null;
+
+    // Override the 4 event-time columns in tifTrimmedStats with values sourced from
+    // the TIF historic band (tifForecast → sourceWindows). This is NOT redundant:
+    //
+    //   computeTifTrimmedStats  — sorts raw event time strings from aggregateMetrics rows
+    //                             and applies a plain trimmedMinMax. No rejection logic.
+    //
+    //   tifForecast sourceWindows — runs the full TIF band-building algorithm, which
+    //                             applies rejectedInWindow to exclude bad days and uses
+    //                             its own trim path. Produces the same numbers shown in
+    //                             the Today screen's historic band.
+    //
+    // Without this override the min-TIF/median-TIF/max-TIF event-time cells diverge
+    // from the Today screen's historic band. See commit 50d491c (original fix) and
+    // NW-15 plan 02 FIX-03 (which incorrectly removed it, reintroducing the bug).
+    if (isTif && tifTrimmedStats) {
+      const currentForecast = tifForecast(reversedDays, snap, activityLog);
+      const HISTORIC_LABELS = {
+        wake:     'Historic wake-up band',
+        napStart: 'Historic nap-start band',
+        napEnd:   'Historic nap-end band',
+        bedtime:  'Historic bedtime band',
+      };
+      for (const [colKey, label] of Object.entries(HISTORIC_LABELS)) {
+        const pred = currentForecast[colKey];
+        if (!pred?.sourceWindows) continue;
+        const band = pred.sourceWindows.find(w => w.label === label);
+        if (!band) continue;
+        tifTrimmedStats.min[colKey]    = band.min    ?? null;
+        tifTrimmedStats.median[colKey] = band.median ?? null;
+        tifTrimmedStats.max[colKey]    = band.max    ?? null;
+      }
+    }
 
     // Build table
     const table = document.createElement('table');
