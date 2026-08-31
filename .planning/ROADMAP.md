@@ -164,7 +164,11 @@ Plans:
   3. The 7-day, 14-day, and all-time aggregate sections are visually distinguished from each other (distinct section headings or styling)
   4. When the active stage has fewer than 7 or 14 non-rejected days respectively, the corresponding rolling section renders `—` for all cells without errors
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 16-01-PLAN.md — Tracer: 7-day + 14-day rolling tbodies with section headers, cold-start behavior, CSS, and Playwright boundary tests (MET-09, MET-10)
+
 **UI hint**: yes
 
 ### Phase 17: Day-of-Week Patterns
