@@ -28,9 +28,9 @@ import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Column definitions for the 16-column metrics table (D-09 order).
+ * Column definitions for the 18-column metrics table (D-09 order).
  * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
- *        Comb | Day Len | Day/Sleep | →Nap | Nap→ | Act | AM/PM | AAS
+ *        Comb | Day Len | Day/Sleep | →Nap | MA/Sl | MA/Nap | Nap→ | Act | AM/PM | AAS
  *
  * Changes from 14-column layout (D-09, D-13, D-14):
  *   - SAA (sleepAfterActivityFactor) removed per D-14/MET-07
