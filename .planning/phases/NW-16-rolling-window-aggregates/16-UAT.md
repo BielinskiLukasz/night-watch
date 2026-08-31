@@ -42,3 +42,7 @@ blocked: 0
 - test: confirmation
   idea: "add section headers (metrics-section-header) for TIF section and daily data section, similar to the 3 new rolling-window sections"
   deferred_at: 2026-08-31
+
+- test: confirmation
+  idea: "add event-time statistics rows (min, avg, max) for wake time, nap start, nap end, and bedtime across the rolling windows and all-time sections"
+  deferred_at: 2026-08-31
