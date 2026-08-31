@@ -534,8 +534,8 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const minRow = buildAggregateRow('Min', min, snap);
     const maxRow = buildAggregateRow('Max', max, snap);
 
-    summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(minRow);
+    summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(maxRow);
 
     // TIF aggregate rows (MET-11, D-06, D-07, D-08) — hidden when TIF is off
