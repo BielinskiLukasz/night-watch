@@ -71,7 +71,21 @@ v1.0 shipped all 8 phases. The layered module structure is stable:
 ```
 js/
   app.js          # Composition root — the ONLY place adapters are selected and injected
-  lib/            # Pure functions (no DOM, no side effects): forecast, day-bucket, csv-parse, accuracy, time…
+  lib/            # Pure functions (no DOM, no side effects)
+    forecast.js         # Classic P10/P50/P90 percentile rolling-window algorithm
+    forecast-tif.js     # Opt-in TIF algorithm; imports helpers from forecast.js
+    accuracy.js         # Retroactive accuracy scoring for classic algorithm
+    accuracy-tif.js     # Retroactive TIF backtesting engine; must NOT import metrics.js (circular)
+    metrics.js          # Per-day sleep metrics; shared by forecast-tif.js and metrics-screen.js
+    chart-data.js       # Pure data transforms for Charts screen visualizations
+    day-bucket.js       # Groups events into sleep-days using the cutover-hour setting
+    db-shape.js         # Schema validation + V1→V2 migration; source of DEFAULT_SETTINGS
+    settings-validate.js # Pure settings validator (two modes: 'save' strict / 'load' lenient)
+    stages.js           # Date-range stage filters applied by Metrics/Accuracy screens
+    csv-parse.js        # CSV import (Polish sen.xlsx column schema mapping)
+    import-export.js    # JSON round-trip export/import
+    time.js             # Time-string utilities (wall-clock, never UTC)
+    id.js               # Event ID minting via crypto.randomUUID(); injectable seam for tests
   store/          # Stateful stores with pub/sub: event-log.js, settings.js
   adapters/       # Injectable seams: storage-local/memory, clock-system/fixed
   ui/             # DOM rendering modules: today-screen, history-screen, charts-screen…
@@ -108,6 +122,8 @@ tests/
 - **PRECACHE_LIST must exclude test-only adapters.** `clock-fixed.js` and `storage-memory.js` must not appear in `sw.js`'s `PRECACHE_LIST`; `tests/unit/sw-precache.test.js` enforces this and will fail if an app-shell file is added without updating the list.
 
 - **`metrics.js` circular-import guard** — `metrics.js` is consumed by both `forecast-tif.js` and `metrics-screen.js`. It imports `timeToMinutes` from `forecast.js` but keeps a local copy of `extractTime` to avoid a cycle (`forecast-tif.js` → `metrics.js` → `forecast.js` is fine; the reverse direction would be circular).
+
+- **`accuracy-tif.js` circular-import guard** — imports from `forecast-tif.js` and `forecast.js` only. Must NOT import from `metrics.js` (which imports `forecast.js`, and `forecast-tif.js` already imports `metrics.js` — closing that loop would be circular). `settings-validate.js` has the same constraint: it imports `DEFAULT_SETTINGS` from `db-shape.js` rather than `settings.js` to avoid a `settings.js` → `settings-validate.js` → `settings.js` cycle.
 
 - **Stages are date-range filters, not app phases.** `js/lib/stages.js` exposes `filterDayRecordsByStage(dayRecords, stages, activeStageId)`. `activeStageId === null` means "all data". Any screen that aggregates history (Metrics, Accuracy) must pass data through this filter so user-defined life-stage scoping works correctly.
 <!-- GSD:architecture-end -->
