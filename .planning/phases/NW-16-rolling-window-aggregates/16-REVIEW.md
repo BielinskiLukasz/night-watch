@@ -9,9 +9,9 @@ files_reviewed_list:
   - tests/e2e/metrics.spec.js
 findings:
   critical: 1
-  warning: 6
-  info: 0
-  total: 7
+  warning: 4
+  info: 1
+  total: 6
 status: issues_found
 ---
 
@@ -24,48 +24,45 @@ status: issues_found
 
 ## Summary
 
-Three files were reviewed: the core Metrics screen module (`js/ui/metrics-screen.js`), the
-accompanying stylesheet (`style.css`), and the Playwright E2E spec (`tests/e2e/metrics.spec.js`).
+Three files reviewed: the metrics-screen JS module (rolling-window aggregate rendering), the shared stylesheet, and the E2E test suite. The rolling-window section rendering logic for 7-day and 14-day tbodies is correct. One blocker was found: the All-time Min/Average/Max aggregate rows skip the TIF placeholder cell injection step that the rolling sections perform, producing a column-count mismatch whenever TIF is the active algorithm. Four warnings cover a stale column-index comment repeated in two docstrings, a missing `text-align` override on section-header cells, dark-theme fallback colors on the stage dropdown, and missing `id` fields on seeded test events.
 
-`style.css` is clean — the new `.metrics-section-header` rule and `.metrics-rolling-tbody`
-selector are correct and consistent with the JS output.
+## Structural Findings (fallow)
 
-`js/ui/metrics-screen.js` has one BLOCKER: the All-time summary rows (Min / Average / Max) are
-never given TIF placeholder cells, so when TIF is the active algorithm the All-time section is
-12 cells short per row while the header and rolling-window rows all have 30 cells. The visual
-corruption only surfaces when TIF is toggled on, which is why the existing E2E tests (which only
-run with `forecastAlgorithm: 'classic'`) do not catch it.
+No structural pre-pass was provided for this phase.
 
-The E2E spec has several issues: a fundamentally broken test (MET-02/MET-03 opens an unhandled
-modal), a UTC/local-time mismatch in MET-06, and a flaky `waitForTimeout` call. There is also an
-unused import and a global-shadowing variable name in the JS module, plus an undocumented interface
-method dependency.
+## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: All-time Min/Average/Max aggregate rows are missing 12 TIF placeholder cells
+### CR-01: All-time Min/Average/Max rows missing 12 TIF placeholder cells when TIF is active
 
 **File:** `js/ui/metrics-screen.js:638-644`
 
-**Issue:** `buildRollingSection` explicitly appends 12 TIF placeholder cells (hidden when TIF is
-off) to each of the Min / Average / Max rows it produces (lines 451-458). The All-time
-`summaryTbody` block builds the same three rows with `buildAggregateRow` but never appends the
-TIF placeholder cells. When `forecastAlgorithm === 'tif'` the table header has 30 visible columns
-(18 base + 12 TIF), the rolling-window rows also have 30 cells, but the All-time Min / Average /
-Max rows have only 18 — producing visible column misalignment for every row in the All-time
-section. The TIF aggregate rows (`buildTifAggregateRow`) below them are correct (they include the
-12 TIF cells internally), making the misalignment more jarring.
+**Issue:** `buildRollingSection` (lines 451-458) appends 12 hidden `<td>` placeholder cells to each aggregate row after calling `buildAggregateRow`, keeping the column count at 18 + 12 = 30. The All-time section (lines 638-644) calls `buildAggregateRow` for Min, Average, and Max but never performs the equivalent injection. Those three rows end up with 18 cells while every other row in the table (header, rolling section rows, per-day rows, TIF rows) has 30. When TIF is enabled (`isTif === true`), the hidden attribute is removed from TIF column headers and TIF inline cells in per-day rows, making the column structure visible. The 12 missing cells in the All-time Min/Avg/Max rows cause those rows to visually misalign with the rest of the table.
 
-**Fix:** After building the three All-time aggregate rows (lines 638-640) and before appending
-them to `summaryTbody`, add the same TIF-cell loop used by `buildRollingSection`:
+The rolling section correctly does:
+```javascript
+// Step 8: append TIF placeholder cells to each row (D-05)
+for (const row of [minRow, avgRow, maxRow]) {
+  for (let j = 0; j < TIF_COLUMNS.length; j++) {
+    const td = document.createElement('td');
+    td.textContent = '—';
+    td.hidden = !isTif;
+    row.appendChild(td);
+  }
+}
+```
 
-```js
-// Build aggregate rows
+The All-time section does not. No E2E test covers TIF-on rendering of the Metrics screen, so this is undetected by the test suite.
+
+**Fix:** After appending minRow/avgRow/maxRow to `summaryTbody`, add the same TIF placeholder loop used in `buildRollingSection`:
+
+```javascript
 const avgRow = buildAggregateRow('Average', avg, snap);
 const minRow = buildAggregateRow('Min', min, snap);
 const maxRow = buildAggregateRow('Max', max, snap);
 
-// Append TIF placeholder cells to All-time rows (prevents column-count mismatch when TIF is on)
+// Append TIF placeholder cells to all-time aggregate rows (D-05, mirrors buildRollingSection)
 for (const row of [minRow, avgRow, maxRow]) {
   for (let j = 0; j < TIF_COLUMNS.length; j++) {
     const td = document.createElement('td');
@@ -82,151 +79,110 @@ summaryTbody.appendChild(maxRow);
 
 ## Warnings
 
-### WR-01: Unused import `activityAfterSleepFactor`
+### WR-01: Stale "indices 1-15" comment appears in two docstrings; COLUMNS has 18 entries (indices 0-17)
 
-**File:** `js/ui/metrics-screen.js:18`
+**File:** `js/ui/metrics-screen.js:287` and `js/ui/metrics-screen.js:358`
 
-**Issue:** `activityAfterSleepFactor` is imported from `../lib/metrics.js` but is never called
-anywhere in `metrics-screen.js`. The column with that key reads its value directly from the
-`aggregateMetrics` row object by string key; no direct function invocation is needed. Unused
-imports increase cognitive surface area and inflate the module's visible API dependency.
+**Issue:** Both `computeTifTrimmedStats` (line 287) and `buildTifAggregateRow` (line 358) document the column iteration as "indices 1–15". The COLUMNS array was extended to 18 elements (indices 0–17) when `napFraction` (MET-09), `dayToSleepFactor` (MET-07), and `amPmSplit` (MET-10) were added. The loop body `for (let i = 1; i < COLUMNS.length; i++)` is correct, but the stale comment creates a false mental model. A reader debugging these functions will count 15 columns and not find indices 16 and 17 (`amPmSplit`, `activityAfterSleepFactor`), leading to confusion about whether those columns are intentionally skipped.
 
-**Fix:** Remove from the import statement:
-
-```js
-import {
-  aggregateMetrics,
-} from '../lib/metrics.js';
+**Fix:** Update both occurrences:
+```
+// Line 287 docstring: "each base metric column (indices 1–17)"
+// Line 358 comment:   "Base COLUMNS (indices 1-17): show trimmed stat for each column"
 ```
 
-### WR-02: `window` variable shadows the global `window` object
+### WR-02: `.metrics-section-header` inherits `text-align: right` — section labels appear right-aligned
 
-**File:** `js/ui/metrics-screen.js:294`
+**File:** `style.css:1733-1742`
 
-**Issue:** Inside `computeTifTrimmedStats`, the local variable `const window = rows.slice(-windowSize).filter(r => !r.rejected)` shadows the browser's `window` global. While the global is not accessed in this scope, the name collision is a footgun if the function is ever extended, and it will fire ESLint `no-shadow` / browser-lint rules.
+**Issue:** The general rule `.metricsTable td { text-align: right }` (line 1694) applies to all `<td>` elements, including the full-width section-header cells. The new `.metrics-section-header` rule does not declare `text-align`, so it inherits `right`. A 30-column-spanning cell with `text-align: right` renders its label ("7-DAY ROLLING", "14-DAY ROLLING", "ALL-TIME") flush against the far-right edge of the table — a presentation defect on wide screens.
 
-**Fix:** Rename to a non-colliding identifier:
-
-```js
-const rollingWindow = rows.slice(-windowSize).filter(r => !r.rejected);
-// … and update all subsequent references from `window` to `rollingWindow`
+**Fix:** Add `text-align: left` to the section-header rule:
+```css
+.metricsTable td.metrics-section-header {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #334155;
+  padding: 6px 12px;
+  letter-spacing: 0.05em;
+  border-top: 2px solid #cbd5e1;
+  text-align: left;   /* add this */
+}
 ```
 
-### WR-03: `eventLog.getActivityLog()` is called but absent from the documented interface
+### WR-03: `.stage-select` uses dark-theme CSS variable fallbacks in a light-themed app
 
-**File:** `js/ui/metrics-screen.js:556`
+**File:** `style.css:1237-1241`
 
-**Issue:** The JSDoc for `mountMetricsScreen` (lines 480-492) documents the `eventLog` interface
-as requiring only `daysBySubjectiveNight` and `subscribe`. However, at line 556 the code calls
-`eventLog.getActivityLog()` unconditionally when TIF is active:
+**Issue:** The `.stage-select` rule uses CSS variable references with fallback literals:
+```css
+border: 1px solid var(--color-border, #333);
+background: var(--color-bg-input, #1a1a2e);
+color: var(--color-text, #e0e0e0);
+```
+No CSS custom properties are defined anywhere in `style.css` or the app shell, so the fallback values are always used: `#1a1a2e` (very dark navy) background with `#e0e0e0` (light gray) text and `#333` border. This produces a dark-themed dropdown inside the light-themed app. Compare with other form controls that use `background: #fff` and `color: #334155`.
 
-```js
-const activityLog = isTif ? eventLog.getActivityLog() : {};
+**Fix:** Replace the variable references with concrete light-theme values consistent with the rest of the UI:
+```css
+.stage-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
 ```
 
-Any caller (or test double) that follows the documented interface will receive a `TypeError:
-eventLog.getActivityLog is not a function` the moment TIF is toggled on — a silent runtime break
-with no static warning.
+### WR-04: Seeded events in E2E tests are missing `id` fields — may silently bypass schema validation
 
-**Fix:** Add `getActivityLog` to the JSDoc interface:
+**File:** `tests/e2e/metrics.spec.js:85-96` (and similar seed blocks at lines 187-213, 244-258, 283-298, 328-342, 399-416)
 
-```js
- *   eventLog: {
- *     daysBySubjectiveNight: (cutoverHour: number) => Array<object>,
- *     subscribe: (fn: () => void) => () => void,
- *     getActivityLog: () => object,
- *   },
+**Issue:** All test seed databases inject events without an `id` field, e.g.:
+```javascript
+events: [
+  { type: 'wake',    at: todayISO + 'T08:00' },
+  { type: 'bedtime', at: todayISO + 'T22:00' }
+],
+```
+`js/lib/id.js` mints IDs via `crypto.randomUUID()` at log time. The schema validator in `db-shape.js` may enforce `id` presence on import. If validation rejects or silently drops the seeded events, the tests will test an empty-state path while believing they are testing a populated table. Even if the current validator is lenient on import, any future tightening of schema validation will silently break all six seeded tests simultaneously. The correct fix is to include `id` in all seeded events.
+
+**Fix:** Add stable synthetic IDs to all seeded events:
+```javascript
+events: [
+  { id: 'test-wake-1',    type: 'wake',    at: todayISO + 'T08:00' },
+  { id: 'test-bedtime-1', type: 'bedtime', at: todayISO + 'T22:00' },
+],
 ```
 
-### WR-04: JSDoc says "16-column metrics table" but COLUMNS has 18 entries
+## Info
 
-**File:** `js/ui/metrics-screen.js:32-33`
+### IN-01: Redundant null/undefined guards in `formatCellValue` after early-return guard
 
-**Issue:** The block comment at the top of the COLUMNS definition reads "16-column metrics table
-(D-09 order)" and the column enumeration in the comment lists 16 columns. The actual array has 18
-entries — `maSleepRatio` (MA/Sl) and `maNapRatio` (MA/Nap) are present in the array but missing
-from the comment list. The E2E test correctly expects 30 header cells (18 + 12 TIF), confirming
-the implementation is the ground truth. The docstring is wrong.
+**File:** `js/ui/metrics-screen.js:139-148`
 
-**Fix:** Update the comment header to "18-column metrics table" and add MA/Sl and MA/Nap to the
-column-order enumeration:
-
-```js
- * Column definitions for the 18-column metrics table (D-09 order).
- * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
- *        Comb | Day Len | Day/Sleep | →Nap | MA/Sl | MA/Nap | Nap→ | Act | AM/PM | AAS
+**Issue:** Line 137 performs an early return for `null` and `undefined`:
+```javascript
+if (value === null || value === undefined) return '—';
 ```
-
-### WR-05: E2E test MET-02/MET-03 clicks a quick-log button without handling the resulting modal
-
-**File:** `tests/e2e/metrics.spec.js:24-47`
-
-**Issue:** The test clicks `[data-log="wake"]`, which in this app opens the manual-entry modal
-dialog. The test then immediately navigates to the Metrics tab with no modal interaction (no
-fill-in, no submit, no close). The comment acknowledges this: "For now, assume quick-log was used
-and data exists." The event is never saved, so the Metrics table renders with no data, and the
-assertion `await expect(table).toBeVisible()` will fail because the empty-state `<p class="emptyState">` is rendered instead of `.metricsTable`.
-
-**Fix:** Seed test data in `localStorage` before the page load (the same pattern used in all
-other tests in this file), or interact with the modal to completion before navigating. Remove the
-ambiguous "assume quick-log" comment.
-
-```js
-// Recommended: inject seed data before navigating, matching the pattern in MET-06 / MET-09
-await page.evaluate((data) => {
-  localStorage.setItem('nightwatch:db', JSON.stringify(data));
-}, seedDb);
-await page.reload();
-await page.waitForSelector('[data-tab="today"]');
-await page.locator('[data-tab="metrics"]').click();
-await expect(page.locator('.metricsTable')).toBeVisible();
+The subsequent branch conditions repeat those checks:
+```javascript
+} else if (colDef.isRatio && value !== null && value !== undefined) {
+} else if (!colDef.isTime && !colDef.isRatio && value !== null && value !== undefined) {
 ```
+These inner checks are always true at that point (the early return already excluded null/undefined). Leaving them in makes the function harder to reason about (a reader must trace the guard to confirm they are dead checks) and creates a slight risk that a future editor inserts code between line 137 and line 139 in a way that breaks the invariant.
 
-### WR-06: MET-06 test derives "today" via `toISOString()` — UTC date, not local date
-
-**File:** `tests/e2e/metrics.spec.js:59-60`
-
-**Issue:**
-
-```js
-const today = new Date();
-const todayISO = today.toISOString().split('T')[0]; // YYYY-MM-DD
-```
-
-`toISOString()` returns the UTC date. When the test machine's local timezone is UTC-N and the
-test runs between midnight UTC and N hours after midnight locally, `todayISO` will be yesterday's
-date in local time. The seeded event (`at: todayISO + 'T08:00'`) would then be attributed to a
-different date than what the app expects for "today", potentially causing the stage filter to
-exclude the seeded day and making the test fail intermittently. CLAUDE.md explicitly states
-"Time strings are local wall-clock, never UTC."
-
-**Fix:** Derive local date without UTC conversion:
-
-```js
-const now = new Date();
-const pad = (n) => String(n).padStart(2, '0');
-const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-```
-
-### WR-07: `page.waitForTimeout(500)` used instead of a condition-based wait
-
-**File:** `tests/e2e/metrics.spec.js:382`
-
-**Issue:** In the "zero days" boundary test, `await page.waitForTimeout(500)` is used to
-"allow render to complete" before asserting that `.metricsTable` is absent. Fixed-time delays
-are fragile: on slow CI runners 500 ms may not be sufficient; on fast machines it wastes time.
-Playwright's own documentation explicitly discourages `waitForTimeout` in tests.
-
-**Fix:** Replace with a condition-based wait. Since the empty-state element should appear when
-there are no days, wait for it:
-
-```js
-// Instead of waitForTimeout(500):
-await expect(page.locator('.emptyState')).toBeVisible();
-
-// Then assert table is absent:
-const tableCount = await page.locator('.metricsTable').count();
-expect(tableCount).toBe(0);
+**Fix:** Remove the redundant guards from the `else if` branches:
+```javascript
+function formatCellValue(value, colDef, snap) {
+  if (value === null || value === undefined) return '—';
+  if (colDef.isTime)  return formatTime(value, snap.timeFormat);
+  if (colDef.isRatio) return value.toFixed(2);
+  return formatDuration(value); // duration columns
+}
 ```
 
 ---
