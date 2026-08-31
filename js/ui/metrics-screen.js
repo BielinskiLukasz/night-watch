@@ -137,9 +137,9 @@ function formatCellValue(value, colDef, snap) {
 
   if (colDef.isTime) {
     return formatTime(value, snap.timeFormat);
-  } else if (colDef.isRatio && value !== null && value !== undefined) {
+  } else if (colDef.isRatio) {
     return value.toFixed(2);
-  } else if (!colDef.isTime && !colDef.isRatio && value !== null && value !== undefined) {
+  } else if (!colDef.isTime && !colDef.isRatio) {
     // Duration columns
     return formatDuration(value);
   } else {
