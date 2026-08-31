@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
-current_phase: 15
-current_phase_name: TIF Engine Bug Fixes
-status: executing
-stopped_at: Completed NW-15-02-PLAN.md
-last_updated: "2026-08-31T13:51:54.068Z"
+current_phase: 16
+current_phase_name: Rolling Window Aggregates
+status: planning
+stopped_at: Phase 16 context gathered
+last_updated: "2026-08-31T17:39:20.720Z"
 last_activity: 2026-08-31
-last_activity_desc: Phase NW-15 execution started
-state_head: 8f3065c40acf3dcfc5a2231416b83968b33fecfa
+last_activity_desc: Phase NW-15 complete, transitioned to Phase 16
+state_head: 70a23f6100a7799d32246ca886ec7775efa6cd60
 progress:
-  total_phases: 1
-  completed_phases: 0
+  total_phases: 2
+  completed_phases: 1
   total_plans: 2
   completed_plans: 2
 ---
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-15 — TIF Engine Bug Fixes
+**Current focus:** Phase NW-16 — Rolling Window Aggregates
 
 ## Current Position
 
-Phase: NW-15 (TIF Engine Bug Fixes) — EXECUTING
-Plan: 2 of 2
-Status: Executing Phase NW-15
-Last activity: 2026-08-31 — Phase NW-15 execution started
+Phase: 16 — Rolling Window Aggregates
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-31 — Phase NW-15 complete, transitioned to Phase 16
 
 ## Phases
 
@@ -43,7 +43,7 @@ Last activity: 2026-08-31 — Phase NW-15 execution started
 | 12 | Prediction Logic Refinements | PRED-08..12, UI-07 | Complete |
 | 13 | TIF Algorithm Extensions | TIF-12, TIF-13, TIF-15, TIF-16 | Complete |
 | 14 | TIF Metrics, Accuracy & Chart Fixes | TIF-14, MET-07..11, UI-08..10 | Complete |
-| 15 | TIF Engine Bug Fixes | FIX-01..05 | Not started |
+| 15 | TIF Engine Bug Fixes | FIX-01..05 | Complete |
 | 16 | Rolling Window Aggregates | MET-09, MET-10 | Not started |
 | 17 | Day-of-Week Patterns | MET-11, MET-12 | Not started |
 | 18 | Sleep Debt Proxy | MET-13, MET-14 | Not started |
@@ -121,9 +121,11 @@ Last activity: 2026-08-31 — Phase NW-15 execution started
 - [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
 - [Phase 15]: FIX-01: latestAt === null guard in findBedtimeDayRecord bare-string path prevents ISO-dated selection from being displaced by later bare-string entries
 - [Phase 15]: FIX-02: rejectedInWindow = window.length - acceptedWindow.length threaded to all primary band-building calls; postNoNapNapStartTimes call retains 0
-- [Phase 15]: FIX-03: tifForecast import removed entirely from metrics-screen.js; trimmedMinMax retained
+- [Phase 15]: FIX-03 (plan 02 removed the block; UAT revealed regression and restored it): override block in metrics-screen.js render() must call tifForecast and overwrite event-time columns in tifTrimmedStats with sourceWindows values — computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic and diverges from Today screen
+- [Phase 15]: FIX-03 day-order fix (UAT): override must pass `days` (newest-first, as daysBySubjectiveNight returns) NOT reversedDays — tifForecast uses slice(-N) internally so oldest-first input selects a different rolling window than Today screen
 - [Phase 15]: FIX-04: computeTifTrimmedStats comment updated to clarify bare HH:MM and ISO string inputs both handled by raw.length > 5 guard
 - [Phase 15]: FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91
+- [Phase 15]: UAT: Metrics summary row order changed to Min / Average / Max (Average between bounds)
 
 ### Quick Tasks Completed
 
@@ -147,10 +149,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-31T13:51:54.026Z
-Stopped at: Completed NW-15-02-PLAN.md
-Resume file: None
+Last session: 2026-08-31T17:39:18.501Z
+Stopped at: Phase 16 context gathered
+Resume file: .planning/phases/NW-16-rolling-window-aggregates/16-CONTEXT.md
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 15` to plan Phase 15 (TIF Engine Bug Fixes)
+- Run `/gsd-plan-phase 16` to plan Phase 16 (Rolling Window Aggregates)
