@@ -145,7 +145,11 @@ Plans:
   4. The `computeTifTrimmedStats` comment in `metrics-screen.js` accurately describes that metric rows may contain bare `HH:MM` strings, so the `raw.length > 5` guard is not mistakenly dismissed as dead code
   5. The test in `settings-validate.test.js` that covers the `tifRollingDays` upper-bound reads "rejects 91 (above max=90)" and the full test suite passes
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — forecast-tif.js: fix findBedtimeDayRecord bare/ISO ordering + manualExcludedCount semantics + unit tests (FIX-01, FIX-02)
+- [ ] 15-02-PLAN.md — metrics-screen.js: remove redundant tifForecast call, fix comment; settings-validate.test.js: fix stale test description (FIX-03, FIX-04, FIX-05)
 
 ### Phase 16: Rolling Window Aggregates
 
