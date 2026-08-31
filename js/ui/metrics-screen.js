@@ -289,7 +289,7 @@ function computeTifTrimmedStats(rows, snap) {
   const trimPct    = snap.trimPct ?? 10;
 
   // Take the last windowSize rows (most recent), then exclude rejected.
-  const window = rows.slice(-windowSize).filter(r => !r.rejected);
+  const rollingRows = rows.slice(-windowSize).filter(r => !r.rejected);
 
   const minMap    = {};
   const medianMap = {};
@@ -302,7 +302,7 @@ function computeTifTrimmedStats(rows, snap) {
       // Metric rows may contain bare 'HH:MM' strings or full ISO strings ('YYYY-MM-DDTHH:MM').
       // raw.length > 5 extracts the HH:MM slice from ISO strings and passes bare strings through
       // unchanged — this guard handles both forms and is live code, not dead code.
-      const mins = window
+      const mins = rollingRows
         .map(r => {
           const raw = r[col.key];
           if (raw == null) return null;
@@ -317,7 +317,7 @@ function computeTifTrimmedStats(rows, snap) {
       maxMap[col.key]    = result ? minutesToTime(result.max)    : null;
     } else {
       // Duration and ratio columns — sort numerically, apply trimmedMinMax.
-      const vals = window
+      const vals = rollingRows
         .map(r => r[col.key] != null ? r[col.key] : null)
         .filter(v => v !== null);
       vals.sort((a, b) => a - b);
