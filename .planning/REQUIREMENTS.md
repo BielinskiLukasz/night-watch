@@ -12,9 +12,9 @@
 
 - [x] **FIX-01**: `findBedtimeDayRecord` in `forecast-tif.js` correctly tracks `latestAt` when iterating bare `'HH:MM'` slot entries, so an older bare-string day cannot beat a newer ISO-string day as the selected bedtime day record
 - [x] **FIX-02**: The rejected-day pre-filter in TIF band computation (`forecast-tif.js` ~line 512) preserves the original `manualExcludedCount` semantics, so rejected days that are non-outliers do not cause the auto-trim budget to be applied against fewer data points than intended
-- [ ] **FIX-03**: `metrics-screen.js` render() does not call `tifForecast` a second time to read back 4 `HH:MM` event-time strings; those values are extracted from data already computed in the same render cycle
-- [ ] **FIX-04**: The comment in `computeTifTrimmedStats` (`metrics-screen.js` ~line 317) accurately describes that metric rows may contain bare `HH:MM` strings (not only full ISO strings), so maintainers cannot incorrectly conclude the `raw.length > 5` guard is dead code
-- [ ] **FIX-05**: The test description in `settings-validate.test.js` line 722 correctly reads "rejects 91 (above max=90)" rather than the stale "rejects 31 (above max=90)"
+- [x] **FIX-03**: `metrics-screen.js` render() does not call `tifForecast` a second time to read back 4 `HH:MM` event-time strings; those values are extracted from data already computed in the same render cycle
+- [x] **FIX-04**: The comment in `computeTifTrimmedStats` (`metrics-screen.js` ~line 317) accurately describes that metric rows may contain bare `HH:MM` strings (not only full ISO strings), so maintainers cannot incorrectly conclude the `raw.length > 5` guard is dead code
+- [x] **FIX-05**: The test description in `settings-validate.test.js` line 722 correctly reads "rejects 91 (above max=90)" rather than the stale "rejects 31 (above max=90)"
 
 ### Rolling Aggregates
 
@@ -67,9 +67,9 @@
 |-------------|-------|--------|
 | FIX-01 | Phase 15 | Complete |
 | FIX-02 | Phase 15 | Complete |
-| FIX-03 | Phase 15 | Pending |
-| FIX-04 | Phase 15 | Pending |
-| FIX-05 | Phase 15 | Pending |
+| FIX-03 | Phase 15 | Complete |
+| FIX-04 | Phase 15 | Complete |
+| FIX-05 | Phase 15 | Complete |
 | MET-09 | Phase 16 | Pending |
 | MET-10 | Phase 16 | Pending |
 | MET-11 | Phase 17 | Pending |

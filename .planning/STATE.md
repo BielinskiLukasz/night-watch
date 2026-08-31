@@ -5,16 +5,16 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 15
 current_phase_name: TIF Engine Bug Fixes
 status: executing
-stopped_at: Completed NW-15-01-PLAN.md
-last_updated: "2026-08-31T13:07:31.904Z"
+stopped_at: Completed NW-15-02-PLAN.md
+last_updated: "2026-08-31T13:51:54.068Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase NW-15 execution started
-state_head: 3e4d35a0a940ee73dabac1fa5aa5508d63117dc7
+state_head: 8f3065c40acf3dcfc5a2231416b83968b33fecfa
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -85,6 +85,7 @@ Last activity: 2026-08-31 — Phase NW-15 execution started
 | Phase NW-14 P03 | 9 | 3 tasks | 1 files |
 | Phase NW-14 P04 | 7 | 2 tasks | 1 files |
 | Phase NW-15 P01 | 14 | 3 tasks | 2 files |
+| Phase NW-15 P02 | 14 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ Last activity: 2026-08-31 — Phase NW-15 execution started
 - [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
 - [Phase 15]: FIX-01: latestAt === null guard in findBedtimeDayRecord bare-string path prevents ISO-dated selection from being displaced by later bare-string entries
 - [Phase 15]: FIX-02: rejectedInWindow = window.length - acceptedWindow.length threaded to all primary band-building calls; postNoNapNapStartTimes call retains 0
+- [Phase 15]: FIX-03: tifForecast import removed entirely from metrics-screen.js; trimmedMinMax retained
+- [Phase 15]: FIX-04: computeTifTrimmedStats comment updated to clarify bare HH:MM and ISO string inputs both handled by raw.length > 5 guard
+- [Phase 15]: FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91
 
 ### Quick Tasks Completed
 
@@ -143,8 +147,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-31T13:07:31.813Z
-Stopped at: Completed NW-15-01-PLAN.md
+Last session: 2026-08-31T13:51:54.026Z
+Stopped at: Completed NW-15-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
