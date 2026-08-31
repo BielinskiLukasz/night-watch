@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-31 (added B-038–B-041)
-Last assigned ID: **B-041** — next new item must be **B-042**
+Last updated: 2026-08-31 (added B-038–B-042)
+Last assigned ID: **B-042** — next new item must be **B-043**
 
 ---
 
@@ -994,3 +994,29 @@ For each existing window that uses historical distributions (e.g. activity-befor
 - Add equivalent columns to the Accuracy screen renderer (`js/ui/accuracy-screen.js` or equivalent). Follow the B-031 layout decision for where they appear.
 - Ensure the `accuracy-tif.js` circular-import guard is respected: columns on the Accuracy screen should read from `accuracy-tif.js` output, not from `metrics.js`.
 - Update any E2E tests that assert TIF column presence on the Metrics screen.
+
+---
+
+### B-042 · App Version Number Display
+
+**Source:** product idea — reported 2026-08-31; mirrors B-013 in med-stock
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next available patch or alongside any Settings modal work
+
+**What:** Show the current app version somewhere visible in the UI — most naturally in the Settings modal footer or a small "About" row at the bottom of the settings panel. The version string should be a single authoritative constant (e.g., `v1.0.0`) that is updated manually alongside `package.json` on each release.
+
+**Why:** Without a visible version, users cannot report "which version broke X" and the developer cannot correlate bug reports to releases. A one-line version display costs almost nothing to add and eliminates ambiguity when debugging issues reported by household members or found during manual UAT.
+
+**Open questions when this gets planned:**
+
+- Where exactly: Settings modal footer, a small badge in the PWA header, or a dedicated "About" row at the bottom of the Settings panel?
+- Should the build date be shown alongside the version for easier correlation during development?
+- Tap-to-copy behaviour — useful for pasting into a bug report?
+- Single source of truth location: a `VERSION` constant in a dedicated `js/lib/version.js` file (imported by `app.js` and the settings UI), or a literal in `app.js` directly?
+
+**Implementation notes:**
+
+- No build step in this project, so Vite's `import.meta.env` approach (used in med-stock) is not available. Instead, define `export const VERSION = 'v1.0.0'` in a new `js/lib/version.js` file; update it manually on each release alongside `package.json`.
+- Import `VERSION` in `js/ui/settings-modal.js` and append a small footer row: `<p class="version-label">Nightwatch ${VERSION}</p>`.
+- Style with existing muted-text CSS token so it does not compete visually with the settings fields.
+- `sw.js` `PRECACHE_LIST` and `tests/unit/sw-precache.test.js` must be updated to include `js/lib/version.js` if it is added as a new app-shell file.
