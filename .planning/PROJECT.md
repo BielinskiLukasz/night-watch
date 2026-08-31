@@ -98,7 +98,7 @@ compared to reality.
 
 ### Active
 
-- [ ] Phase 15 — TIF bug fixes (FIX-01..FIX-05)
+- [x] Phase 15 — TIF bug fixes (FIX-01..FIX-05)
 - [ ] Phase 16 — Rolling aggregates (MET-09, MET-10)
 - [ ] Phase 17 — Day-of-week patterns (MET-11, MET-12)
 - [ ] Phase 18 — Sleep debt proxy (MET-13, MET-14)
@@ -162,15 +162,21 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | ✓ Good |
 | TIF is additive only; classic forecast.js remains untouched and is the default | TIF ships as opt-in toggle; existing Classic algorithm unchanged | ✓ Good — v1.2 delivered |
 | metrics.js is a shared module consumed by both TIF (duration bands) and Metrics screen | Single source of truth for duration/ratio calculations across both features | ✓ Good — no duplication in either consumer |
+| tifForecast override block in metrics-screen render() is NOT redundant | computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic; tifForecast sourceWindows runs full band-building with rejectedInWindow — without the override the two screens diverge. Discovered during NW-15 UAT. | ✓ Required — restored with day-order fix |
+| tifForecast in metrics-screen.js must receive newest-first days (same as daysBySubjectiveNight output) | tifForecast uses slice(-N) to select the rolling window; oldest-first input would select a different (older) window than Today screen. Day order must match. | ✓ Fixed in NW-15 UAT |
 
-## Current State (v1.2 — shipped 2026-08-24)
+## Current State (v1.4 — in progress, Phase 15 complete 2026-08-31)
 
-Both phases complete. 264 files, ~15,500 LOC added over 45 days. All 17/17 v1.2 requirements satisfied. Test suite: 647+ unit/integration tests + E2E coverage for all new screens and algorithm paths.
+Phase 15 (TIF Engine Bug Fixes) complete. 5 planned fixes delivered across 2 plans; 2 additional correctness fixes discovered and applied during UAT (FIX-03 regression + day-ordering bug in tifForecast call). Test suite: 756+ unit/integration tests, 0 failures. Metrics summary row order updated to Min / Average / Max.
 
 **Tech stack as shipped:** Vanilla JS/HTML/CSS, no build, no runtime deps. Layered architecture: `js/lib/` (pure functions) → `js/store/` (stateful pub/sub) → `js/adapters/` (injectable seams) → `js/ui/` (DOM modules). 5 bottom-nav screens: Today, History, Charts, Accuracy, Metrics. Two forecast algorithms: Classic (default) and TIF (opt-in).
 
 **Known issues / tech debt:**
-- None at v1.2 close (0 TODO/FIXME markers, 0 open security threats)
+- None at Phase 15 close (0 TODO/FIXME markers, 0 open security threats)
+
+## Previous State (v1.2 — shipped 2026-08-24)
+
+Both v1.2 phases complete. 264 files, ~15,500 LOC added over 45 days. All 17/17 v1.2 requirements satisfied. Test suite: 647+ unit/integration tests + E2E coverage for all new screens and algorithm paths.
 
 ## Previous State (v1.1 — shipped 2026-07-10)
 
@@ -226,4 +232,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 — Milestone v1.4 started*
+*Last updated: 2026-08-31 — Phase NW-15 complete; Phase NW-16 (Rolling Window Aggregates) next*
