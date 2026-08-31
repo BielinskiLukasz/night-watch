@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-25 (removed B-021, B-026 — shipped in v1.2; promoted B-004–007, B-031, B-033–037 → v1.3)
-Last assigned ID: **B-037** — next new item must be **B-038**
+Last updated: 2026-08-31 (added B-038–B-041)
+Last assigned ID: **B-041** — next new item must be **B-042**
 
 ---
 
@@ -889,3 +889,108 @@ For each existing window that uses historical distributions (e.g. activity-befor
 - **Rolling windows**: add `rollingTrimmedMinMax(values, N, trimPct)` helper — takes the last N values from the series before computing `trimmedMinMax`. Slot the rolling window as an additional entry in each event type's window array; the intersection logic is unchanged.
 - **Settings**: add `tifRollingDays: number | null` to `DEFAULT_SETTINGS` and the Settings modal (Forecast & Prediction section, TIF sub-group). Guard: show only when `forecastAlgorithm === 'tif'`.
 - Unit-test `resolveActivityBeforeNap` with recorded vs. absent MA; unit-test `rollingTrimmedMinMax` with N < series length and N > series length.
+
+---
+
+## Prediction normalization, event quality flags, and screen reorganization (captured 2026-08-31)
+
+### B-038 · Normalize prediction: show only the next relevant event (nap may be skipped)
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.3 — refines the forecaster output pipeline in `today-screen.js` and the forecast libs
+
+**What:** Change prediction display so only the single next upcoming event is shown as the hero prediction, and nap events are skipped from the sequence when it is too late in the day for a nap to occur. Currently all prediction cards are rendered regardless of the current time. Normalization means: given the current time and the last logged event, determine which event type is realistically next, skip nap-start/nap-end if the nap window has passed, and surface only that event as the primary prediction.
+
+**Why:** Showing a nap-start prediction at 20:00 is misleading — the nap window is closed. Parents rely on the hero card to know what to expect next; surfacing stale or unreachable events erodes trust in the predictions.
+
+**Open questions when this gets planned:**
+
+- What threshold defines "too late for a nap"? A configurable cutoff hour (e.g., 16:00), or derived from historical nap-end data?
+- If the nap is skipped, should nap-start and nap-end cards be hidden entirely, dimmed, or replaced with a "nap window closed" label?
+- Should this logic live in the forecaster (return `null` for unreachable events) or in the Today screen renderer (filter cards before display)?
+- Interaction with B-007 (missing nap impact on bedtime): if nap is skipped, bedtime prediction should shift earlier — these two items should be planned together.
+
+**Implementation notes:**
+
+- Add a `nextReachableEvent(lastEvent, currentHour, settings)` helper (likely in `forecast.js` or a new `forecast-normalize.js`) that returns the event type that is realistically next given the time of day.
+- In `today-screen.js`: pass current clock hour to a filter before rendering prediction cards; suppress or mark cards whose event type is no longer reachable today.
+- No data shape changes — this is a presentation-layer + forecaster output filter.
+
+---
+
+### B-039 · Mark event as unknown/unclear; exclude from prediction
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete) — requires an edit flow to apply the flag
+
+**What:** Allow a logged event to be marked as "unknown" or "unclear" — either with an approximate hour (e.g., "happened around 14:00 but unsure") or with no time at all. Events carrying this flag are excluded from the prediction algorithm's historical series so they do not skew forecasts. The flag is stored on the event record; the UI shows a visual indicator (e.g., a `?` badge) on flagged events in the history view.
+
+**Why:** Parents sometimes log events from memory hours later, or note that a sleep boundary was ambiguous (e.g., the child dozed briefly but it is unclear if it counts as a nap). Including low-confidence data in prediction training degrades forecast accuracy. Giving users a way to flag uncertain events preserves the record without poisoning the model.
+
+**Open questions when this gets planned:**
+
+- Two sub-modes: (a) unclear time — event type is known but the exact time is not; (b) unclear event — both type and time are uncertain. Should these be one flag or two?
+- Where does the flag appear in the UI? A checkbox in the manual-entry popup? A long-press action on a history row?
+- Should flagged events still appear on the Today screen and History screen, or be greyed out?
+- Prediction exclusion: remove from the historical series entirely, or include with reduced weight?
+- Data shape: add `unclear: boolean` (or `confidence: 'normal' | 'approximate' | 'unknown'`) to the event record. Requires schema migration guard in `db-shape.js`.
+
+**Implementation notes:**
+
+- Data: add `unclear: boolean` field to event records; default `false`. Update `db-shape.js` schema validation to allow the field (additive — no version bump required per the V2-additive-idempotent rule).
+- Forecast exclusion: in `forecast.js` and `forecast-tif.js` series builders, filter out events where `event.unclear === true` before computing historical windows.
+- UI: add a checkbox/toggle to `manual-entry.js`; add a `?` badge in `history-screen.js` for flagged events. Use `textContent` / `dom.js` helpers — no `innerHTML`.
+- Unit tests: verify that unclear events are excluded from rolling window inputs; verify schema round-trip.
+
+---
+
+### B-040 · Fix charts data: display the same metric values as the Metrics screen
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next charts or metrics phase — audit before adding new chart types
+
+**What:** Audit and reconcile the data transforms used by the Charts screen (`js/lib/chart-data.js`) against the per-day metric calculations in `js/lib/metrics.js`. Where the two diverge — e.g., different formulas for sleep duration, activity windows, or nap duration — fix `chart-data.js` to use the same values that appear on the Metrics screen. The Charts screen should display metric data, not independently re-derived values that may differ.
+
+**Why:** If the Sleep Length chart shows a different number than the "Sleep duration" column on the Metrics screen for the same day, users lose confidence in both screens. Consistency is more important than micro-optimizing either formula in isolation. Shared calculation from `metrics.js` is the correct source of truth.
+
+**Open questions when this gets planned:**
+
+- Which specific chart series diverge from `metrics.js`? Run a side-by-side comparison for sleep duration, nap duration, and activity gaps on at least 5 known days to identify gaps.
+- Should `chart-data.js` import directly from `metrics.js`, or should the chart renderers receive pre-computed metric rows? Direct import is simpler and removes duplication; receiving pre-computed rows avoids the circular-import risk (check the invariants in CLAUDE.md first).
+- Is the divergence in formula (e.g., cutover-hour handling) or in data pipeline (e.g., `chart-data.js` sees raw events, `metrics.js` sees day-bucketed records)?
+
+**Implementation notes:**
+
+- Audit: for each `build*Series` function in `chart-data.js`, compare the computation with its counterpart in `metrics.js`. Note any formula differences.
+- Fix: where a metric is already computed in `metrics.js`, call the same function (or import the same helper) rather than re-deriving inline.
+- Circular-import guard: `chart-data.js` currently does not import from `metrics.js`. Check whether adding that import is safe (see CLAUDE.md `metrics.js` circular-import note) before proceeding; if not, extract the shared helper to a standalone util.
+- Unit tests: pin the numeric output of `buildSleepLengthSeries` against known fixture inputs and verify it matches `dayMetrics().sleepDuration` for the same days.
+
+---
+
+### B-041 · Move TIF columns from Metrics screen to Accuracy screen
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-031 (TIF accuracy on Accuracy screen) and B-035 (TIF window bounds on Metrics screen) are planned — this item reorganizes the output of those two
+
+**What:** Relocate TIF-specific columns currently displayed on the Metrics screen (e.g., TIF window bounds, confidence scores surfaced via B-035) to the Accuracy screen instead. The Metrics screen should show per-day sleep and activity measurements; algorithm-specific prediction quality data belongs on the Accuracy screen alongside the existing classic-forecaster accuracy grid (B-031).
+
+**Why:** The Metrics screen is about what happened (sleep duration, activity windows, nap fraction). The Accuracy screen is about how well the algorithm predicted what would happen. Mixing prediction metadata into the Metrics screen conflates two distinct concerns and makes both screens harder to scan. Grouping all accuracy/quality data on the Accuracy screen gives users a single place to evaluate forecast performance.
+
+**Open questions when this gets planned:**
+
+- Should TIF columns appear as an additional section on the Accuracy screen (below the classic grid or as a tab — see B-031 layout options A/B/C), or replace the classic columns when TIF is active?
+- Which specific columns migrate: `finalStart`/`finalEnd` bounds, confidence score, window width? Or all TIF-derived fields?
+- After migration, does the Metrics screen still need any TIF-related display (e.g., a single "Today's TIF confidence" indicator), or is it fully TIF-free?
+- Interaction with B-031: if B-031 is planned first, design the Accuracy screen layout to accommodate the migrated columns without a second restructuring.
+
+**Implementation notes:**
+
+- Remove TIF column definitions from `js/ui/metrics-screen.js` COLUMNS array and from `js/lib/metrics.js` `aggregateMetrics()` if they were added for B-035.
+- Add equivalent columns to the Accuracy screen renderer (`js/ui/accuracy-screen.js` or equivalent). Follow the B-031 layout decision for where they appear.
+- Ensure the `accuracy-tif.js` circular-import guard is respected: columns on the Accuracy screen should read from `accuracy-tif.js` output, not from `metrics.js`.
+- Update any E2E tests that assert TIF column presence on the Metrics screen.
