@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth
 status: planning
-last_updated: "2026-08-31T11:27:23.867Z"
+last_updated: "2026-08-31T00:00:00.000Z"
 last_activity: 2026-08-31
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,18 +17,18 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-26)
+See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-14 — TIF Metrics, Accuracy & Chart Fixes
+**Current focus:** Phase 15 — TIF Engine Bug Fixes
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 15 (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-31 — Milestone v1.4 started
+Status: Roadmap defined; ready for planning
+Last activity: 2026-08-31 — Milestone v1.4 roadmap created
 
 ## Phases
 
@@ -37,6 +37,12 @@ Last activity: 2026-08-31 — Milestone v1.4 started
 | 10 | TIF Algorithm & Settings | TIF-01..11 (11) | Complete |
 | 11 | Metrics Screen | MET-01..06 (6) | Complete |
 | 12 | Prediction Logic Refinements | PRED-08..12, UI-07 | Complete |
+| 13 | TIF Algorithm Extensions | TIF-12, TIF-13, TIF-15, TIF-16 | Complete |
+| 14 | TIF Metrics, Accuracy & Chart Fixes | TIF-14, MET-07..11, UI-08..10 | Complete |
+| 15 | TIF Engine Bug Fixes | FIX-01..05 | Not started |
+| 16 | Rolling Window Aggregates | MET-09, MET-10 | Not started |
+| 17 | Day-of-Week Patterns | MET-11, MET-12 | Not started |
+| 18 | Sleep Debt Proxy | MET-13, MET-14 | Not started |
 
 ## Performance Metrics
 
@@ -102,11 +108,11 @@ Last activity: 2026-08-31 — Milestone v1.4 started
 - [Phase 14]: D-12: dayToSleepFactor=dayLength/sleepDuration; napFraction=napDuration/combinedSleepNap; amPmSplit=activityBeforeNap/activityAfterNap — all null on missing/zero denominators
 - [Phase 14]: D-14: sleepAfterActivityFactor removed from aggregateMetrics avg/min/max; stays exported and in per-row data for backward compat
 - [Phase 14]: accuracy-tif.js imports only forecast-tif.js and forecast.js — never metrics.js (circular-import guard per CLAUDE.md)
-- [Phase 14]: [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
+- [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
 - [Phase 14]: D-15/D-16/D-17: chart fixes — yScale inverted, 4-series nap/wake/bedtime dots, buildTimeBandSeries uses dayRecords.map
 - [Phase 14]: D-09: 16-column order with napFraction/dayToSleepFactor/amPmSplit added, SAA removed
 - [Phase 14]: TIF inline columns (12) and aggregate rows (3) use el.hidden = !isTif pattern
-- [Phase 14]: [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
+- [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
 
 ### Quick Tasks Completed
 
@@ -126,14 +132,14 @@ None.
 
 ### Blockers/Concerns
 
-None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix confirmed (commit 1cf2361); mobile nap probability absence confirmed as by-design cold-start suppression.
+None.
 
 ## Session Continuity
 
-Last session: 2026-08-27T16:16:30.382Z
-Stopped at: Phase NW-14 complete — all phases complete
+Last session: 2026-08-31
+Stopped at: Milestone v1.4 roadmap created — Phases 15–18 defined
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 13` to plan Phase NW-13 (TIF Algorithm Extensions)
+- Run `/gsd-plan-phase 15` to plan Phase 15 (TIF Engine Bug Fixes)

@@ -5,7 +5,8 @@
 - **[v1.0](milestones/v1.0-ROADMAP.md)** — 8 phases, 46 plans, 51/51 requirements, 495 tests; shipped 2026-06-30 (tag: `v1.0.0`)
 - **[v1.1](milestones/v1.1-ROADMAP.md)** — 1 phase, 6 plans, 9/9 requirements, 635 tests; shipped 2026-07-10 (tag: `v1.1.0`)
 - **[v1.2](milestones/v1.2-ROADMAP.md)** — 2 phases, 15 plans, 17/17 requirements; shipped 2026-08-24 (tag: `v1.2.0`)
-- **v1.3** — prediction logic refinements + TIF extensions; planning in progress
+- **v1.3** — 3 phases, prediction logic refinements + TIF extensions; shipped 2026-08-27
+- **v1.4** — TIF bug fixes + Metrics depth (rolling aggregates, day-of-week patterns, sleep debt proxy); active
 
 ## Phases
 
@@ -32,11 +33,21 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 </details>
 
 <details>
-<summary>🚧 v1.3 Prediction & TIF Enhancements — PLANNING</summary>
+<summary>✅ v1.3 Prediction & TIF Enhancements (Phases 12–14) — SHIPPED 2026-08-27</summary>
 
 - [x] **Phase 12: Prediction Logic Refinements** - Classic forecaster contextual rules (time-of-day bedtime, duration-band wake, intense-day flag, missed-nap bedtime shift, nap probability score) plus Today screen card ordering fix — completed 2026-08-25
 - [x] **Phase 13: TIF Algorithm Extensions** - Ratio-based windows for nap-start/nap-end, rolling-window variant with MA/AA preference, per-window medians, and no-nap-day substitution logic — completed 2026-08-27
-- [x] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix (completed 2026-08-27)
+- [x] **Phase 14: TIF Metrics, Accuracy & Chart Fixes** - TIF-specific accuracy grid, Day/Sleep Factor column, Nap Fraction and AM/PM Split columns, TIF window bounds and aggregates on Metrics screen, Wake & Bedtime Bands chart Y-axis inversion + nap series + post-midnight dedup fix — completed 2026-08-27
+
+</details>
+
+<details open>
+<summary>🚧 v1.4 TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
+
+- [ ] **Phase 15: TIF Engine Bug Fixes** - Correctness fixes for `findBedtimeDayRecord` latestAt ordering, rejected-day pre-filter semantics, redundant tifForecast render call, misleading comment, and stale test name
+- [ ] **Phase 16: Rolling Window Aggregates** - 7-day and 14-day windowed stats across all Metrics screen columns
+- [ ] **Phase 17: Day-of-Week Patterns** - Per-weekday averages for MA, AA, nap duration, and sleep duration in a collapsible Metrics section
+- [ ] **Phase 18: Sleep Debt Proxy** - Rolling 7-day accumulated sleep deficit column in Metrics screen per-day table and aggregates
 
 </details>
 
@@ -121,6 +132,65 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 15: TIF Engine Bug Fixes
+
+**Goal**: The TIF forecast engine and test suite are free of correctness bugs introduced after v1.3, so predictions are computed on the correct data set and the codebase is self-consistent
+**Depends on**: Phase 14 (v1.3 complete)
+**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
+**Success Criteria** (what must be TRUE):
+
+  1. `findBedtimeDayRecord` selects the chronologically latest day record when slot entries mix bare `HH:MM` strings with ISO strings — verified by a unit test covering both string forms
+  2. Rejected days excluded by the TIF pre-filter do not reduce the auto-trim budget; `manualExcludedCount` semantics are preserved — verified by a unit test confirming trim-budget independence
+  3. `metrics-screen.js` render() obtains TIF event-time strings from data already computed in the same render cycle without a second `tifForecast` call — verified by code inspection confirming single invocation path
+  4. The `computeTifTrimmedStats` comment in `metrics-screen.js` accurately describes that metric rows may contain bare `HH:MM` strings, so the `raw.length > 5` guard is not mistakenly dismissed as dead code
+  5. The test in `settings-validate.test.js` that covers the `tifRollingDays` upper-bound reads "rejects 91 (above max=90)" and the full test suite passes
+
+**Plans**: TBD
+
+### Phase 16: Rolling Window Aggregates
+
+**Goal**: The Metrics screen gives users a 7-day and 14-day rolling view of all metric columns alongside all-time aggregates, so short-term trends are visible without scrolling to external tools
+**Depends on**: Phase 15 (TIF pre-filter and render bugs resolved so aggregate inputs are clean)
+**Requirements**: MET-09, MET-10
+**Success Criteria** (what must be TRUE):
+
+  1. The Metrics screen shows a 7-day rolling aggregate section (avg, min with date, max with date) for all base metric columns, computed from the 7 most recent non-rejected days in the active stage
+  2. The Metrics screen shows a 14-day rolling aggregate section with the same column coverage, computed from the 14 most recent non-rejected days in the active stage
+  3. The 7-day, 14-day, and all-time aggregate sections are visually distinguished from each other (distinct section headings or styling)
+  4. When the active stage has fewer than 7 or 14 non-rejected days respectively, the corresponding rolling section renders `—` for all cells without errors
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 17: Day-of-Week Patterns
+
+**Goal**: Users can inspect per-weekday averages for MA, AA, nap duration, and sleep duration in a collapsible Metrics screen section, revealing rhythm patterns across the week
+**Depends on**: Phase 16 (rolling aggregate infrastructure in place)
+**Requirements**: MET-11, MET-12
+**Success Criteria** (what must be TRUE):
+
+  1. `dayOfWeekAverages(dayRecords)` in `js/lib/metrics.js` (or a sibling module) groups non-rejected day records by weekday (Mon–Sun) and returns per-weekday averages for MA, AA, nap duration, and sleep duration — verified by unit tests
+  2. The Metrics screen includes a collapsible "Day-of-Week Patterns" section with a 7-row Mon–Sun table showing per-weekday averages for MA, AA, nap duration, and sleep duration
+  3. The section is scoped to the active stage (same filter as all other Metrics content)
+  4. Weekdays with no non-rejected recorded data render `—` without errors
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 18: Sleep Debt Proxy
+
+**Goal**: Users can see a rolling 7-day accumulated sleep deficit column in the Metrics per-day table and aggregates, providing an observable signal of cumulative under-sleep
+**Depends on**: Phase 17 (day-of-week patterns complete; metrics infrastructure stable)
+**Requirements**: MET-13, MET-14
+**Success Criteria** (what must be TRUE):
+
+  1. `sleepDebtProxy(dayRecords, windowDays)` in `js/lib/metrics.js` (or a sibling module) returns a rolling accumulated sleep deficit (target total sleep minus actual total sleep, summed over `windowDays` non-rejected days), returning `null` when fewer than `windowDays` non-rejected records are available — verified by unit tests
+  2. The Metrics screen per-day table includes a Sleep Debt column showing the rolling 7-day deficit in minutes; cold-start days (fewer than 7 prior non-rejected days) render `—`
+  3. The all-time, 7-day, and 14-day aggregate sections include avg, min-with-date, and max-with-date rows for the Sleep Debt column
+
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -131,7 +201,11 @@ Plans:
 | 11. Metrics Screen | v1.2 | 10/10 | Complete | 2026-07-30 |
 | 12. Prediction Logic Refinements | v1.3 | 6/6 | Complete | 2026-08-25 |
 | 13. TIF Algorithm Extensions | v1.3 | 4/4 | Complete | 2026-08-27 |
-| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete    | 2026-08-27 |
+| 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete | 2026-08-27 |
+| 15. TIF Engine Bug Fixes | v1.4 | 0/TBD | Not started | - |
+| 16. Rolling Window Aggregates | v1.4 | 0/TBD | Not started | - |
+| 17. Day-of-Week Patterns | v1.4 | 0/TBD | Not started | - |
+| 18. Sleep Debt Proxy | v1.4 | 0/TBD | Not started | - |
 
 ## Backlog
 
