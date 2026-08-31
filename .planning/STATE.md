@@ -4,16 +4,16 @@ milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 16
 current_phase_name: Rolling Window Aggregates
-status: planning
+status: executing
 stopped_at: Phase 16 context gathered
-last_updated: "2026-08-31T17:39:20.720Z"
+last_updated: "2026-08-31T18:25:56.659Z"
 last_activity: 2026-08-31
-last_activity_desc: Phase NW-15 complete, transitioned to Phase 16
-state_head: 70a23f6100a7799d32246ca886ec7775efa6cd60
+last_activity_desc: Phase NW-16 execution started
+state_head: f081dd6afafe93ec9b6f71437294075f6c4520cf
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
+  total_plans: 3
   completed_plans: 2
 ---
 
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: 16 — Rolling Window Aggregates
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-31 — Phase NW-15 complete, transitioned to Phase 16
+Phase: NW-16 (Rolling Window Aggregates) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase NW-16
+Last activity: 2026-08-31 — Phase NW-16 execution started
 
 ## Phases
 
