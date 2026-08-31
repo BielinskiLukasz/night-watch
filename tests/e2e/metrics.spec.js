@@ -234,4 +234,206 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     const summaryRows = firstRollingTbody.locator('.metrics-summary-row');
     await expect(summaryRows).toHaveCount(3);
   });
+
+  test('MET-10/boundary: cold-start 7-day (6 non-rejected days available)', async ({ page }) => {
+    // Seed 6 non-rejected days — 7-day window partially satisfied, 14-day not
+    const events = [];
+    for (let i = 0; i < 6; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-02-' + dayNum;
+      events.push({ type: 'wake',    at: date + 'T08:00' });
+      events.push({ type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // 7-day section header: cold-start note '(6 days available)'
+    const sevenDayHeader = page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-section-header');
+    const sevenHeaderText = await sevenDayHeader.textContent();
+    expect(sevenHeaderText).toContain('6 days available');
+
+    // 7-day section: three aggregate rows always rendered (D-10)
+    const sevenRows = page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-summary-row');
+    await expect(sevenRows).toHaveCount(3);
+
+    // 14-day section: also shows cold-start note '(6 days available)'
+    const fourteenDayHeader = page.locator('.metrics-rolling-tbody').nth(1).locator('.metrics-section-header');
+    const fourteenHeaderText = await fourteenDayHeader.textContent();
+    expect(fourteenHeaderText).toContain('6 days available');
+  });
+
+  test('MET-10/boundary: cold-start 14-day only (13 non-rejected days available)', async ({ page }) => {
+    // Seed 13 non-rejected days — 7-day fully satisfied, 14-day partially
+    const events = [];
+    for (let i = 0; i < 13; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-03-' + dayNum;
+      events.push({ type: 'wake',    at: date + 'T08:00' });
+      events.push({ type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // 7-day section header: no cold-start note (7 days fully satisfied)
+    const sevenDayHeader = page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-section-header');
+    const sevenHeaderText = await sevenDayHeader.textContent();
+    expect(sevenHeaderText).not.toContain('days available');
+    expect(sevenHeaderText.toLowerCase()).toContain('7-day rolling');
+
+    // 14-day section header: cold-start note '(13 days available)'
+    const fourteenDayHeader = page.locator('.metrics-rolling-tbody').nth(1).locator('.metrics-section-header');
+    const fourteenHeaderText = await fourteenDayHeader.textContent();
+    expect(fourteenHeaderText).toContain('13 days available');
+  });
+
+  test('MET-10/boundary: both sections full (15 non-rejected days)', async ({ page }) => {
+    // Seed 15 days — both 7-day and 14-day windows fully satisfied
+    const events = [];
+    for (let i = 0; i < 15; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-04-' + dayNum;
+      events.push({ type: 'wake',    at: date + 'T08:00' });
+      events.push({ type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // Neither section header should contain 'days available'
+    const sevenDayHeader = page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-section-header');
+    const fourteenDayHeader = page.locator('.metrics-rolling-tbody').nth(1).locator('.metrics-section-header');
+
+    const sevenText = await sevenDayHeader.textContent();
+    const fourteenText = await fourteenDayHeader.textContent();
+    expect(sevenText).not.toContain('days available');
+    expect(fourteenText).not.toContain('days available');
+
+    // Both sections must have 3 aggregate rows
+    await expect(page.locator('.metrics-rolling-tbody').nth(0).locator('.metrics-summary-row')).toHaveCount(3);
+    await expect(page.locator('.metrics-rolling-tbody').nth(1).locator('.metrics-summary-row')).toHaveCount(3);
+  });
+
+  test('MET-10/boundary: zero days — metrics table not rendered, no JS errors', async ({ page }) => {
+    // Seed empty events — metrics screen should show empty state
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events: [],
+      activityLog: {},
+    };
+
+    // Capture console errors
+    const consoleErrors = [];
+    page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+    page.on('pageerror', err => consoleErrors.push(err.message));
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForTimeout(500); // allow render to complete
+
+    // metricsTable must not be present (empty state renders instead)
+    const tableCount = await page.locator('.metricsTable').count();
+    expect(tableCount).toBe(0);
+
+    // Empty state message must be visible
+    await expect(page.locator('.emptyState')).toBeVisible();
+
+    // No JS errors
+    expect(consoleErrors).toHaveLength(0);
+  });
+
+  test('MET-10/boundary: TIF placeholder cells hidden when TIF is off', async ({ page }) => {
+    // Seed 8 days with classic algorithm — TIF is off
+    const events = [];
+    for (let i = 0; i < 8; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-05-' + dayNum;
+      events.push({ type: 'wake',    at: date + 'T08:00' });
+      events.push({ type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
+        statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // Count hidden td elements in the first aggregate row of the first rolling tbody
+    // Expected: 12 hidden cells (TIF_COLUMNS.length = 12), hidden attribute present
+    const hiddenTifCellCount = await page.evaluate(() => {
+      const firstRollingTbody = document.querySelector('.metrics-rolling-tbody');
+      if (!firstRollingTbody) return -1;
+      const firstSummaryRow = firstRollingTbody.querySelector('.metrics-summary-row');
+      if (!firstSummaryRow) return -2;
+      const allTds = firstSummaryRow.querySelectorAll('td');
+      let hiddenCount = 0;
+      for (const td of allTds) {
+        if (td.hidden) hiddenCount++;
+      }
+      return hiddenCount;
+    });
+
+    expect(hiddenTifCellCount).toBe(12);
+  });
 });
