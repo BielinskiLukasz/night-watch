@@ -3,8 +3,8 @@ phase: NW-16-rolling-window-aggregates
 fixed_at: 2026-08-31T00:00:00Z
 review_path: .planning/phases/NW-16-rolling-window-aggregates/16-REVIEW.md
 iteration: 1
-findings_in_scope: 5
-fixed: 5
+findings_in_scope: 8
+fixed: 8
 skipped: 0
 status: all_fixed
 ---
@@ -12,48 +12,85 @@ status: all_fixed
 # Phase NW-16: Code Review Fix Report
 
 **Fixed at:** 2026-08-31
-**Source review:** .planning/phases/NW-16-rolling-window-aggregates/16-REVIEW.md
+**Source review:** `.planning/phases/NW-16-rolling-window-aggregates/16-REVIEW.md`
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope: 5 (CR-01, WR-01, WR-02, WR-03, WR-04)
-- Fixed: 5
+- Findings in scope: 8
+- Fixed: 8
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: All-time Min/Average/Max rows missing 12 TIF placeholder cells when TIF is active
+### WR-01: Dead import — `activityAfterSleepFactor` never called
 
 **Files modified:** `js/ui/metrics-screen.js`
-**Commit:** 70cf073
-**Applied fix:** Inserted the same TIF placeholder cell injection loop used by `buildRollingSection` immediately after building the three all-time aggregate rows (minRow, avgRow, maxRow) and before appending them to `summaryTbody`. Each row now gets 12 hidden `<td>` cells (or visible when TIF is active), matching the column count of every other row in the table.
+**Commit:** 012f11e
+**Applied fix:** Removed `activityAfterSleepFactor` from the import statement, leaving only `aggregateMetrics`.
 
-### WR-01: Stale "indices 1-15" comment appears in two docstrings; COLUMNS has 18 entries (indices 0-17)
+---
+
+### WR-02: Variable name `window` shadows the browser global
 
 **Files modified:** `js/ui/metrics-screen.js`
-**Commit:** a065d29
-**Applied fix:** Updated both occurrences — the `computeTifTrimmedStats` docstring (line 280) and the `buildTifAggregateRow` inline comment (line 358) — from "indices 1-15" to "indices 1-17" to match the actual 18-element COLUMNS array.
+**Commit:** e3653fd
+**Applied fix:** Renamed local variable `window` to `rollingRows` in `computeTifTrimmedStats`, updating all three references (declaration, `const mins = rollingRows`, `const vals = rollingRows`).
 
-### WR-02: `.metrics-section-header` inherits `text-align: right` — section labels appear right-aligned
+---
 
-**Files modified:** `style.css`
-**Commit:** 5a1d48e
-**Applied fix:** Added `text-align: left;` to the `.metricsTable td.metrics-section-header` rule, overriding the inherited `text-align: right` from the general `.metricsTable td` rule. Section labels now align to the left edge.
+### WR-03: TIF aggregate rows computed over a different sample set than rolling aggregate rows
 
-### WR-03: `.stage-select` uses dark-theme CSS variable fallbacks in a light-themed app
+**Files modified:** `js/ui/metrics-screen.js`
+**Commit:** b2150cf
+**Applied fix:** Changed `computeTifTrimmedStats` to filter rejected rows before slicing instead of after: `rows.filter(r => !r.rejected).slice(-windowSize)` instead of `rows.slice(-windowSize).filter(r => !r.rejected)`. This ensures the TIF aggregate rows always see exactly N non-rejected days, consistent with `buildRollingSection`.
 
-**Files modified:** `style.css`
-**Commit:** 1fab50e
-**Applied fix:** Replaced the three CSS variable references (`var(--color-border, #333)`, `var(--color-bg-input, #1a1a2e)`, `var(--color-text, #e0e0e0)`) with concrete light-theme values consistent with the rest of the UI (`border: 1px solid #cbd5e1`, `background: #fff`, `color: #334155`).
+Note: The reviewer's suggested fix passed `nonRejectedDays` (raw day records) as the parameter, which would break the function (it expects computed metrics rows with column keys like `sleepDuration`, `napFraction`). The correct fix reorders the filter/slice on the existing `rows` parameter without changing the call site.
 
-### WR-04: Seeded events in E2E tests are missing `id` fields — may silently bypass schema validation
+**Commit status:** fixed: requires human verification (logic change — please confirm TIF aggregate row counts match rolling row counts in practice).
+
+---
+
+### WR-04: `formatCellValue` — truthy check skips time-branch for falsy non-null values
+
+**Files modified:** `js/ui/metrics-screen.js`
+**Commit:** e436f9a
+**Applied fix:** Replaced `if (colDef.isTime && value)` with `if (colDef.isTime)`. The early-return guard on line 136 already handles `null`/`undefined`, so the `&& value` truthy test was both redundant and incorrect for falsy non-null values like `""` or `0`.
+
+---
+
+### WR-05: MET-02/MET-03 E2E test never seeds data — structurally flaky
 
 **Files modified:** `tests/e2e/metrics.spec.js`
-**Commit:** a39aa61
-**Applied fix:** Added stable synthetic `id` fields to all seeded events across all six seed blocks. For the single-event seed (MET-06 stage badge test), added `id: 'test-wake-1'` and `id: 'test-bedtime-1'`. For the five loop-based seed blocks (MET-09, MET-10 boundary tests × 4), added `id: 'test-wake-' + dayNum` and `id: 'test-bedtime-' + dayNum` to each push call, using the `dayNum` variable already in scope.
+**Commit:** 50f3b56
+**Applied fix:** Replaced the unreliable `wakeBtn.click()` approach with explicit `localStorage.setItem('nightwatch:db', ...)` seeding before `page.reload()`, matching the pattern used by all other rolling-window tests. The seeded database contains one wake and one bedtime event sufficient to render the metrics table.
+
+---
+
+### IN-01: COLUMNS module comment says "16-column" but array has 18 entries
+
+**Files modified:** `js/ui/metrics-screen.js`
+**Commit:** bab4043
+**Applied fix:** Updated the JSDoc comment from "16-column" to "18-column" and added `MA/Sl` and `MA/Nap` to the column order list (between `→Nap` and `Nap→`).
+
+---
+
+### IN-02: Redundant null checks in `formatCellValue` after early-return guard
+
+**Files modified:** `js/ui/metrics-screen.js`
+**Commit:** 483b5fe
+**Applied fix:** Removed `&& value !== null && value !== undefined` from both the `isRatio` and duration branches. The early-return guard on line 136 already covers those cases.
+
+---
+
+### IN-03: `waitForTimeout(500)` in empty-state E2E test is fragile
+
+**Files modified:** `tests/e2e/metrics.spec.js`
+**Commit:** 4b6681f
+**Applied fix:** Removed `await page.waitForTimeout(500)` and replaced with an inline comment noting that `toBeVisible()` retries until its own timeout. The subsequent `await expect(page.locator('.emptyState')).toBeVisible()` assertion already provides resilient waiting.
 
 ---
 
 _Fixed: 2026-08-31_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+_Verification ran in: main checkout (workflow.use_worktrees=false)_
