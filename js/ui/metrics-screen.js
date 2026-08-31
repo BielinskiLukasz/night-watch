@@ -288,8 +288,10 @@ function computeTifTrimmedStats(rows, snap) {
   const windowSize = snap.tifRollingDays ?? 7;
   const trimPct    = snap.trimPct ?? 10;
 
-  // Take the last windowSize rows (most recent), then exclude rejected.
-  const rollingRows = rows.slice(-windowSize).filter(r => !r.rejected);
+  // Exclude rejected first, then take the last windowSize non-rejected rows.
+  // This matches buildRollingSection which receives nonRejectedDays.slice(-nDays),
+  // ensuring both sections compute over the same effective N-day sample.
+  const rollingRows = rows.filter(r => !r.rejected).slice(-windowSize);
 
   const minMap    = {};
   const medianMap = {};
