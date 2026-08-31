@@ -495,7 +495,8 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // 2. Slice to tifRollingDays (TIF-13 / D-06: TIF uses its own rolling window, not windowDays)
   const tifRollingDays = settings.tifRollingDays ?? 7;
   const window = dayRecords.slice(-tifRollingDays);
-  const acceptedWindow  = window.filter(d => !d.rejected);
+  const acceptedWindow     = window.filter(d => !d.rejected);
+  const rejectedInWindow   = window.length - acceptedWindow.length;
 
   const trimPct         = settings.trimPct ?? 10;
   const precisionTarget = settings.precisionTarget ?? 60;
@@ -542,11 +543,11 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napStartLabelledWindows = [];
 
-  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, 0);
+  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, rejectedInWindow);
   if (histNapStart) napStartLabelledWindows.push({ label: 'Historic nap-start band', ...histNapStart });
 
   if (wakeAnchorForNap !== null) {
-    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, 0);
+    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, rejectedInWindow);
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
   }
 
@@ -570,7 +571,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
       if (abn != null && sd != null && sd > 0) ratios.push(abn / sd);
     }
     const projectedDurations = ratios.map(r => r * todaySleepDuration);
-    const ratioBandResult = buildDurationBand(projectedDurations, wakeAnchorForNap, trimPct, 0);
+    const ratioBandResult = buildDurationBand(projectedDurations, wakeAnchorForNap, trimPct, rejectedInWindow);
     if (ratioBandResult != null) napStartLabelledWindows.push({ label: 'MA/sleep ratio band', ...ratioBandResult });
   }
 
@@ -582,11 +583,11 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napEndLabelledWindows = [];
 
-  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, 0);
+  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, rejectedInWindow);
   if (histNapEnd) napEndLabelledWindows.push({ label: 'Historic nap-end band', ...histNapEnd });
 
   if (napStartAnchor !== null) {
-    const napLenBand = buildDurationBand(napDurations, napStartAnchor, trimPct, 0);
+    const napLenBand = buildDurationBand(napDurations, napStartAnchor, trimPct, rejectedInWindow);
     if (napLenBand) napEndLabelledWindows.push({ label: 'Nap-length band', ...napLenBand });
   }
 
@@ -607,7 +608,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
       if (abn != null && abn > 0 && nd != null && nd > 0) napRatios.push(abn / nd);
     }
     const projectedNapDurations = napRatios.map(r => todayMA / r);
-    const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, 0);
+    const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, rejectedInWindow);
     if (napRatioBandResult != null) napEndLabelledWindows.push({ label: 'MA/nap ratio band', ...napRatioBandResult });
   }
 
@@ -625,7 +626,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   const wakeLabelledWindows = [];
 
   // Window 1: historic wake-up band
-  const histWake = buildHistoricBand(wakeMinutes, trimPct, 0);
+  const histWake = buildHistoricBand(wakeMinutes, trimPct, rejectedInWindow);
   if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
 
   // Window 2: sleep-length band (bedtime + sleep).
@@ -641,7 +642,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const sleepBandLabel = (isNoNapDay && postNoNapSleepDurations.length >= settings.minDays)
       ? 'Post-no-nap sleep-length band'
       : 'Sleep-length band';
-    const sleepBandRaw = buildDurationBand(srcSleepDurations, bedtimeAnchor, trimPct, 0);
+    const sleepBandRaw = buildDurationBand(srcSleepDurations, bedtimeAnchor, trimPct, rejectedInWindow);
     if (sleepBandRaw) {
       wakeLabelledWindows.push({
         label:  sleepBandLabel,
@@ -658,7 +659,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // Uses actual nap when logged; predicted nap otherwise (resolveTodayNapDuration).
   // Skipped on no-nap days (D-17): nap duration is irrelevant when no nap occurred.
   if (!isNoNapDay && bedtimeAnchor !== null && todayNapDuration !== null) {
-    const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
+    const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, rejectedInWindow);
     if (combinedBandRaw) {
       wakeLabelledWindows.push({
         label:  'Sleep + nap combined band',
@@ -678,7 +679,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const bedtimeLabelledWindows = [];
 
-  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, 0);
+  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, rejectedInWindow);
   if (histBedtime) bedtimeLabelledWindows.push({ label: 'Historic bedtime band', ...histBedtime });
 
   if (wakeAnchor2 !== null) {
@@ -691,12 +692,12 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const dayLengthLabel = (isNoNapDay && noNapDayLengths.length >= settings.minDays)
       ? 'Day-length band (no-nap days)'
       : 'Day-length band';
-    const dayLenBand = buildDurationBand(srcLengths, wakeAnchor2, trimPct, 0);
+    const dayLenBand = buildDurationBand(srcLengths, wakeAnchor2, trimPct, rejectedInWindow);
     if (dayLenBand) bedtimeLabelledWindows.push({ label: dayLengthLabel, ...dayLenBand });
   }
 
   if (napEndAnchor !== null) {
-    const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, 0);
+    const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, rejectedInWindow);
     if (actAfterBand) bedtimeLabelledWindows.push({ label: 'Activity-after-nap band', ...actAfterBand });
   }
 
