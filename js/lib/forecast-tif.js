@@ -253,8 +253,8 @@ function findBedtimeDayRecord(dayRecords) {
           result   = day;
         }
       } else if (extractTime(slot) !== null) {
-        // bare 'HH:MM' — no cross-day ordering possible; last such record wins
-        result = day;
+        // bare 'HH:MM' — only update if no ISO-dated bedtime has been found yet (FIX-01)
+        if (latestAt === null) result = day;
       }
     }
   }

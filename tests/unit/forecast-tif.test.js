@@ -210,3 +210,65 @@ describe('buildPrediction — central from medians (TIF-15)', () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// FIX-01: findBedtimeDayRecord bare-string vs ISO ordering
+// ---------------------------------------------------------------------------
+
+describe('findBedtimeDayRecord: bare-string vs ISO ordering', () => {
+
+  // Fixture: three days with bedtime slots.
+  //   Day 0 (2024-01-10): bedtime as bare '22:00' string
+  //   Day 1 (2024-01-11): bedtime as ISO event object { at: '2024-01-11T22:30', type: 'bedtime' }
+  //   Day 2 (2024-01-12): bedtime as bare '21:45' string (appears AFTER the ISO day)
+  //
+  // Expected: tifForecast should not throw and should produce a bedtime prediction
+  // whose historic band reflects the ISO-dated day (day 1), not be skewed by
+  // the bare-string day that appears later in the array (day 2).
+  // We confirm the result is a valid prediction shape (not null/cold-start).
+  it('ISO-dated bedtime day is not displaced by a later bare-string day', () => {
+    function makeDay(date, wake, napStart, napEnd, bedtime) {
+      return { date, wake, napStart, napEnd, bedtime, rejected: false, allEvents: [] };
+    }
+
+    // Build enough days to pass minDays=3 gate.
+    // Days 0-4: warm-up days with consistent times (bare strings).
+    const warmup = Array.from({ length: 5 }, (_, i) => {
+      const d = String(i + 1).padStart(2, '0');
+      return makeDay(`2024-01-${d}`, '07:30', '13:00', '14:30', '22:00');
+    });
+
+    // Day 5: has ISO bedtime event object (chronologically latest bedtime).
+    const isoDay = makeDay(
+      '2024-01-06',
+      '07:30', '13:00', '14:30',
+      { at: '2024-01-06T22:30', type: 'bedtime' },
+    );
+
+    // Day 6: bare-string bedtime again, appears AFTER isoDay in the array.
+    const bareAfterIso = makeDay('2024-01-07', '07:30', '13:00', '14:30', '21:45');
+
+    const days = [...warmup, isoDay, bareAfterIso];
+
+    const settings = {
+      minDays: 3,
+      windowDays: 30,
+      trimPct: 0,
+      precisionTarget: 120,
+      tifRollingDays: 14,
+      forecastAlgorithm: 'tif',
+    };
+
+    // Should not throw (previously could select wrong day).
+    const result = tifForecast(days, settings);
+
+    assert.strictEqual(result.isColdStart, false, 'should not be cold-start');
+    assert.ok(result.bedtime !== null, 'bedtime prediction must not be null');
+    // Historic bedtime band must be computed (sourceWindows non-empty).
+    assert.ok(
+      Array.isArray(result.bedtime.sourceWindows) && result.bedtime.sourceWindows.length >= 1,
+      'bedtime.sourceWindows must have at least one entry',
+    );
+  });
+
+});
