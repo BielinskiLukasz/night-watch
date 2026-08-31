@@ -374,6 +374,98 @@ function buildTifAggregateRow(label, tifStats, snap) {
   return tr;
 }
 
+/**
+ * Build a full-width section-header row (tr) spanning all columns.
+ *
+ * Creates a single td with colspan = colCount and textContent = label.
+ * CSS text-transform: uppercase is applied by style.css, so label is stored
+ * in lowercase ('7-day rolling', 'All-time') per D-02.
+ *
+ * T-11-05: textContent only — label is always a hardcoded static string.
+ *
+ * @param {string} label    Section label ('7-day rolling', '14-day rolling', 'All-time')
+ * @param {number} colCount Total column count (COLUMNS.length + TIF_COLUMNS.length = 30)
+ * @returns {HTMLTableRowElement}
+ */
+function buildSectionHeaderRow(label, colCount) {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.className = 'metrics-section-header';
+  td.colSpan = colCount;
+  td.textContent = label; // T-11-05: hardcoded static string — textContent safe
+  tr.appendChild(td);
+  return tr;
+}
+
+/**
+ * Build a rolling-window aggregate tbody (7-day or 14-day).
+ *
+ * Derives its slice from nonRejectedDays — the caller must already have
+ * applied stage filtering and rejection filtering. This function does NOT
+ * re-filter (D-08).
+ *
+ * Structure: section-header row → Min row → Average row → Max row.
+ * Min/Avg/Max rows always rendered even when fewer than nDays are available (D-10).
+ * TIF placeholder cells (12) are appended to each aggregate row and hidden when
+ * TIF is not active (D-05).
+ *
+ * T-11-05: all cell content via textContent (delegated to buildAggregateRow / buildCell).
+ *
+ * @param {number}   nDays            Window size (7 or 14)
+ * @param {string}   label            Section label ('7-day rolling' or '14-day rolling')
+ * @param {object[]} nonRejectedDays  Stage-filtered, rejection-filtered, oldest-first days
+ * @param {object}   snap             Settings snapshot
+ * @param {boolean}  isTif            True when TIF algorithm is active
+ * @returns {HTMLTableSectionElement}
+ */
+function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
+  // Step 1: available count
+  const available = nonRejectedDays.length;
+
+  // Step 2: cold-start note when fewer than nDays available (D-09)
+  const headerLabel = (available < nDays)
+    ? (label + ' (' + available + ' days available)')
+    : label;
+
+  // Step 3: oldest-first slice of the N most recent non-rejected days
+  const slice = nonRejectedDays.slice(-nDays);
+
+  // Step 4: compute aggregates (returns all-null avg/min/max when slice is [])
+  const result = aggregateMetrics(slice);
+
+  // Step 5: create tbody with rolling-specific classes
+  const tbody = document.createElement('tbody');
+  tbody.classList.add('metrics-summary-tbody', 'metrics-rolling-tbody');
+
+  // Step 6: section-header row spanning all columns
+  tbody.appendChild(buildSectionHeaderRow(headerLabel, COLUMNS.length + TIF_COLUMNS.length));
+
+  // Step 7: build Min / Average / Max aggregate rows (always rendered, D-10)
+  const minRow = buildAggregateRow('Min',     result.min, snap);
+  const avgRow = buildAggregateRow('Average', result.avg, snap);
+  const maxRow = buildAggregateRow('Max',     result.max, snap);
+
+  // Step 8: append TIF placeholder cells to each row (D-05)
+  // Each rolling aggregate row ends with TIF_COLUMNS.length (= 12) em-dash cells,
+  // hidden when TIF is not active. This prevents column-count mismatch.
+  for (const row of [minRow, avgRow, maxRow]) {
+    for (let j = 0; j < TIF_COLUMNS.length; j++) {
+      const td = document.createElement('td');
+      td.textContent = '—';
+      td.hidden = !isTif;
+      row.appendChild(td);
+    }
+  }
+
+  // Step 9: append rows to tbody
+  tbody.appendChild(minRow);
+  tbody.appendChild(avgRow);
+  tbody.appendChild(maxRow);
+
+  // Step 10: return the completed tbody
+  return tbody;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -455,6 +547,10 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const metricsResult = aggregateMetrics(reversedDays);
     const { rows, avg, min, max } = metricsResult;
 
+    // Derive non-rejected days from stage-filtered reversedDays (D-08).
+    // Must come from reversedDays (already stage-filtered), NOT from allDays.
+    const nonRejectedDays = reversedDays.filter(r => !r.rejected);
+
     // TIF inline columns — compute retroactive bounds map when TIF is active (MET-08, D-11)
     const isTif = snap.forecastAlgorithm === 'tif';
     const activityLog = isTif ? eventLog.getActivityLog() : {};
@@ -525,9 +621,15 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // Summary rows tbody (Avg, Min, Max)
+    // 7-day rolling aggregate tbody (D-06: appears first above all-time)
+    const sevenDayTbody = buildRollingSection(7, '7-day rolling', nonRejectedDays, snap, isTif);
+
+    // All-time summary tbody (Avg, Min, Max + TIF rows)
     const summaryTbody = document.createElement('tbody');
     summaryTbody.classList.add('metrics-summary-tbody');
+
+    // Section-header row for All-time section (D-02, D-03)
+    summaryTbody.appendChild(buildSectionHeaderRow('All-time', COLUMNS.length + TIF_COLUMNS.length));
 
     // Build aggregate rows
     const avgRow = buildAggregateRow('Average', avg, snap);
@@ -549,6 +651,10 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(medianTifRow);
     summaryTbody.appendChild(maxTifRow);
 
+    // Table tbody append sequence (D-06, D-07):
+    // thead → 7-day rolling → all-time summary → per-day rows
+    // (14-day rolling will be inserted between 7-day and all-time in Task 2)
+    table.appendChild(sevenDayTbody);
     table.appendChild(summaryTbody);
 
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.

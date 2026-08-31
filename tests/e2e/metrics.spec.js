@@ -34,10 +34,11 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     const table = page.locator('.metricsTable');
     await expect(table).toBeVisible();
 
-    // Check column headers exist
+    // Check column headers exist: 18 base columns + 12 TIF inline columns = 30 total.
+    // TIF columns are hidden (hidden attribute) when TIF is not active but still in DOM.
     const headerCells = page.locator('.metricsTable th');
     const count = await headerCells.count();
-    expect(count).toBe(14); // 14 columns
+    expect(count).toBe(30); // 18 base + 12 TIF inline columns (Phase 14 layout)
 
     // Check that some expected headers are present
     const headerTexts = await page.locator('.metricsTable th').allTextContents();
@@ -172,5 +173,65 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
 
     // Metrics screen should be hidden
     await expect(metricsScreen).toHaveAttribute('hidden');
+  });
+});
+
+test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('http://localhost:8081');
+    await page.waitForSelector('[data-tab="today"]');
+  });
+
+  test('MET-09: 7-day rolling section appears above per-day rows', async ({ page }) => {
+    // Seed 8 days of wake+bedtime pairs so the 7-day window is fully satisfied.
+    const events = [];
+    for (let i = 0; i < 8; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-01-' + dayNum;
+      events.push({ type: 'wake',    at: date + 'T08:00' });
+      events.push({ type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4,
+        timeFormat: '24h',
+        maxDelta: 30,
+        minDays: 1,
+        windowDays: 7,
+        statBlend: 'median',
+        autoOutlier: false,
+        groupingMode: 'calendar',
+        rejectedDays: [],
+        stages: [],
+        activeStageId: null,
+        forecastAlgorithm: 'classic',
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+
+    // Navigate to Metrics tab
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // 7-day rolling tbody must be visible
+    const firstRollingTbody = page.locator('.metrics-rolling-tbody').first();
+    await expect(firstRollingTbody).toBeVisible();
+
+    // Section header must contain '7-day rolling'
+    const sectionHeader = firstRollingTbody.locator('.metrics-section-header');
+    await expect(sectionHeader).toContainText('7-day rolling', { ignoreCase: true });
+
+    // Three aggregate rows (Min, Average, Max) must be present
+    const summaryRows = firstRollingTbody.locator('.metrics-summary-row');
+    await expect(summaryRows).toHaveCount(3);
   });
 });

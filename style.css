@@ -1726,6 +1726,21 @@ button[data-log] {
   background-color: #eef2ff;
 }
 
+/* ── Rolling-window section-header cells (D-03, Phase 16) ────────────── */
+/* Mirrors thead th styling: muted background, bold, uppercase via CSS.    */
+/* Text stored lowercase in DOM ('7-day rolling', 'All-time') per D-02.   */
+
+.metricsTable td.metrics-section-header {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #334155;
+  padding: 6px 12px;
+  letter-spacing: 0.05em;
+  border-top: 2px solid #cbd5e1;
+}
+
 /* ── Rejected day rows (dimmed, D11-05) ────────────────────────────────– */
 
 .metricsTable tr.rejected td {
