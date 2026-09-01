@@ -1,0 +1,33 @@
+{
+  "phase": "17",
+  "phase_name": "Day-of-Week Patterns",
+  "timestamp": "2026-09-01T00:00:00.000Z",
+  "areas_completed": ["No-nap day handling"],
+  "areas_remaining": ["Module home for dayOfWeekAverages", "Section placement", "Collapsibility mechanism"],
+  "decisions": {
+    "No-nap day handling": [
+      {
+        "question": "For weekday averages of MA, AA, and nap duration — how should no-nap days be treated?",
+        "answer": "Exclude silently",
+        "options_presented": ["Exclude silently (Recommended)", "Explicit null pass-through", "Include with zero"]
+      },
+      {
+        "question": "Does a 'no nap day' mean nap start is absent, or does it need both nap start AND nap end to be absent?",
+        "answer": "Nap start absent = no-nap day",
+        "options_presented": ["Nap start absent = no-nap day (Recommended)", "Both nap-start and nap-end absent", "You decide"]
+      },
+      {
+        "question": "When a weekday has both nap days and no-nap days, should the section show anything about this split?",
+        "answer": "No — just show — when null",
+        "options_presented": ["No — just show — when null (Recommended)", "Show sample count per cell", "You decide"]
+      }
+    ]
+  },
+  "deferred_ideas": [],
+  "canonical_refs": [
+    ".planning/REQUIREMENTS.md",
+    ".planning/ROADMAP.md",
+    "js/lib/metrics.js",
+    "js/ui/metrics-screen.js"
+  ]
+}
