@@ -516,3 +516,160 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     expect(consoleErrors).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Day-of-Week Patterns E2E (MET-11, MET-12, Phase 17)
+// ---------------------------------------------------------------------------
+
+test.describe('Metrics Screen Day-of-Week Patterns (MET-11, MET-12)', () => {
+  // Shared settings object for all DoW tests (includes firstDayOfWeek).
+  const baseSettings = {
+    cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1,
+    windowDays: 7, statBlend: 'median', autoOutlier: false,
+    groupingMode: 'calendar', rejectedDays: [], stages: [],
+    activeStageId: null, forecastAlgorithm: 'classic',
+    firstDayOfWeek: 'monday',
+  };
+
+  test('MET-12/basic: DoW section present, collapsed by default, expands to 7 rows', async ({ page }) => {
+    const consoleErrors = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
+    // Seed 14 days: 2025-04-01 through 2025-04-14.
+    // Odd-numbered days (day index 1, 3, 5, 7, 9, 11, 13) include nap events.
+    const events = [];
+    for (let d = 1; d <= 14; d++) {
+      const dd = String(d).padStart(2, '0');
+      const dateStr = `2025-04-${dd}`;
+      events.push({ id: `dow-wake-${d}`,    type: 'wake',    at: `${dateStr}T07:00` });
+      events.push({ id: `dow-bed-${d}`,     type: 'bedtime', at: `${dateStr}T22:00` });
+      if (d % 2 === 1) {  // odd days have naps
+        events.push({ id: `dow-nap-s-${d}`, type: 'napStart', at: `${dateStr}T12:00` });
+        events.push({ id: `dow-nap-e-${d}`, type: 'napEnd',   at: `${dateStr}T13:30` });
+      }
+    }
+
+    const seedDb = { version: 2, settings: baseSettings, events, activityLog: {} };
+    await page.goto('http://localhost:8081');
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // DoW section present
+    await expect(page.locator('.metrics-dow-section')).toHaveCount(1);
+
+    // Collapsed by default — details element must NOT have 'open' attribute (D-12)
+    const isOpenBefore = await page.locator('.metrics-dow-section').evaluate((el) => el.hasAttribute('open'));
+    expect(isOpenBefore).toBe(false);
+
+    // Click summary to expand
+    await page.locator('.metrics-dow-section summary').click();
+
+    // Now should have 'open' attribute (D-11)
+    const isOpenAfter = await page.locator('.metrics-dow-section').evaluate((el) => el.hasAttribute('open'));
+    expect(isOpenAfter).toBe(true);
+
+    // 7 rows in the tbody (one per weekday, D-09)
+    await expect(page.locator('.metrics-dow-table tbody tr')).toHaveCount(7);
+
+    // No JS errors
+    expect(consoleErrors).toHaveLength(0);
+  });
+
+  test('MET-12/empty-weekdays: only-Monday data — other weekdays render em-dash', async ({ page }) => {
+    const consoleErrors = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
+    // Seed two Mondays: 2025-01-06 and 2025-01-13 (both with naps).
+    const events = [
+      { id: 'dow2-wake-1',  type: 'wake',     at: '2025-01-06T07:00' },
+      { id: 'dow2-bed-1',   type: 'bedtime',  at: '2025-01-06T22:00' },
+      { id: 'dow2-ns-1',    type: 'napStart', at: '2025-01-06T12:00' },
+      { id: 'dow2-ne-1',    type: 'napEnd',   at: '2025-01-06T13:30' },
+      { id: 'dow2-wake-2',  type: 'wake',     at: '2025-01-13T07:00' },
+      { id: 'dow2-bed-2',   type: 'bedtime',  at: '2025-01-13T22:00' },
+      { id: 'dow2-ns-2',    type: 'napStart', at: '2025-01-13T12:00' },
+      { id: 'dow2-ne-2',    type: 'napEnd',   at: '2025-01-13T13:30' },
+    ];
+
+    const seedDb = { version: 2, settings: baseSettings, events, activityLog: {} };
+    await page.goto('http://localhost:8081');
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+    await page.locator('.metrics-dow-section summary').click();
+
+    // First row (Monday) must have at least one non-dash metric cell.
+    const firstRowTexts = await page.locator('.metrics-dow-table tbody tr').first().locator('td').allTextContents();
+    // firstRowTexts[0] is the weekday label; [1..4] are metrics
+    const monMetrics = firstRowTexts.slice(1);
+    expect(monMetrics.some((t) => t !== '—')).toBe(true);
+
+    // Count em-dash cells across the 6 non-Monday rows (rows 1..6, zero-indexed).
+    const emDashCount = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('.metrics-dow-table tbody tr'));
+      // Skip first row (Monday)
+      const nonMonRows = rows.slice(1);
+      let count = 0;
+      for (const row of nonMonRows) {
+        // Skip label cell (first td), count metric cells
+        const metricTds = Array.from(row.querySelectorAll('td')).slice(1);
+        for (const td of metricTds) {
+          if (td.textContent === '—') count++;
+        }
+      }
+      return count;
+    });
+    // 6 rows × 4 metric columns = 24 em-dash cells
+    expect(emDashCount).toBe(24);
+
+    // No JS errors
+    expect(consoleErrors).toHaveLength(0);
+  });
+
+  test('MET-14/rerender-collapse: DoW section resets to collapsed after page reload', async ({ page }) => {
+    // Seed 8 days to ensure the Metrics screen renders with data.
+    const events = [];
+    for (let d = 1; d <= 8; d++) {
+      const dd = String(d).padStart(2, '0');
+      events.push({ id: `dow3-wake-${d}`, type: 'wake',    at: `2025-06-${dd}T07:00` });
+      events.push({ id: `dow3-bed-${d}`,  type: 'bedtime', at: `2025-06-${dd}T22:00` });
+    }
+
+    const seedDb = { version: 2, settings: baseSettings, events, activityLog: {} };
+    await page.goto('http://localhost:8081');
+    await page.evaluate((data) => {
+      localStorage.setItem('nightwatch:db', JSON.stringify(data));
+    }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // Open the DoW section
+    await page.locator('.metrics-dow-section summary').click();
+    const isOpenAfterClick = await page.locator('.metrics-dow-section').evaluate((el) => el.hasAttribute('open'));
+    expect(isOpenAfterClick).toBe(true);
+
+    // Reload the page — the re-rendered section must start collapsed (D-12, D-14)
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    const isOpenAfterReload = await page.locator('.metrics-dow-section').evaluate((el) => el.hasAttribute('open'));
+    expect(isOpenAfterReload).toBe(false);
+  });
+});
