@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-31 (added B-038–B-044)
-Last assigned ID: **B-044** — next new item must be **B-045**
+Last updated: 2026-09-02 (added B-045–B-046)
+Last assigned ID: **B-046** — next new item must be **B-047**
 
 ---
 
@@ -1078,3 +1078,55 @@ Example: "Wake time — Min: 06:45 · Avg: 07:12 · Max: 08:00" as a row in the 
 - Column count: each event-time stats row adds cells to the existing row structure — confirm total column count remains consistent and update the `colspan` in section headers (B-043) accordingly.
 - Unit tests: one test per event type covering nap-present, nap-absent (null filtered), and single-day edge case.
 - E2E tests: add assertions in `tests/e2e/metrics.spec.js` that the event-time stats rows render in the rolling sections with the correct label text.
+
+---
+
+## Metrics screen collapse improvements (captured 2026-09-02, from Phase 17 UAT)
+
+### B-045 · Collapsible aggregate rows (Min / Average / Max / TIF) in Metrics screen
+
+**Source:** user input during Phase 17 UAT (2026-09-02)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen polish phase — small standalone change
+
+**What:** Move the Min / Average / Max summary rows and the TIF aggregate rows from the main metrics table into a separate `<table>` wrapped in a `<details>/<summary>` collapse control (same pattern as the DoW section added in Phase 17). The main table would then show only per-day rows; the aggregate section would be collapsed by default.
+
+**Why:** Metrics screen has grown dense. Collapsing the aggregate summary rows de-clutters the default view while keeping the data one click away — mirrors the DoW collapse pattern and improves scannability on small screens.
+
+**Open questions when this gets planned:**
+
+- Summary label: "Aggregates" / "Summary rows" / "Min · Avg · Max"?
+- Should 7-day, 14-day, and all-time sections each get their own collapse, or one shared collapse for all aggregate rows?
+- Collapsed by default (consistent with DoW) or open by default (aggregates are high-value)?
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`: extract aggregate rows (Min / Average / Max / TIF) into a separate `<table class="metrics-aggregate-table">` wrapped in `<details class="metrics-aggregate-section">` with no `open` attribute.
+- Follow the same `buildDowSection` pattern: `document.createElement('details')`, `summary.textContent = 'Summary'`, `replaceChildren` on the scroll container.
+- CSS: reuse or extend `.metrics-dow-section` styles — same margin and overflow-x treatment.
+- No changes to `js/lib/metrics.js` or any data layer.
+
+---
+
+### B-046 · Collapsible daily-data table in Metrics screen
+
+**Source:** user input during Phase 17 UAT (2026-09-02)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** paired with B-045 — same metrics-screen polish phase
+
+**What:** Wrap the main per-day metrics table in a `<details>/<summary>` collapse control so the full day-by-day log can be collapsed. Useful once the Metrics screen also has rolling-window aggregates (NW-16), DoW averages (NW-17), and aggregate rows (B-045) — the per-day log is the most verbose section and benefits most from a collapse toggle.
+
+**Why:** As more sections are added to the Metrics screen the per-day table becomes the dominant source of scroll. A collapse option lets users who primarily consult aggregates or DoW averages hide the daily detail without losing access to it.
+
+**Open questions when this gets planned:**
+
+- Summary label: "Daily Data" / "All days (N)"?
+- Collapsed or open by default? Open is probably safer since the daily table is the primary content; collapsed hides data that some users visit the screen for.
+- Should the row count appear in the summary label (e.g., "Daily Data — 92 days") to signal content volume without expanding?
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`: wrap the existing `tableScroll` div (or the `<table>` itself) in a `<details>` element. The `<summary>` label can include a dynamic day count.
+- No `open` attribute or an explicit `open` attribute depending on the "open by default" decision above.
+- CSS: same `.metrics-dow-section` pattern.
+- Update E2E tests in `tests/e2e/metrics.spec.js` that query table rows directly — they may need to first expand the `<details>` if it is collapsed by default.
