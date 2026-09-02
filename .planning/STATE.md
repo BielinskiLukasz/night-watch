@@ -5,13 +5,13 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 17
 current_phase_name: Day-of-Week Patterns
 status: idle
-stopped_at: Phase NW-17 complete — verified 2026-09-02
-last_updated: "2026-09-02T00:00:00.000Z"
+stopped_at: Phase 18 context gathered
+last_updated: "2026-09-02T21:39:10.084Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase NW-17 verified complete (7/7 truths, 0 gaps)
-state_head: e3f8c5c3cc2d4ae161d8a6099b5c850733752b9a
+state_head: a935d73f671dc2bf3c8a6246262071d70dcf02d4
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
   total_plans: 4
   completed_plans: 4
@@ -156,9 +156,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-02
-Stopped at: Phase NW-17 verified complete
-Resume file: None
+Last session: 2026-09-02T21:39:06.599Z
+Stopped at: Phase 18 context gathered
+Resume file: .planning/phases/18-sleep-debt-proxy/18-CONTEXT.md
 
 ## Operator Next Steps
 
