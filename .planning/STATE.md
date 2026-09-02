@@ -5,13 +5,13 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 17
 current_phase_name: Day-of-Week Patterns
 status: planning
-stopped_at: Phase NW-16 complete, ready to plan Phase 17
-last_updated: "2026-08-31T23:05:28.135Z"
+stopped_at: Phase 17 context gathered
+last_updated: "2026-09-02T12:15:26.268Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase NW-16 complete, transitioned to Phase 17
-state_head: 00313d80d66108f329835597a611314bad932690
+state_head: dea5a85d083676303dc082117436441e63071aa0
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
   total_plans: 3
   completed_plans: 3
@@ -152,9 +152,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-31T18:47:30.362Z
-Stopped at: Phase NW-16 complete, ready to plan Phase 17
-Resume file: None
+Last session: 2026-09-02T12:15:24.836Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/phases/NW-17-day-of-week-patterns/17-CONTEXT.md
 
 ## Operator Next Steps
 
