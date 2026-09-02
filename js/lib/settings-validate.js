@@ -62,6 +62,7 @@ export const RULES = Object.freeze({
   eveningHour:               { type: 'integer', min: 0, max: 23 },           // PRED-08 / D-06
   noNapBedtimeOffsetMinutes: { type: 'integer', min: 0, max: 120 },          // PRED-11 / D-08
   intenseDayOffsetMinutes:   { type: 'integer', min: 0, max: 120 },          // PRED-10 / D-08
+  firstDayOfWeek:   { type: 'enum', values: new Set(['monday', 'sunday']) }, // D-10 / MET-12
 });
 
 // ---------------------------------------------------------------------------

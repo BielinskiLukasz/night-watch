@@ -36,6 +36,7 @@
  *   forecastAlgorithm: string,
  *   trimPct: number,
  *   precisionTarget: number,
+ *   firstDayOfWeek: string,
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   eveningHour:               18,  // PRED-08 / D-06: hour (0–23) at which bedtime takes priority over nap
   noNapBedtimeOffsetMinutes: 30,  // PRED-11 / D-08: minutes to shift bedtime on no-nap days
   intenseDayOffsetMinutes:   30,  // PRED-10 / D-08: minutes to shift bedtime on intense days
+  firstDayOfWeek:        'monday',  // D-10 / MET-12: first day shown in DoW table ('monday'|'sunday')
 });
 
 /**

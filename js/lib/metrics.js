@@ -380,3 +380,142 @@ export function aggregateMetrics(dayRecords) {
 
   return { rows, avg, min, max };
 }
+
+// ---------------------------------------------------------------------------
+// Day-of-week averages (MET-11, D-04..D-07)
+// ---------------------------------------------------------------------------
+
+/** Abbreviated day labels; index matches getDay() (0=Sun..6=Sat). */
+const DAY_LABELS = Object.freeze(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+
+/**
+ * Group pre-filtered day records by weekday and compute per-weekday averages.
+ *
+ * Caller is responsible for pre-filtering (stage filter + rejected exclusion)
+ * before passing dayRecords in — consistent with aggregateMetrics() (D-07).
+ *
+ * Weekday attribution uses the wake date (D-06), via extractDate(day.wake).
+ * Records where extractDate returns null (e.g., bare 'HH:MM' synthetic data)
+ * are silently skipped.
+ *
+ * Nap-related metrics (activityBeforeNap, activityAfterNap, napDuration)
+ * exclude no-nap days (day.napStart === null per D-02).
+ *
+ * Sleep duration pairs today's wake with prevDay.bedtime — identical to the
+ * overnight-pairing logic inside aggregateMetrics() (D-06).
+ *
+ * Returns a fixed 7-entry array (index 0=Sun..6=Sat) where each entry holds
+ * averaged metrics (numbers) or null when no data exists for that weekday.
+ * Duration averages use Math.round (consistent with aggregateMetrics).
+ * Ratio averages are returned as-is (no rounding).
+ *
+ * D-05: computes all Metrics columns, not just the 4 required by MET-11.
+ *
+ * @param {object[]} dayRecords  pre-filtered (stage + rejected) day records
+ * @returns {Array<{weekday: number, label: string, activityBeforeNap: number|null, activityAfterNap: number|null, napDuration: number|null, sleepDuration: number|null, dayLength: number|null, totalActivity: number|null, combinedSleepNap: number|null, dayToSleepFactor: number|null, napFraction: number|null, amPmSplit: number|null, maSleepRatio: number|null, maNapRatio: number|null}>}
+ */
+export function dayOfWeekAverages(dayRecords) {
+  // Per-weekday accumulators: { sum, count } for each metric field.
+  // nap-related accumulators only count days where napStart is present.
+  const buckets = Array.from({ length: 7 }, () => ({
+    // duration metrics (Math.round on output)
+    activityBeforeNap: { sum: 0, count: 0 },
+    activityAfterNap:  { sum: 0, count: 0 },
+    napDuration:       { sum: 0, count: 0 },
+    sleepDuration:     { sum: 0, count: 0 },
+    dayLength:         { sum: 0, count: 0 },
+    totalActivity:     { sum: 0, count: 0 },
+    combinedSleepNap:  { sum: 0, count: 0 },
+    // ratio metrics (no rounding on output)
+    dayToSleepFactor:  { sum: 0, count: 0 },
+    napFraction:       { sum: 0, count: 0 },
+    amPmSplit:         { sum: 0, count: 0 },
+    maSleepRatio:      { sum: 0, count: 0 },
+    maNapRatio:        { sum: 0, count: 0 },
+  }));
+
+  // Inline sleep helper: bedtime-prev → wake, same overnight-pairing as aggregateMetrics.
+  function calcSleep(bedStr, wakeStr) {
+    if (!bedStr || !wakeStr) return null;
+    const result = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    return result < 0 ? result + 24 * 60 : result;
+  }
+
+  // Accumulate helper: add a value to a bucket slot when non-null.
+  function acc(slot, value) {
+    if (value !== null && value !== undefined) {
+      slot.sum   += value;
+      slot.count += 1;
+    }
+  }
+
+  for (let i = 0; i < dayRecords.length; i++) {
+    const day     = dayRecords[i];
+    const prevDay = i > 0 ? dayRecords[i - 1] : null;
+
+    // Weekday attribution via wake date (D-06).
+    const dateStr = extractDate(day.wake);
+    if (dateStr === null) continue;  // synthetic bare-string data — skip (D-07 note)
+
+    const weekday = new Date(dateStr + 'T00:00').getDay();  // 0=Sun..6=Sat; local time, never UTC
+    const b = buckets[weekday];
+
+    const isNapDay = day.napStart != null;  // D-02: no-nap = napStart absent
+
+    // Overnight sleep duration paired with prevDay.bedtime (D-06).
+    const prevBedStr = prevDay ? extractTime(prevDay.bedtime) : null;
+    const wakeStr    = extractTime(day.wake);
+    acc(b.sleepDuration, calcSleep(prevBedStr, wakeStr));
+
+    // Duration metrics available on all days.
+    acc(b.dayLength,        dayLength(day));
+    acc(b.totalActivity,    totalActivity(day));
+    acc(b.combinedSleepNap, combinedSleepNap(day));
+    acc(b.dayToSleepFactor, dayToSleepFactor(day));
+
+    // Nap-related metrics: only accumulate on nap days (D-01, D-02, D-03).
+    if (isNapDay) {
+      acc(b.activityBeforeNap, activityBeforeNap(day));
+      acc(b.activityAfterNap,  activityAfterNap(day));
+      acc(b.napDuration,       napDuration(day));
+      acc(b.napFraction,       napFraction(day));
+      acc(b.amPmSplit,         amPmSplit(day));
+      acc(b.maSleepRatio,      maSleepRatio(day));
+      acc(b.maNapRatio,        maNapRatio(day));
+    }
+  }
+
+  // Duration field names (Math.round on average).
+  const durationFields = new Set([
+    'activityBeforeNap', 'activityAfterNap', 'napDuration', 'sleepDuration',
+    'dayLength', 'totalActivity', 'combinedSleepNap',
+  ]);
+
+  // Produce the 7-entry result array.
+  return Array.from({ length: 7 }, (_, i) => {
+    const b = buckets[i];
+    const avg = (slot, isDuration) =>
+      slot.count === 0
+        ? null
+        : isDuration
+          ? Math.round(slot.sum / slot.count)
+          : slot.sum / slot.count;
+
+    return {
+      weekday:           i,
+      label:             DAY_LABELS[i],
+      activityBeforeNap: avg(b.activityBeforeNap, true),
+      activityAfterNap:  avg(b.activityAfterNap,  true),
+      napDuration:       avg(b.napDuration,        true),
+      sleepDuration:     avg(b.sleepDuration,      true),
+      dayLength:         avg(b.dayLength,          true),
+      totalActivity:     avg(b.totalActivity,      true),
+      combinedSleepNap:  avg(b.combinedSleepNap,   true),
+      dayToSleepFactor:  avg(b.dayToSleepFactor,   false),
+      napFraction:       avg(b.napFraction,         false),
+      amPmSplit:         avg(b.amPmSplit,           false),
+      maSleepRatio:      avg(b.maSleepRatio,        false),
+      maNapRatio:        avg(b.maNapRatio,          false),
+    };
+  });
+}

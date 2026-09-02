@@ -1764,6 +1764,58 @@ button[data-log] {
   font-style: italic;
 }
 
+/* ── Day-of-Week Patterns section (MET-12, D-08..D-14, Phase 17) ───────── */
+
+.metrics-dow-section {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.metrics-dow-section summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  background-color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  list-style: none;
+  user-select: none;
+}
+
+.metrics-dow-section[open] summary {
+  border-radius: 4px 4px 0 0;
+}
+
+.metrics-dow-table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+}
+
+.metrics-dow-table th,
+.metrics-dow-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+}
+
+.metrics-dow-table th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.metrics-dow-table th:first-child,
+.metrics-dow-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
 /* ==========================================================================
  * Landscape orientation optimization (Plan 11-04, G-NW-11-15)
  * ==========================================================================

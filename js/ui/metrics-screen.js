@@ -16,6 +16,7 @@
 
 import {
   aggregateMetrics,
+  dayOfWeekAverages,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
@@ -468,6 +469,90 @@ function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
 }
 
 // ---------------------------------------------------------------------------
+// Day-of-Week Patterns section (MET-12, D-08..D-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the collapsible "Day-of-Week Patterns" <details> element.
+ *
+ * Receives nonRejectedDays — the same stage-filtered + rejected-excluded array
+ * used by rolling sections — so active-stage scoping is automatic (D-07, MET-12).
+ *
+ * Section starts collapsed by default (no `open` attribute, D-12, D-14):
+ * replaceChildren() rebuilds the DOM on every render, so state always resets.
+ *
+ * All cell content is set via textContent only (XSS guard T-17-03).
+ *
+ * @param {object[]} nonRejectedDays  pre-filtered day records (same as rolling sections)
+ * @param {object}   snap             settings snapshot (reads snap.firstDayOfWeek)
+ * @returns {HTMLDetailsElement}
+ */
+function buildDowSection(nonRejectedDays, snap) {
+  const firstDay = snap.firstDayOfWeek ?? 'monday';
+
+  // Compute per-weekday averages from the pre-filtered records.
+  const entries = dayOfWeekAverages(nonRejectedDays);
+
+  // Rotate so the configured first day leads.
+  // Default array is [Sun=0, Mon=1, ..., Sat=6].
+  // 'monday' → [Mon, Tue, Wed, Thu, Fri, Sat, Sun] (slice from index 1, append Sun)
+  // 'sunday' → [Sun, Mon, Tue, Wed, Thu, Fri, Sat] (keep as-is)
+  const ordered = firstDay === 'monday'
+    ? [...entries.slice(1), entries[0]]
+    : [...entries];
+
+  // <details> with no `open` attribute — collapsed by default (D-12).
+  const details = document.createElement('details');
+  details.className = 'metrics-dow-section';
+
+  // <summary> heading — exact text per D-13.
+  const summary = document.createElement('summary');
+  summary.textContent = 'Day-of-Week Patterns';
+  details.appendChild(summary);
+
+  // Standalone 5-column table (D-09).
+  const table = document.createElement('table');
+  table.className = 'metrics-dow-table';
+
+  // thead row: Weekday | MA | AA | Nap | Sleep
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const label of ['Weekday', 'MA', 'AA', 'Nap', 'Sleep']) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.appendChild(th);
+  }
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  // tbody — one row per ordered weekday entry.
+  const tbody = document.createElement('tbody');
+  for (const entry of ordered) {
+    const tr = document.createElement('tr');
+
+    // Weekday label cell (left-aligned via CSS).
+    const labelTd = document.createElement('td');
+    labelTd.textContent = entry.label;
+    tr.appendChild(labelTd);
+
+    // Four metric cells: MA, AA, Nap, Sleep — em-dash when null (MET-12).
+    for (const key of ['activityBeforeNap', 'activityAfterNap', 'napDuration', 'sleepDuration']) {
+      const td = document.createElement('td');
+      const value = entry[key];
+      // All values are durations (integers in minutes) or null.
+      td.textContent = value === null ? '—' : formatDuration(value);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  details.appendChild(table);
+
+  return details;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -680,8 +765,9 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     }
     table.appendChild(daysTbody);
 
-    // Update scroll container
-    tableScroll.replaceChildren(table);
+    // Build DoW section and update scroll container (MET-12, D-08).
+    const dowSection = buildDowSection(nonRejectedDays, snap);
+    tableScroll.replaceChildren(table, dowSection);
   };
 
   // Initial render.
