@@ -4,15 +4,15 @@ milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 17
 current_phase_name: Day-of-Week Patterns
-status: executing
-stopped_at: Completed NW-17-01-PLAN.md
-last_updated: "2026-09-02T18:42:14.264Z"
+status: idle
+stopped_at: Phase NW-17 complete — verified 2026-09-02
+last_updated: "2026-09-02T00:00:00.000Z"
 last_activity: 2026-09-02
-last_activity_desc: Phase NW-17 execution started
+last_activity_desc: Phase NW-17 verified complete (7/7 truths, 0 gaps)
 state_head: e3f8c5c3cc2d4ae161d8a6099b5c850733752b9a
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 4
   completed_plans: 4
 ---
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-17 — Day-of-Week Patterns
+**Current focus:** Phase NW-17 complete — ready for Phase NW-18 (Sleep Debt Proxy)
 
 ## Current Position
 
-Phase: NW-17 (Day-of-Week Patterns) — EXECUTING
+Phase: NW-17 (Day-of-Week Patterns) — COMPLETE
 Plan: 1 of 1
-Status: Executing Phase NW-17
-Last activity: 2026-09-02 — Phase NW-17 execution started
+Status: Phase NW-17 verified complete (2026-09-02)
+Last activity: 2026-09-02 — Phase NW-17 verified complete
 
 ## Phases
 
@@ -44,8 +44,8 @@ Last activity: 2026-09-02 — Phase NW-17 execution started
 | 13 | TIF Algorithm Extensions | TIF-12, TIF-13, TIF-15, TIF-16 | Complete |
 | 14 | TIF Metrics, Accuracy & Chart Fixes | TIF-14, MET-07..11, UI-08..10 | Complete |
 | 15 | TIF Engine Bug Fixes | FIX-01..05 | Complete |
-| 16 | Rolling Window Aggregates | MET-09, MET-10 | Not started |
-| 17 | Day-of-Week Patterns | MET-11, MET-12 | Not started |
+| 16 | Rolling Window Aggregates | MET-09, MET-10 | Complete |
+| 17 | Day-of-Week Patterns | MET-11, MET-12 | Complete |
 | 18 | Sleep Debt Proxy | MET-13, MET-14 | Not started |
 
 ## Performance Metrics
@@ -156,10 +156,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-02T18:42:12.789Z
-Stopped at: Completed NW-17-01-PLAN.md
+Last session: 2026-09-02
+Stopped at: Phase NW-17 verified complete
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 16` to plan Phase 16 (Rolling Window Aggregates)
+- Run `/gsd-plan-phase 18` to plan Phase NW-18 (Sleep Debt Proxy — MET-13, MET-14)

@@ -46,7 +46,7 @@ See [v1.1 archive](milestones/v1.1-ROADMAP.md) for full phase details.
 
 - [x] **Phase 15: TIF Engine Bug Fixes** - Correctness fixes for `findBedtimeDayRecord` latestAt ordering, rejected-day pre-filter semantics, redundant tifForecast render call, misleading comment, and stale test name (completed 2026-08-31)
 - [x] **Phase 16: Rolling Window Aggregates** - 7-day and 14-day windowed stats across all Metrics screen columns (completed 2026-09-01)
-- [ ] **Phase 17: Day-of-Week Patterns** - Per-weekday averages for MA, AA, nap duration, and sleep duration in a collapsible Metrics section
+- [x] **Phase 17: Day-of-Week Patterns** - Per-weekday averages for MA, AA, nap duration, and sleep duration in a collapsible Metrics section (completed 2026-09-02)
 - [ ] **Phase 18: Sleep Debt Proxy** - Rolling 7-day accumulated sleep deficit column in Metrics screen per-day table and aggregates
 
 </details>
@@ -191,6 +191,7 @@ Plans:
 - [x] 17-01-PLAN.md — Tracer/TDD: dayOfWeekAverages() + firstDayOfWeek schema + DoW section + CSS + Settings UI + E2E tests (MET-11, MET-12)
 
 **UI hint**: yes
+**Completed**: 2026-09-02
 
 ### Phase 18: Sleep Debt Proxy
 
@@ -219,7 +220,7 @@ Plans:
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete | 2026-08-27 |
 | 15. TIF Engine Bug Fixes | v1.4 | 2/2 | Complete    | 2026-08-31 |
 | 16. Rolling Window Aggregates | v1.4 | 1/1 | Complete    | 2026-09-01 |
-| 17. Day-of-Week Patterns | v1.4 | 1/1 | In Progress|  |
+| 17. Day-of-Week Patterns | v1.4 | 1/1 | Complete   | 2026-09-02 |
 | 18. Sleep Debt Proxy | v1.4 | 0/TBD | Not started | - |
 
 ## Backlog
