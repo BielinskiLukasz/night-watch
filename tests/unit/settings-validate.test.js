@@ -33,19 +33,19 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 21 field names (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
+  it('has entries for all 22 field names (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 fields)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
       'intenseDays', 'eveningHour', 'noNapBedtimeOffsetMinutes', 'intenseDayOffsetMinutes',
-      'tifRollingDays',
+      'tifRollingDays', 'firstDayOfWeek',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 21);
+    assert.equal(Object.keys(RULES).length, 22);
   });
 });
 
@@ -61,10 +61,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 21 keys (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
+  it('normalized contains all 22 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 fields)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 21);
+    assert.equal(keys.length, 22);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -420,6 +420,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+    firstDayOfWeek: 'monday',
   };
 
   it('accepts empty stages array', () => {
@@ -489,6 +490,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+    firstDayOfWeek: 'monday',
   };
 
   it('accepts null activeStageId', () => {
@@ -733,6 +735,42 @@ describe('validateSettings — tifRollingDays (TIF-13)', () => {
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
       'Expected error for non-integer tifRollingDays');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — firstDayOfWeek (D-10, Phase 17)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — firstDayOfWeek (D-10)', () => {
+  it('accepts \'monday\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'monday' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts \'sunday\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'sunday' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('rejects \'saturday\' in mode:\'save\' — not in enum {monday, sunday}', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'saturday' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'firstDayOfWeek'),
+      'Expected error for firstDayOfWeek field');
+  });
+
+  it('rejects empty string in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: '' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'firstDayOfWeek'),
+      'Expected error for firstDayOfWeek field');
+  });
+
+  it('mode:\'load\' with invalid value \'wednesday\' → ok:true, normalized resets to \'monday\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'wednesday' }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.strictEqual(result.normalized.firstDayOfWeek, 'monday');
   });
 });
 
