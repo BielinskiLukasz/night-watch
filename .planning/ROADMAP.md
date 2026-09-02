@@ -184,11 +184,11 @@ Plans:
   3. The section is scoped to the active stage (same filter as all other Metrics content)
   4. Weekdays with no non-rejected recorded data render `—` without errors
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans executed
 
 Plans:
 
-- [ ] 17-01-PLAN.md — Tracer/TDD: dayOfWeekAverages() + firstDayOfWeek schema + DoW section + CSS + Settings UI + E2E tests (MET-11, MET-12)
+- [x] 17-01-PLAN.md — Tracer/TDD: dayOfWeekAverages() + firstDayOfWeek schema + DoW section + CSS + Settings UI + E2E tests (MET-11, MET-12)
 
 **UI hint**: yes
 
@@ -219,7 +219,7 @@ Plans:
 | 14. TIF Metrics, Accuracy & Chart Fixes | v1.3 | 5/5 | Complete | 2026-08-27 |
 | 15. TIF Engine Bug Fixes | v1.4 | 2/2 | Complete    | 2026-08-31 |
 | 16. Rolling Window Aggregates | v1.4 | 1/1 | Complete    | 2026-09-01 |
-| 17. Day-of-Week Patterns | v1.4 | 0/1 | Not started | - |
+| 17. Day-of-Week Patterns | v1.4 | 1/1 | In Progress|  |
 | 18. Sleep Debt Proxy | v1.4 | 0/TBD | Not started | - |
 
 ## Backlog

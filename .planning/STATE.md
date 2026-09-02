@@ -4,17 +4,17 @@ milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 17
 current_phase_name: Day-of-Week Patterns
-status: planning
-stopped_at: Phase 17 context gathered
-last_updated: "2026-09-02T12:15:26.268Z"
-last_activity: 2026-09-01
-last_activity_desc: Phase NW-16 complete, transitioned to Phase 17
-state_head: dea5a85d083676303dc082117436441e63071aa0
+status: executing
+stopped_at: Completed NW-17-01-PLAN.md
+last_updated: "2026-09-02T18:42:14.264Z"
+last_activity: 2026-09-02
+last_activity_desc: Phase NW-17 execution started
+state_head: e3f8c5c3cc2d4ae161d8a6099b5c850733752b9a
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-16 — Rolling Window Aggregates
+**Current focus:** Phase NW-17 — Day-of-Week Patterns
 
 ## Current Position
 
-Phase: 17 — Day-of-Week Patterns
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-01 — Phase NW-16 complete, transitioned to Phase 17
+Phase: NW-17 (Day-of-Week Patterns) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase NW-17
+Last activity: 2026-09-02 — Phase NW-17 execution started
 
 ## Phases
 
@@ -87,6 +87,7 @@ Last activity: 2026-09-01 — Phase NW-16 complete, transitioned to Phase 17
 | Phase NW-15 P01 | 14 | 3 tasks | 2 files |
 | Phase NW-15 P02 | 14 | 3 tasks | 2 files |
 | Phase NW-16 P01 | 30 | 2 tasks | 3 files |
+| Phase NW-17 P01 | 18 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,9 @@ Last activity: 2026-09-01 — Phase NW-16 complete, transitioned to Phase 17
 - [Phase 15]: UAT: Metrics summary row order changed to Min / Average / Max (Average between bounds)
 - [Phase 16]: nonRejectedDays derived from stage-filtered reversedDays per D-08 prohibition
 - [Phase 16]: buildRollingSection helper encapsulates cold-start note, TIF placeholders, and section-header row per D-09/D-10/D-05
+- [Phase 17]: dayOfWeekAverages uses extractDate(day.wake) for weekday attribution — skips synthetic bare-string records
+- [Phase 17]: Nap metrics only accumulate when day.napStart != null per D-02 (no-nap days excluded)
+- [Phase 17]: DoW section built with no open attribute — native HTML details collapse resets on every replaceChildren rebuild
 
 ### Quick Tasks Completed
 
@@ -152,9 +156,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-02T12:15:24.836Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/NW-17-day-of-week-patterns/17-CONTEXT.md
+Last session: 2026-09-02T18:42:12.789Z
+Stopped at: Completed NW-17-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

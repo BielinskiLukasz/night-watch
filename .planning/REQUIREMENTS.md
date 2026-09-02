@@ -23,8 +23,8 @@
 
 ### Day-of-Week Patterns
 
-- [ ] **MET-11**: `js/lib/metrics.js` (or a sibling module) exposes a `dayOfWeekAverages(dayRecords)` function that groups non-rejected day records by weekday (Mon–Sun) and returns per-weekday averages for MA, AA, nap duration, and sleep duration
-- [ ] **MET-12**: The Metrics screen includes a collapsible "Day-of-Week Patterns" section that shows a 7-row (Mon–Sun) table with per-weekday averages for MA, AA, nap duration, and sleep duration, scoped to the active stage
+- [x] **MET-11**: `js/lib/metrics.js` (or a sibling module) exposes a `dayOfWeekAverages(dayRecords)` function that groups non-rejected day records by weekday (Mon–Sun) and returns per-weekday averages for MA, AA, nap duration, and sleep duration
+- [x] **MET-12**: The Metrics screen includes a collapsible "Day-of-Week Patterns" section that shows a 7-row (Mon–Sun) table with per-weekday averages for MA, AA, nap duration, and sleep duration, scoped to the active stage
 
 ### Sleep Debt Proxy
 
@@ -72,8 +72,8 @@
 | FIX-05 | Phase 15 | Complete |
 | MET-09 | Phase 16 | Complete |
 | MET-10 | Phase 16 | Complete |
-| MET-11 | Phase 17 | Pending |
-| MET-12 | Phase 17 | Pending |
+| MET-11 | Phase 17 | Complete |
+| MET-12 | Phase 17 | Complete |
 | MET-13 | Phase 18 | Pending |
 | MET-14 | Phase 18 | Pending |
 
