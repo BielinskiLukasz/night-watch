@@ -86,6 +86,8 @@ export function openSettings({ settings, eventLog, storage, id }) {
     if (precisionTargetEl) precisionTargetEl.value = String(s.precisionTarget ?? 60);
     const tifRollingDaysEl = form.elements.namedItem('tifRollingDays');
     if (tifRollingDaysEl) tifRollingDaysEl.value = String(s.tifRollingDays ?? 7);
+    const firstDayOfWeekEl = form.elements.namedItem('firstDayOfWeek');
+    if (firstDayOfWeekEl) firstDayOfWeekEl.value = s.firstDayOfWeek ?? 'monday';
     const eveningHourEl = form.elements.namedItem('eveningHour');
     if (eveningHourEl) eveningHourEl.value = String(s.eveningHour ?? 18);
     const noNapOffsetEl = form.elements.namedItem('noNapBedtimeOffsetMinutes');
@@ -151,6 +153,7 @@ export function openSettings({ settings, eventLog, storage, id }) {
         noNapBedtimeOffsetMinutes: Number(data.get('noNapBedtimeOffsetMinutes') ?? 30),
         intenseDayOffsetMinutes:   settings.get().intenseDayOffsetMinutes ?? 30,
         intenseDays:               settings.get().intenseDays || [],
+        firstDayOfWeek:            String(data.get('firstDayOfWeek') ?? 'monday'),
       };
 
       const result = validateSettings(raw, { mode: 'save' });
