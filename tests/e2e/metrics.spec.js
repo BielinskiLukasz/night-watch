@@ -30,6 +30,7 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
         windowDays: 7, statBlend: 'median', autoOutlier: false,
         groupingMode: 'calendar', rejectedDays: [], stages: [],
         activeStageId: null, forecastAlgorithm: 'classic',
+        targetSleepMinutes: 600,
       },
       events: [
         { id: 'met02-wake-1',    type: 'wake',    at: '2025-06-01T08:00' },
@@ -50,17 +51,34 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     const table = page.locator('.metricsTable');
     await expect(table).toBeVisible();
 
-    // Check column headers exist: 18 base columns + 12 TIF inline columns = 30 total.
+    // Check column headers exist: 19 base columns + 12 TIF inline columns = 31 total.
     // TIF columns are hidden (hidden attribute) when TIF is not active but still in DOM.
+    // Phase 18 added S.Debt (MET-14) between Comb and Day Len → 19 base columns.
     const headerCells = page.locator('.metricsTable th');
     const count = await headerCells.count();
-    expect(count).toBe(30); // 18 base + 12 TIF inline columns (Phase 14 layout)
+    expect(count).toBe(31); // 19 base + 12 TIF inline columns (Phase 14 + Phase 18 layout)
 
-    // Check that some expected headers are present
+    // Check that some expected headers are present, including the new S.Debt column (MET-14)
     const headerTexts = await page.locator('.metricsTable th').allTextContents();
     expect(headerTexts).toContain('Date');
     expect(headerTexts).toContain('Wake');
     expect(headerTexts).toContain('Sleep');
+    expect(headerTexts).toContain('S.Debt');
+
+    // S.Debt cold-start: seed has only 1 day (fewer than 7 qualifying records),
+    // so all S.Debt cells in per-day rows must render '—' (MET-14 cold-start guard).
+    const sDebtCells = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('.metricsTable tbody tr:not(.metrics-summary-row)'));
+      const results = [];
+      for (const row of rows) {
+        const tds = Array.from(row.querySelectorAll('td'));
+        // S.Debt is index 9 in COLUMNS (0-based); td index 9 in each row (0 = Date, 1..18 = COLUMNS[1..18])
+        if (tds[9]) results.push(tds[9].textContent);
+      }
+      return results;
+    });
+    // All visible S.Debt cells must be em-dash (cold-start: fewer than 7 qualifying records)
+    expect(sDebtCells.every(t => t === '—')).toBe(true);
   });
 
   test('MET-06: Stage filter badge shown/hidden based on active stage', async ({ page }) => {
