@@ -4,17 +4,17 @@ milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 18
 current_phase_name: Sleep Debt Proxy
-status: idle
-stopped_at: Phase 18 context gathered
-last_updated: "2026-09-03T07:26:33.333Z"
-last_activity: 2026-09-02
-last_activity_desc: Phase NW-17 verified complete (7/7 truths, 0 gaps)
-state_head: 0bbdb5cdb9e66fff6f650e4106de17f0d97a8d77
+status: executing
+stopped_at: Completed 18-01-PLAN.md — sleepDebtProxy implemented and tested
+last_updated: "2026-09-03T09:36:29.744Z"
+last_activity: 2026-09-03
+last_activity_desc: Phase 18 execution started
+state_head: 1a3c0dbcb4317368eaba8f29db4e0f70d82583eb
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-17 complete — ready for Phase NW-18 (Sleep Debt Proxy)
+**Current focus:** Phase 18 — Sleep Debt Proxy
 
 ## Current Position
 
-Phase: 18 (Sleep Debt Proxy) — READY TO EXECUTE
-Plan: 1 of 1
-Status: Phase NW-17 verified complete (2026-09-02)
-Last activity: 2026-09-02 — Phase NW-17 verified complete
+Phase: 18 (Sleep Debt Proxy) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-09-03 — Phase 18 execution started
 
 ## Phases
 
@@ -88,6 +88,7 @@ Last activity: 2026-09-02 — Phase NW-17 verified complete
 | Phase NW-15 P02 | 14 | 3 tasks | 2 files |
 | Phase NW-16 P01 | 30 | 2 tasks | 3 files |
 | Phase NW-17 P01 | 18 | 3 tasks | 11 files |
+| Phase 18 P18-01 | 3 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,7 @@ Last activity: 2026-09-02 — Phase NW-17 verified complete
 - [Phase 17]: dayOfWeekAverages uses extractDate(day.wake) for weekday attribution — skips synthetic bare-string records
 - [Phase 17]: Nap metrics only accumulate when day.napStart != null per D-02 (no-nap days excluded)
 - [Phase 17]: DoW section built with no open attribute — native HTML details collapse resets on every replaceChildren rebuild
+- [Phase 18]: Phase 18 Plan 01: sleepDebtProxy uses filter-then-slice null-exclusion rolling window; signed reduce (positive=deficit); null when < windowDays qualifying records (D-05, D-06, D-07)
 
 ### Quick Tasks Completed
 
@@ -156,9 +158,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-02T21:39:06.599Z
-Stopped at: Phase 18 context gathered
-Resume file: .planning/phases/18-sleep-debt-proxy/18-CONTEXT.md
+Last session: 2026-09-03T09:36:27.755Z
+Stopped at: Completed 18-01-PLAN.md — sleepDebtProxy implemented and tested
+Resume file: None
 
 ## Operator Next Steps
 

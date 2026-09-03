@@ -28,7 +28,7 @@
 
 ### Sleep Debt Proxy
 
-- [ ] **MET-13**: `js/lib/metrics.js` (or a sibling module) exposes a `sleepDebtProxy(dayRecords, windowDays)` function that computes a rolling accumulated sleep deficit per day (target total sleep − actual total sleep, summed over the window), returning `null` when fewer than `windowDays` non-rejected records are available
+- [x] **MET-13**: `js/lib/metrics.js` (or a sibling module) exposes a `sleepDebtProxy(dayRecords, windowDays)` function that computes a rolling accumulated sleep deficit per day (target total sleep − actual total sleep, summed over the window), returning `null` when fewer than `windowDays` non-rejected records are available
 - [ ] **MET-14**: The Metrics screen includes a Sleep Debt column (rolling 7-day deficit in minutes) in the per-day table; the column renders `—` on cold-start days; the all-time and rolling aggregate rows include avg/min/max for this column
 
 ---
@@ -74,7 +74,7 @@
 | MET-10 | Phase 16 | Complete |
 | MET-11 | Phase 17 | Complete |
 | MET-12 | Phase 17 | Complete |
-| MET-13 | Phase 18 | Pending |
+| MET-13 | Phase 18 | Complete |
 | MET-14 | Phase 18 | Pending |
 
 **Coverage:**
