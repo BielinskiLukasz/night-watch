@@ -519,3 +519,47 @@ export function dayOfWeekAverages(dayRecords) {
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Sleep debt proxy (MET-13, MET-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rolling sleep-debt proxy over the last windowDays qualifying records.
+ *
+ * Caller is responsible for pre-filtering (stage filter + rejected exclusion)
+ * before passing dayRecords in — consistent with aggregateMetrics() and
+ * dayOfWeekAverages() (D-08).
+ *
+ * Days where combinedSleepNap is null (missing wake or bedtime data) are
+ * excluded and do not count toward windowDays (D-05).
+ *
+ * Sign convention: positive = deficit (actual sleep < target).
+ * Negative values are preserved — surplus sleep reduces the rolling sum.
+ * No clamping at zero (D-06).
+ *
+ * Returns null when fewer than windowDays non-null qualifying records are
+ * available — cold-start guard (D-07).
+ *
+ * Inputs are integer minutes; the result is an integer with no rounding
+ * needed (D-08 / MET-14 precision).
+ *
+ * @param {object[]} dayRecords         pre-filtered (stage + rejected) day records, oldest-first
+ * @param {number}   windowDays         rolling window size (MET-14: fixed 7)
+ * @param {number}   targetSleepMinutes per-day sleep target in minutes (from settings, D-01)
+ * @returns {number|null} signed sum of (targetSleepMinutes − combinedSleepNap) over the
+ *                        last windowDays qualifying records, or null if insufficient data
+ */
+export function sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes) {
+  // Collect qualifying records: only days where combinedSleepNap is non-null.
+  // Take the last windowDays entries (rolling slice — D-05, D-07).
+  const validDays = dayRecords
+    .filter(day => combinedSleepNap(day) !== null)
+    .slice(-windowDays);
+
+  // Cold-start guard: not enough qualifying records yet (D-07).
+  if (validDays.length < windowDays) return null;
+
+  // Sum of (target − actual) across the window. Positive = deficit, negative = surplus (D-06).
+  return validDays.reduce((sum, day) => sum + (targetSleepMinutes - combinedSleepNap(day)), 0);
+}
