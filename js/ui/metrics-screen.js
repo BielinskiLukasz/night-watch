@@ -17,6 +17,7 @@
 import {
   aggregateMetrics,
   dayOfWeekAverages,
+  sleepDebtProxy,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration } from '../lib/time.js';
@@ -29,15 +30,16 @@ import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Column definitions for the 18-column metrics table (D-09 order).
+ * Column definitions for the 19-column metrics table (D-09 order + MET-14).
  * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
- *        Comb | Day Len | Day/Sleep | →Nap | MA/Sl | MA/Nap | Nap→ | Act | AM/PM | AAS
+ *        Comb | S.Debt | Day Len | Day/Sleep | →Nap | MA/Sl | MA/Nap | Nap→ | Act | AM/PM | AAS
  *
  * Changes from 14-column layout (D-09, D-13, D-14):
  *   - SAA (sleepAfterActivityFactor) removed per D-14/MET-07
  *   - Nap Frac (napFraction, isRatio) inserted at index 7 per MET-09
  *   - Day/Sleep (dayToSleepFactor, isRatio) inserted at index 10 per MET-07
  *   - AM/PM (amPmSplit, isRatio) inserted at index 14 per MET-10
+ *   - S.Debt (sleepDebt, signed minutes) inserted at index 9 per MET-14
  */
 const COLUMNS = Object.freeze([
   { key: 'date',                    label: 'Date',      isTime: false, isRatio: false, sticky: true },
@@ -49,6 +51,7 @@ const COLUMNS = Object.freeze([
   { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
   { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
   { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
+  { key: 'sleepDebt',              label: 'S.Debt',    isTime: false, isRatio: false }, // MET-14
   { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
   { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
   { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
@@ -435,6 +438,28 @@ function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
   // Step 4: compute aggregates (returns all-null avg/min/max when slice is [])
   const result = aggregateMetrics(slice);
 
+  // Step 4a: augment rolling rows with sleepDebt (MET-14).
+  // All entries in slice are already non-rejected (nonRejectedDays pre-filtered).
+  // For row at index i, pass the sub-slice [0..i] so sleepDebtProxy's
+  // filter-then-slice window accumulates correctly oldest-to-newest.
+  for (let i = 0; i < result.rows.length; i++) {
+    result.rows[i].sleepDebt = sleepDebtProxy(slice.slice(0, i + 1), 7, snap.targetSleepMinutes);
+  }
+  // Aggregate sleepDebt over the rolling rows (all non-rejected, filter only null).
+  const rollingDebtEntries = result.rows
+    .filter(r => r.sleepDebt !== null)
+    .map(r => ({ value: r.sleepDebt, date: r.date }));
+  if (rollingDebtEntries.length > 0) {
+    const rollingDebtSum = rollingDebtEntries.reduce((acc, e) => acc + e.value, 0);
+    result.avg.sleepDebt = Math.round(rollingDebtSum / rollingDebtEntries.length);
+    result.min.sleepDebt = rollingDebtEntries.reduce((best, e) => e.value < best.value ? e : best, rollingDebtEntries[0]);
+    result.max.sleepDebt = rollingDebtEntries.reduce((best, e) => e.value > best.value ? e : best, rollingDebtEntries[0]);
+  } else {
+    result.avg.sleepDebt = null;
+    result.min.sleepDebt = null;
+    result.max.sleepDebt = null;
+  }
+
   // Step 5: create tbody with rolling-specific classes
   const tbody = document.createElement('tbody');
   tbody.classList.add('metrics-summary-tbody', 'metrics-rolling-tbody');
@@ -637,6 +662,33 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // Derive non-rejected days from stage-filtered reversedDays (D-08).
     // Must come from reversedDays (already stage-filtered), NOT from allDays.
     const nonRejectedDays = reversedDays.filter(r => !r.rejected);
+
+    // Augment per-day rows with sleepDebt (MET-14).
+    // rows[i] corresponds to reversedDays[i] (oldest-first). For each row, pass
+    // the non-rejected days up to and including position i so sleepDebtProxy
+    // can apply its own filter-then-slice window. snap.targetSleepMinutes comes
+    // from the validated settings store (D-01). Note: the plan draft used
+    // snap.settings.targetSleepMinutes but snap IS the settings object here.
+    for (let i = 0; i < rows.length; i++) {
+      const nonRejectedUpToI = reversedDays.slice(0, i + 1).filter(d => !d.rejected);
+      rows[i].sleepDebt = sleepDebtProxy(nonRejectedUpToI, 7, snap.targetSleepMinutes);
+    }
+    // Augment all-time aggregate with sleepDebt avg/min/max.
+    // Only non-rejected rows with a non-null debt contribute (D-08).
+    // First-occurrence wins on ties (oldest-first iteration, strict < / > updates).
+    const debtEntries = rows
+      .filter(r => !r.rejected && r.sleepDebt !== null)
+      .map(r => ({ value: r.sleepDebt, date: r.date }));
+    if (debtEntries.length > 0) {
+      const debtSum = debtEntries.reduce((acc, e) => acc + e.value, 0);
+      avg.sleepDebt = Math.round(debtSum / debtEntries.length);
+      min.sleepDebt = debtEntries.reduce((best, e) => e.value < best.value ? e : best, debtEntries[0]);
+      max.sleepDebt = debtEntries.reduce((best, e) => e.value > best.value ? e : best, debtEntries[0]);
+    } else {
+      avg.sleepDebt = null;
+      min.sleepDebt = null;
+      max.sleepDebt = null;
+    }
 
     // TIF inline columns — compute retroactive bounds map when TIF is active (MET-08, D-11)
     const isTif = snap.forecastAlgorithm === 'tif';
