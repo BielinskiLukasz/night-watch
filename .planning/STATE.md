@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
-current_phase: 17
-current_phase_name: Day-of-Week Patterns
+current_phase: 18
+current_phase_name: Sleep Debt Proxy
 status: idle
 stopped_at: Phase 18 context gathered
-last_updated: "2026-09-02T21:39:10.084Z"
+last_updated: "2026-09-03T07:26:33.333Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase NW-17 verified complete (7/7 truths, 0 gaps)
-state_head: a935d73f671dc2bf3c8a6246262071d70dcf02d4
+state_head: 0bbdb5cdb9e66fff6f650e4106de17f0d97a8d77
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: NW-17 (Day-of-Week Patterns) — COMPLETE
+Phase: 18 (Sleep Debt Proxy) — READY TO EXECUTE
 Plan: 1 of 1
 Status: Phase NW-17 verified complete (2026-09-02)
 Last activity: 2026-09-02 — Phase NW-17 verified complete

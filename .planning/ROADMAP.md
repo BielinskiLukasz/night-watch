@@ -207,9 +207,13 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 18-01-PLAN.md — TDD: sleepDebtProxy() pure function + unit tests (MET-13)
 - [ ] 18-02-PLAN.md — TDD: targetSleepMinutes setting schema, validation, Settings modal UI + median hint (MET-13)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 18-03-PLAN.md — Execute: Sleep Debt column in Metrics screen + E2E test update (MET-14)
 
 **UI hint**: yes
