@@ -420,7 +420,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
-    firstDayOfWeek: 'monday',
+    firstDayOfWeek: 'monday', targetSleepMinutes: 600,
   };
 
   it('accepts empty stages array', () => {
@@ -490,7 +490,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
-    firstDayOfWeek: 'monday',
+    firstDayOfWeek: 'monday', targetSleepMinutes: 600,
   };
 
   it('accepts null activeStageId', () => {

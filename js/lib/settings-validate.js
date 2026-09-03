@@ -63,6 +63,7 @@ export const RULES = Object.freeze({
   noNapBedtimeOffsetMinutes: { type: 'integer', min: 0, max: 120 },          // PRED-11 / D-08
   intenseDayOffsetMinutes:   { type: 'integer', min: 0, max: 120 },          // PRED-10 / D-08
   firstDayOfWeek:   { type: 'enum', values: new Set(['monday', 'sunday']) }, // D-10 / MET-12
+  targetSleepMinutes: { type: 'integer', min: 1, max: 1440 },               // MET-13 / D-02: positive integer, 1 min to 24h
 });
 
 // ---------------------------------------------------------------------------
