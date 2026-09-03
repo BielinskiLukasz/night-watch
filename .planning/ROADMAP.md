@@ -204,7 +204,14 @@ Plans:
   2. The Metrics screen per-day table includes a Sleep Debt column showing the rolling 7-day deficit in minutes; cold-start days (fewer than 7 prior non-rejected days) render `—`
   3. The all-time, 7-day, and 14-day aggregate sections include avg, min-with-date, and max-with-date rows for the Sleep Debt column
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 18-01-PLAN.md — TDD: sleepDebtProxy() pure function + unit tests (MET-13)
+- [ ] 18-02-PLAN.md — TDD: targetSleepMinutes setting schema, validation, Settings modal UI + median hint (MET-13)
+- [ ] 18-03-PLAN.md — Execute: Sleep Debt column in Metrics screen + E2E test update (MET-14)
+
 **UI hint**: yes
 
 ## Progress
