@@ -29,6 +29,7 @@ import {
   napFraction,
   amPmSplit,
   dayOfWeekAverages,
+  sleepDebtProxy,
 } from '../../js/lib/metrics.js';
 
 import { formatDuration } from '../../js/lib/time.js';
@@ -957,5 +958,92 @@ describe('dayOfWeekAverages(dayRecords)', () => {
     const mon = result[1];
     // average of 300 and 330 = 315
     assert.strictEqual(mon.activityBeforeNap, Math.round((300 + 330) / 2));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 18. sleepDebtProxy (MET-13, MET-14)
+// ---------------------------------------------------------------------------
+
+describe('sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes)', () => {
+  const TARGET = 600; // 10h target in minutes
+
+  // Zero-debt day: combinedSleepNap = 600 min (equals target → 0 debt)
+  // wake=07:00=420min, bedtime=21:00=1260min → sleep=420-1260+1440=600 min
+  const ZERO_DAY = makeDay('07:00', '21:00', null, null);
+
+  // Deficit day: combinedSleepNap = 540 min → 60 min debt per day
+  // wake=07:00=420min, bedtime=22:00=1320min → sleep=420-1320+1440=540 min
+  const DEFICIT_DAY = makeDay('07:00', '22:00', null, null);
+
+  // Surplus day: combinedSleepNap = 660 min → −60 min debt per day
+  // wake=07:00=420min, bedtime=20:00=1200min → sleep=420-1200+1440=660 min
+  const SURPLUS_DAY = makeDay('07:00', '20:00', null, null);
+
+  // Null day: no wake/bedtime → combinedSleepNap = null → excluded from window
+  const NULL_DAY = makeDay(null, null, null, null);
+
+  it('returns null for empty input (MET-14 empty edge, D-07)', () => {
+    assert.strictEqual(sleepDebtProxy([], 7, TARGET), null);
+  });
+
+  it('returns null with fewer than windowDays valid records — 3 valid, windowDays=7 (D-07 cold-start)', () => {
+    const days = [DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
+  });
+
+  it('returns a number (not null) with exactly windowDays valid records — boundary (MET-14 boundary)', () => {
+    const days = Array(7).fill(DEFICIT_DAY);
+    const result = sleepDebtProxy(days, 7, TARGET);
+    assert.ok(result !== null, 'should not be null at exactly windowDays qualifying records');
+    assert.ok(typeof result === 'number', 'should be a number');
+  });
+
+  it('returns 0 when all days sleep equals target — each day contributes 0 deficit (MET-14 adjacency)', () => {
+    const days = Array(7).fill(ZERO_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 0);
+  });
+
+  it('returns positive value when all days sleep less than target — deficit scenario (D-06)', () => {
+    // Each DEFICIT_DAY: sleep=540, target=600 → debt=60 per day, 7 days → 420
+    const days = Array(7).fill(DEFICIT_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
+  });
+
+  it('returns negative value when all days sleep more than target — surplus, no clamping (D-06)', () => {
+    // Each SURPLUS_DAY: sleep=660, target=600 → debt=−60 per day, 7 days → −420
+    const days = Array(7).fill(SURPLUS_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), -420);
+  });
+
+  it('excludes null-combinedSleepNap days — 6 valid + 1 null = 7 total, windowDays=7 → null (D-05)', () => {
+    // Only 6 qualify (NULL_DAY excluded), fewer than windowDays=7 → null
+    const days = [
+      NULL_DAY,
+      DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY,
+      DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY,
+    ];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
+  });
+
+  it('takes only last windowDays qualifying records — 10 valid days, windowDays=7 (rolling slice)', () => {
+    // First 3 days: surplus (sleep=660, debt=−60 each)
+    // Last 7 days: deficit (sleep=540, debt=+60 each)
+    // Correct (last 7 only): 7 × 60 = 420
+    // Wrong (all 10): 3×(−60) + 7×60 = −180 + 420 = 240
+    const days = [
+      ...Array(3).fill(SURPLUS_DAY),
+      ...Array(7).fill(DEFICIT_DAY),
+    ];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
+  });
+
+  it('does not mutate the input array (pure function prohibition)', () => {
+    const days = Array(7).fill(DEFICIT_DAY);
+    const originalLength = days.length;
+    const originalRef0 = days[0];
+    sleepDebtProxy(days, 7, TARGET);
+    assert.strictEqual(days.length, originalLength, 'array length must be unchanged after call');
+    assert.strictEqual(days[0], originalRef0, 'element references must be unchanged after call');
   });
 });
