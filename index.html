@@ -303,6 +303,12 @@
           <input type="number" id="noNapBedtimeOffsetMinutes" name="noNapBedtimeOffsetMinutes"
                  min="0" max="120" step="5">
         </label>
+        <label>
+          Sleep target (minutes)
+          <input type="number" id="targetSleepMinutes" name="targetSleepMinutes"
+                 min="1" max="1440" step="5">
+          <small id="targetSleepMedianHint" class="hint"></small>
+        </label>
         <div id="tifOptions" hidden>
           <label>
             Auto-trim percentage (0–40)
