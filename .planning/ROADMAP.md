@@ -204,7 +204,7 @@ Plans:
   2. The Metrics screen per-day table includes a Sleep Debt column showing the rolling 7-day deficit in minutes; cold-start days (fewer than 7 prior non-rejected days) render `—`
   3. The all-time, 7-day, and 14-day aggregate sections include avg, min-with-date, and max-with-date rows for the Sleep Debt column
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -214,7 +214,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 18-03-PLAN.md — Execute: Sleep Debt column in Metrics screen + E2E test update (MET-14)
+- [x] 18-03-PLAN.md — Execute: Sleep Debt column in Metrics screen + E2E test update (MET-14)
 
 **UI hint**: yes
 
@@ -232,7 +232,7 @@ Plans:
 | 15. TIF Engine Bug Fixes | v1.4 | 2/2 | Complete    | 2026-08-31 |
 | 16. Rolling Window Aggregates | v1.4 | 1/1 | Complete    | 2026-09-01 |
 | 17. Day-of-Week Patterns | v1.4 | 1/1 | Complete   | 2026-09-02 |
-| 18. Sleep Debt Proxy | v1.4 | 2/3 | In Progress|  |
+| 18. Sleep Debt Proxy | v1.4 | 3/3 | In Progress|  |
 
 ## Backlog
 

@@ -4,17 +4,17 @@ milestone: v1.4
 milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 18
 current_phase_name: Sleep Debt Proxy
-status: executing
-stopped_at: Completed 18-02-PLAN.md — targetSleepMinutes settings field trio implemented
-last_updated: "2026-09-03T09:49:54.990Z"
+status: verifying
+stopped_at: Completed 18-03-PLAN.md — S.Debt column in Metrics screen
+last_updated: "2026-09-03T10:00:53.932Z"
 last_activity: 2026-09-03
 last_activity_desc: Phase 18 execution started
-state_head: e3eb2c42483d74f319b3b6af31183f1462b659f3
+state_head: e9a2f84893ac80c51cdd0b2cdb4e65ec80486f32
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 Phase: 18 (Sleep Debt Proxy) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-03 — Phase 18 execution started
 
 ## Phases
@@ -89,6 +89,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 | Phase NW-16 P01 | 30 | 2 tasks | 3 files |
 | Phase NW-17 P01 | 18 | 3 tasks | 11 files |
 | Phase 18 P18-01 | 3 | 1 tasks | 2 files |
+| Phase 18 P18-03 | 10 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 - [Phase 17]: DoW section built with no open attribute — native HTML details collapse resets on every replaceChildren rebuild
 - [Phase 18]: Phase 18 Plan 01: sleepDebtProxy uses filter-then-slice null-exclusion rolling window; signed reduce (positive=deficit); null when < windowDays qualifying records (D-05, D-06, D-07)
 - [Phase 18]: Phase 18 Plan 02: targetSleepMinutes default 600 (10h), validated as integer 1-1440, median hint via eventLog.daysBySubjectiveNight in Settings modal
+- [Phase 18]: Phase 18 Plan 18-03: snap.targetSleepMinutes used directly (snap IS the settings object) — plan draft typo snap.settings.targetSleepMinutes corrected
 
 ### Quick Tasks Completed
 
@@ -159,8 +161,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-03T09:49:35.588Z
-Stopped at: Completed 18-02-PLAN.md — targetSleepMinutes settings field trio implemented
+Last session: 2026-09-03T10:00:51.399Z
+Stopped at: Completed 18-03-PLAN.md — S.Debt column in Metrics screen
 Resume file: None
 
 ## Operator Next Steps
