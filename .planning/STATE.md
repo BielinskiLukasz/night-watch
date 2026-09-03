@@ -5,16 +5,16 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 18
 current_phase_name: Sleep Debt Proxy
 status: executing
-stopped_at: Completed 18-01-PLAN.md — sleepDebtProxy implemented and tested
-last_updated: "2026-09-03T09:36:29.744Z"
+stopped_at: Completed 18-02-PLAN.md — targetSleepMinutes settings field trio implemented
+last_updated: "2026-09-03T09:49:54.990Z"
 last_activity: 2026-09-03
 last_activity_desc: Phase 18 execution started
-state_head: 1a3c0dbcb4317368eaba8f29db4e0f70d82583eb
+state_head: e3eb2c42483d74f319b3b6af31183f1462b659f3
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 ## Current Position
 
 Phase: 18 (Sleep Debt Proxy) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-03 — Phase 18 execution started
 
@@ -135,6 +135,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 - [Phase 17]: Nap metrics only accumulate when day.napStart != null per D-02 (no-nap days excluded)
 - [Phase 17]: DoW section built with no open attribute — native HTML details collapse resets on every replaceChildren rebuild
 - [Phase 18]: Phase 18 Plan 01: sleepDebtProxy uses filter-then-slice null-exclusion rolling window; signed reduce (positive=deficit); null when < windowDays qualifying records (D-05, D-06, D-07)
+- [Phase 18]: Phase 18 Plan 02: targetSleepMinutes default 600 (10h), validated as integer 1-1440, median hint via eventLog.daysBySubjectiveNight in Settings modal
 
 ### Quick Tasks Completed
 
@@ -158,8 +159,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-03T09:36:27.755Z
-Stopped at: Completed 18-01-PLAN.md — sleepDebtProxy implemented and tested
+Last session: 2026-09-03T09:49:35.588Z
+Stopped at: Completed 18-02-PLAN.md — targetSleepMinutes settings field trio implemented
 Resume file: None
 
 ## Operator Next Steps
