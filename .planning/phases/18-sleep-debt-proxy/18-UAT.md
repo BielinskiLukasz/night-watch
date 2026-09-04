@@ -61,8 +61,13 @@ blocked: 0
   reason: "User reported: pass but how it is calculated? For example I set sleep time to 690 minutes and for day with combined sleep time 600 minutes I got only 20 minutes debt (shouldnt it be 90 minutes?)"
   severity: major
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "UX mismatch, not a calculation bug. sleepDebtProxy correctly sums (target−actual) over the last 7 qualifying days; with 6 surplus days totaling 70 min offset, the net is 20 min debt. The column label 'S.Debt' does not communicate that it is a 7-day rolling accumulated sum rather than a per-day delta."
+  artifacts:
+    - path: "js/ui/metrics-screen.js"
+      issue: "COLUMNS entry at line 54 uses label 'S.Debt' with no indication of the 7-day rolling window"
+  missing:
+    - "Rename column label from 'S.Debt' to 'S.Debt(7d)' in COLUMNS (js/ui/metrics-screen.js line 54)"
+  debug_session: "parallel debug agent a765197036b4140e6"
 
 - gap_id: G-18-6
   truth: "S.Debt column shows values in the 7-day rolling and 14-day rolling aggregate sections"
@@ -70,5 +75,11 @@ blocked: 0
   reason: "User reported: pass/fail its not visible in 7-day rolling (and its invisible for other, 140day rolling included)"
   severity: major
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "In buildRollingSection, sleepDebtProxy is called with slice.slice(0, i+1) — bounded to the rolling window (max 7 records for the 7-day section). sleepDebtProxy's cold-start guard (return null when fewer than windowDays=7 qualifying records) fires for all but the last row, and any day with null combinedSleepNap drops the count below 7, making all aggregate cells show '—'. Per-day rows work because they pass the full non-rejected history."
+  artifacts:
+    - path: "js/ui/metrics-screen.js"
+      issue: "buildRollingSection line ~446: sleepDebtProxy(slice.slice(0, i+1), 7, ...) uses bounded slice instead of full history — cold-start guard misfires"
+  missing:
+    - "Replace bounded slice with full-history slicing using sliceOffset: sleepDebtProxy(nonRejectedDays.slice(0, sliceOffset+i+1), 7, snap.targetSleepMinutes)"
+    - "Add E2E test asserting rolling aggregate S.Debt shows real values (not '—') when 13+ qualifying days are seeded"
+  debug_session: "parallel debug agent a84509718c74f50dd"
