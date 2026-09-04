@@ -216,6 +216,10 @@ Plans:
 
 - [x] 18-03-PLAN.md — Execute: Sleep Debt column in Metrics screen + E2E test update (MET-14)
 
+**Wave 3 (gap closure)**
+
+- [ ] 18-04-PLAN.md — Gap closure: fix S.Debt(7d) label (G-18-5) and rolling sliceOffset bug (G-18-6)
+
 **UI hint**: yes
 
 ## Progress
