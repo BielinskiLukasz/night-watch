@@ -5,16 +5,16 @@ milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
 current_phase: 18
 current_phase_name: Sleep Debt Proxy
 status: verifying
-stopped_at: Completed 18-03-PLAN.md — S.Debt column in Metrics screen
-last_updated: "2026-09-03T10:00:53.932Z"
+stopped_at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
+last_updated: "2026-09-05T17:03:19.437Z"
 last_activity: 2026-09-03
 last_activity_desc: Phase 18 execution started
-state_head: e9a2f84893ac80c51cdd0b2cdb4e65ec80486f32
+state_head: 0240fe2e39bb9e0e3f781ea0b2333da4c4145693
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -90,6 +90,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 | Phase NW-17 P01 | 18 | 3 tasks | 11 files |
 | Phase 18 P18-01 | 3 | 1 tasks | 2 files |
 | Phase 18 P18-03 | 10 | 2 tasks | 2 files |
+| Phase 18 P04 | 12 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ Last activity: 2026-09-03 — Phase 18 execution started
 - [Phase 18]: Phase 18 Plan 01: sleepDebtProxy uses filter-then-slice null-exclusion rolling window; signed reduce (positive=deficit); null when < windowDays qualifying records (D-05, D-06, D-07)
 - [Phase 18]: Phase 18 Plan 02: targetSleepMinutes default 600 (10h), validated as integer 1-1440, median hint via eventLog.daysBySubjectiveNight in Settings modal
 - [Phase 18]: Phase 18 Plan 18-03: snap.targetSleepMinutes used directly (snap IS the settings object) — plan draft typo snap.settings.targetSleepMinutes corrected
+- [Phase 18]: Phase 18 Plan 18-04: sliceOffset = Math.max(0, nonRejectedDays.length - nDays) applied before rolling sleepDebt loop so proxy receives full history
+- [Phase 18]: Phase 18 Plan 18-04: COLUMNS[9].label changed from 'S.Debt' to 'S.Debt(7d)' to communicate rolling window scope to users
 
 ### Quick Tasks Completed
 
@@ -161,8 +164,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-03T10:00:51.399Z
-Stopped at: Completed 18-03-PLAN.md — S.Debt column in Metrics screen
+Last session: 2026-09-05T17:03:16.478Z
+Stopped at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
 Resume file: None
 
 ## Operator Next Steps
