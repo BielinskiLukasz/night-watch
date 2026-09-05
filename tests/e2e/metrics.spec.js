@@ -63,7 +63,7 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     expect(headerTexts).toContain('Date');
     expect(headerTexts).toContain('Wake');
     expect(headerTexts).toContain('Sleep');
-    expect(headerTexts).toContain('S.Debt');
+    expect(headerTexts).toContain('S.Debt(7d)');
 
     // S.Debt cold-start: seed has only 1 day (fewer than 7 qualifying records),
     // so all S.Debt cells in per-day rows must render '—' (MET-14 cold-start guard).
@@ -532,6 +532,56 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
 
     // No JS errors
     expect(consoleErrors).toHaveLength(0);
+  });
+
+  test('MET-14/rolling: S.Debt shows real values in rolling sections when sufficient history is seeded', async ({ page }) => {
+    // Seed 15 non-rejected days so both 7-day and 14-day windows are fully satisfied.
+    // Each day: wake 08:00, bedtime 22:00. targetSleepMinutes: 600 so sleepDebtProxy
+    // has enough qualifying records to return non-null values (cold-start guard clears).
+    const events = [];
+    for (let i = 0; i < 15; i++) {
+      const dayNum = String(i + 1).padStart(2, '0');
+      const date = '2025-05-' + dayNum;
+      events.push({ id: 'met14-wake-'    + dayNum, type: 'wake',    at: date + 'T08:00' });
+      events.push({ id: 'met14-bedtime-' + dayNum, type: 'bedtime', at: date + 'T22:00' });
+    }
+
+    const seedDb = {
+      version: 2,
+      settings: {
+        cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1,
+        windowDays: 7, statBlend: 'median', autoOutlier: false,
+        groupingMode: 'calendar', rejectedDays: [], stages: [],
+        activeStageId: null, forecastAlgorithm: 'classic',
+        targetSleepMinutes: 600,
+      },
+      events,
+      activityLog: {},
+    };
+
+    await page.evaluate((data) => { localStorage.setItem('nightwatch:db', JSON.stringify(data)); }, seedDb);
+    await page.reload();
+    await page.waitForSelector('[data-tab="today"]');
+    await page.locator('[data-tab="metrics"]').click();
+    await page.waitForSelector('.metricsTable');
+
+    // For each rolling section (7-day, then 14-day), check that at least one
+    // S.Debt(7d) aggregate cell (Min / Avg / Max) shows a real value — not em-dash.
+    // S.Debt(7d) is COLUMNS index 9, so td index 9 in each row (td[0] = Date label).
+    for (const sectionIdx of [0, 1]) {
+      const sDebtAggCells = await page.evaluate((idx) => {
+        const tbody = document.querySelectorAll('.metrics-rolling-tbody')[idx];
+        if (!tbody) return [];
+        const summaryRows = Array.from(tbody.querySelectorAll('.metrics-summary-row'));
+        return summaryRows.map(row => {
+          const tds = Array.from(row.querySelectorAll('td'));
+          return tds[9] ? tds[9].textContent : '';
+        });
+      }, sectionIdx);
+
+      const hasRealValue = sDebtAggCells.some(text => text !== '—' && text.trim() !== '');
+      expect(hasRealValue, `Section ${sectionIdx === 0 ? '7-day' : '14-day'}: expected at least one non-dash S.Debt aggregate cell`).toBe(true);
+    }
   });
 });
 
