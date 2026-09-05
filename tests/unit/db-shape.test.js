@@ -32,8 +32,8 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 22 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 fields)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 22);
+  it('has exactly 23 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 23);
   });
 
   it('has tifRollingDays: 7 default (TIF-13)', () => {
