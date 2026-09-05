@@ -51,7 +51,7 @@ const COLUMNS = Object.freeze([
   { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
   { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
   { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
-  { key: 'sleepDebt',              label: 'S.Debt',    isTime: false, isRatio: false }, // MET-14
+  { key: 'sleepDebt',              label: 'S.Debt(7d)', isTime: false, isRatio: false }, // MET-14 rolling 7-day sum
   { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
   { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
   { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
@@ -439,11 +439,17 @@ function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
   const result = aggregateMetrics(slice);
 
   // Step 4a: augment rolling rows with sleepDebt (MET-14).
-  // All entries in slice are already non-rejected (nonRejectedDays pre-filtered).
-  // For row at index i, pass the sub-slice [0..i] so sleepDebtProxy's
-  // filter-then-slice window accumulates correctly oldest-to-newest.
+  // sliceOffset maps each rolling row back to its position in the full nonRejectedDays
+  // array so sleepDebtProxy receives the full history up to that day — not just the
+  // bounded rolling window. Without this, the cold-start guard (< 7 qualifying records)
+  // misfires for all but the last row in the 7-day section (G-18-6).
+  const sliceOffset = Math.max(0, nonRejectedDays.length - nDays);
   for (let i = 0; i < result.rows.length; i++) {
-    result.rows[i].sleepDebt = sleepDebtProxy(slice.slice(0, i + 1), 7, snap.targetSleepMinutes);
+    result.rows[i].sleepDebt = sleepDebtProxy(
+      nonRejectedDays.slice(0, sliceOffset + i + 1),
+      7,
+      snap.targetSleepMinutes
+    );
   }
   // Aggregate sleepDebt over the rolling rows (all non-rejected, filter only null).
   const rollingDebtEntries = result.rows
