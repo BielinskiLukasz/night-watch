@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
-status: Awaiting next milestone
-stopped_at: Milestone audit passed — v1.4 complete
-last_updated: "2026-09-08T16:58:08.840Z"
+milestone: v2.0
+milestone_name: Prediction Engine & Autosave — ACTIVE
+status: Planning
+stopped_at: Milestone initialized — roadmap pending
+last_updated: "2026-09-08T00:00:00.000Z"
 last_activity: 2026-09-08
-last_activity_desc: Milestone v1.4 completed and archived
+last_activity_desc: Milestone v2.0 initialized
 state_head: 7bc21b1e0345e6d088fcca514d742868b2b22815
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 current_phase: 18
-current_phase_name: Sleep Debt Proxy
+current_phase_name: Sleep Debt Proxy (last completed v1.4 phase)
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 18 — Sleep Debt Proxy
+**Current focus:** Milestone v2.0 — Prediction Engine & Autosave
 
 ## Current Position
 
-Phase: Milestone v1.4 complete
+Phase: Milestone v2.0 initialized
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-08 — Milestone v1.4 completed and archived
+Status: Planning (requirements + roadmap pending)
+Last activity: 2026-09-08 — Milestone v2.0 initialized
 
 ## Phases
 
@@ -183,4 +183,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- REQUIREMENTS.md and ROADMAP.md generation in progress (milestone v2.0 setup)
+- After roadmap: run /gsd-plan-phase 19 to start first execution phase

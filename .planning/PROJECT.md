@@ -161,6 +161,20 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | tifForecast override block in metrics-screen render() is NOT redundant | computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic; tifForecast sourceWindows runs full band-building with rejectedInWindow — without the override the two screens diverge. Discovered during NW-15 UAT. | ✓ Required — restored with day-order fix |
 | tifForecast in metrics-screen.js must receive newest-first days (same as daysBySubjectiveNight output) | tifForecast uses slice(-N) to select the rolling window; oldest-first input would select a different (older) window than Today screen. Day order must match. | ✓ Fixed in NW-15 UAT |
 
+## Current Milestone: v2.0 Prediction Engine & Autosave
+
+**Goal:** Overhaul the forecasting engine with a new multi-band algorithm for all 4 events, redesign the accuracy scoring system, improve nap prediction quality, and add file autosave.
+
+**Target features:**
+- New multi-band Algorithm C (all 4 events) with dual-model median blend + interval stability check; settings modal selector UX (B-050 + B-032)
+- Split bedtime model: separate nap-day vs no-nap-day distributions (B-052)
+- Classic nap anchored to today's wake time via activity-gap percentiles (B-048)
+- Nap probability redesign: data-driven, time-independent (B-047)
+- Prediction normalization: show only next reachable event (B-038)
+- Linear-decay per-event accuracy scoring with tolerance window (B-049)
+- Move TIF window columns from Metrics → Accuracy screen (B-041)
+- Autosave export to user-chosen directory via File System Access API (B-051)
+
 ## Current State (v1.4 — shipped 2026-09-08)
 
 All 4 phases complete. 11/11 requirements satisfied (FIX-01..05, MET-09..14). 918 tests, 0 failures. Tag: `v1.4`.
@@ -211,7 +225,7 @@ Archive: `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQU
 v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`.  
 v1.1 requirements archived to `.planning/milestones/v1.1-REQUIREMENTS.md`.  
 v1.4 requirements archived to `.planning/milestones/v1.4-REQUIREMENTS.md`.  
-Next milestone requirements defined via `/gsd-new-milestone`.
+v2.0 requirements defined in `.planning/REQUIREMENTS.md`.
 
 ## Evolution
 
@@ -231,4 +245,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-08 after v1.4 milestone (TIF Fixes & Metrics Depth)*
+*Last updated: 2026-09-08 after starting v2.0 milestone (Prediction Engine & Autosave)*
