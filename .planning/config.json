@@ -123,7 +123,7 @@
     "always_confirm_destructive": true,
     "always_confirm_external_services": true
   },
-  "project_code": "NW",
+  "project_code": null,
   "agent_skills": {},
   "response_language": null,
   "features": {

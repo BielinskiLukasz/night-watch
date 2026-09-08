@@ -56,30 +56,20 @@ export function napDuration(day) {
   return timeToMinutes(endStr) - timeToMinutes(startStr);
 }
 
-/** Active time between wake and nap start. For complete no-nap days (both napStart and napEnd null), returns 0. */
+/** Active time between wake and nap start. Returns null when there is no nap. */
 export function activityBeforeNap(day) {
   const wakeStr  = extractTime(day.wake);
   const napStr   = extractTime(day.napStart);
-  const napEndStr = extractTime(day.napEnd);
-  if (wakeStr == null) return null;
-  // Complete no-nap day: both napStart and napEnd are null → return 0
-  if (napStr == null && napEndStr == null) return 0;
-  // Otherwise use original logic: both napStart and napEnd must be present (or just napStart for synthetic tests)
-  if (napStr == null) return null;
+  if (wakeStr == null || napStr == null) return null;
   const result = timeToMinutes(napStr) - timeToMinutes(wakeStr);
   return result < 0 ? result + 24 * 60 : result;
 }
 
-/** Active time between nap end and bedtime. For complete no-nap days (both napStart and napEnd null), returns 0. */
+/** Active time between nap end and bedtime. Returns null when there is no nap. */
 export function activityAfterNap(day) {
-  const napStartStr = extractTime(day.napStart);
   const napEndStr = extractTime(day.napEnd);
   const bedStr    = extractTime(day.bedtime);
-  if (bedStr == null) return null;
-  // Complete no-nap day: both napStart and napEnd are null → return 0
-  if (napStartStr == null && napEndStr == null) return 0;
-  // Otherwise use original logic: both napStart and napEnd must be present (or just napEnd for synthetic tests)
-  if (napEndStr == null) return null;
+  if (bedStr == null || napEndStr == null) return null;
   const result = timeToMinutes(bedStr) - timeToMinutes(napEndStr);
   return result < 0 ? result + 24 * 60 : result;
 }
@@ -114,14 +104,11 @@ export function combinedSleepNap(day) {
  * (D11-23)
  */
 export function totalActivity(day) {
+  // No-nap day: total activity is the full wake-to-bedtime span.
+  if (day.napStart == null && day.napEnd == null) return dayLength(day);
   const before = activityBeforeNap(day);
   const after  = activityAfterNap(day);
   if (before == null || after == null) return null;
-  // No-nap day: activityBeforeNap and activityAfterNap return 0,
-  // but total activity is the full wake-to-bedtime span.
-  if (before === 0 && after === 0 && day.napStart == null && day.napEnd == null) {
-    return dayLength(day);
-  }
   return before + after;
 }
 
@@ -175,6 +162,36 @@ export function napFraction(day) {
   const cs = combinedSleepNap(day);
   if (nd == null || cs == null || cs === 0) return null;
   return nd / cs;
+}
+
+/**
+ * MA/sleep ratio: activityBeforeNap(day) / sleepDuration(day).
+ * Mirrors the per-day ratio used by the TIF MA/sleep ratio band.
+ * Returns null on no-nap days or when either component is absent or sleepDuration is 0.
+ * @param {object} day day record
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function maSleepRatio(day) {
+  if (day.napStart == null && day.napEnd == null) return null;
+  const abn = activityBeforeNap(day);
+  const sd  = sleepDuration(day);
+  if (abn == null || sd == null || sd === 0) return null;
+  return abn / sd;
+}
+
+/**
+ * MA/nap ratio: activityBeforeNap(day) / napDuration(day).
+ * Mirrors the per-day ratio used by the TIF MA/nap ratio band.
+ * Returns null on no-nap days or when either component is absent or napDuration is 0.
+ * @param {object} day day record
+ * @returns {number|null} ratio, or null when required slots are absent or denominator is 0
+ */
+export function maNapRatio(day) {
+  if (day.napStart == null && day.napEnd == null) return null;
+  const abn = activityBeforeNap(day);
+  const nd  = napDuration(day);
+  if (abn == null || nd == null || nd === 0) return null;
+  return abn / nd;
 }
 
 /**
@@ -288,6 +305,8 @@ export function aggregateMetrics(dayRecords) {
       dayToSleepFactor: dayToSleepFactor(day),
       napFraction: napFraction(day),
       amPmSplit: amPmSplit(day),
+      maSleepRatio: maSleepRatio(day),
+      maNapRatio: maNapRatio(day),
       // Metadata
       rejected: day.rejected || false,
     });
@@ -356,6 +375,205 @@ export function aggregateMetrics(dayRecords) {
   aggregateMetric('dayToSleepFactor', validRows);
   aggregateMetric('napFraction', napRows);
   aggregateMetric('amPmSplit', napRows);
+  aggregateMetric('maSleepRatio', napRows);
+  aggregateMetric('maNapRatio', napRows);
 
   return { rows, avg, min, max };
+}
+
+// ---------------------------------------------------------------------------
+// Day-of-week averages (MET-11, D-04..D-07)
+// ---------------------------------------------------------------------------
+
+/** Abbreviated day labels; index matches getDay() (0=Sun..6=Sat). */
+const DAY_LABELS = Object.freeze(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+
+/**
+ * Group pre-filtered day records by weekday and compute per-weekday averages.
+ *
+ * Caller is responsible for pre-filtering (stage filter + rejected exclusion)
+ * before passing dayRecords in — consistent with aggregateMetrics() (D-07).
+ *
+ * Weekday attribution uses the wake date (D-06), via extractDate(day.wake).
+ * Records where extractDate returns null (e.g., bare 'HH:MM' synthetic data)
+ * are silently skipped.
+ *
+ * Nap-related metrics (activityBeforeNap, activityAfterNap, napDuration)
+ * exclude no-nap days (day.napStart === null per D-02).
+ *
+ * Sleep duration pairs today's wake with prevDay.bedtime — identical to the
+ * overnight-pairing logic inside aggregateMetrics() (D-06).
+ *
+ * Returns a fixed 7-entry array (index 0=Sun..6=Sat) where each entry holds
+ * averaged metrics (numbers) or null when no data exists for that weekday.
+ * Duration averages use Math.round (consistent with aggregateMetrics).
+ * Ratio averages are returned as-is (no rounding).
+ *
+ * D-05: computes all Metrics columns, not just the 4 required by MET-11.
+ *
+ * @param {object[]} dayRecords  pre-filtered (stage + rejected) day records
+ * @returns {Array<{weekday: number, label: string, activityBeforeNap: number|null, activityAfterNap: number|null, napDuration: number|null, sleepDuration: number|null, dayLength: number|null, totalActivity: number|null, combinedSleepNap: number|null, dayToSleepFactor: number|null, napFraction: number|null, amPmSplit: number|null, maSleepRatio: number|null, maNapRatio: number|null}>}
+ */
+export function dayOfWeekAverages(dayRecords) {
+  // Per-weekday accumulators: { sum, count } for each metric field.
+  // nap-related accumulators only count days where napStart is present.
+  const buckets = Array.from({ length: 7 }, () => ({
+    // duration metrics (Math.round on output)
+    activityBeforeNap: { sum: 0, count: 0 },
+    activityAfterNap:  { sum: 0, count: 0 },
+    napDuration:       { sum: 0, count: 0 },
+    sleepDuration:     { sum: 0, count: 0 },
+    dayLength:         { sum: 0, count: 0 },
+    totalActivity:     { sum: 0, count: 0 },
+    combinedSleepNap:  { sum: 0, count: 0 },
+    // ratio metrics (no rounding on output)
+    dayToSleepFactor:  { sum: 0, count: 0 },
+    napFraction:       { sum: 0, count: 0 },
+    amPmSplit:         { sum: 0, count: 0 },
+    maSleepRatio:      { sum: 0, count: 0 },
+    maNapRatio:        { sum: 0, count: 0 },
+  }));
+
+  // Inline sleep helper: bedtime-prev → wake, same overnight-pairing as aggregateMetrics.
+  function calcSleep(bedStr, wakeStr) {
+    if (!bedStr || !wakeStr) return null;
+    const result = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    return result < 0 ? result + 24 * 60 : result;
+  }
+
+  // Accumulate helper: add a value to a bucket slot when non-null.
+  function acc(slot, value) {
+    if (value !== null && value !== undefined) {
+      slot.sum   += value;
+      slot.count += 1;
+    }
+  }
+
+  for (let i = 0; i < dayRecords.length; i++) {
+    const day     = dayRecords[i];
+    const prevDay = i > 0 ? dayRecords[i - 1] : null;
+
+    // Weekday attribution via wake date (D-06).
+    const dateStr = extractDate(day.wake);
+    if (dateStr === null) continue;  // synthetic bare-string data — skip (D-07 note)
+
+    const weekday = new Date(dateStr + 'T00:00').getDay();  // 0=Sun..6=Sat; local time, never UTC
+    const b = buckets[weekday];
+
+    const isNapDay = day.napStart != null;  // D-02: no-nap = napStart absent
+
+    // Overnight sleep duration paired with prevDay.bedtime (D-06).
+    const prevBedStr = prevDay ? extractTime(prevDay.bedtime) : null;
+    const wakeStr    = extractTime(day.wake);
+    acc(b.sleepDuration, calcSleep(prevBedStr, wakeStr));
+
+    // Duration metrics available on all days.
+    acc(b.dayLength,        dayLength(day));
+    acc(b.totalActivity,    totalActivity(day));
+    acc(b.combinedSleepNap, combinedSleepNap(day));
+    acc(b.dayToSleepFactor, dayToSleepFactor(day));
+
+    // Nap-related metrics: only accumulate on nap days (D-01, D-02, D-03).
+    if (isNapDay) {
+      acc(b.activityBeforeNap, activityBeforeNap(day));
+      acc(b.activityAfterNap,  activityAfterNap(day));
+      acc(b.napDuration,       napDuration(day));
+      acc(b.napFraction,       napFraction(day));
+      acc(b.amPmSplit,         amPmSplit(day));
+      acc(b.maSleepRatio,      maSleepRatio(day));
+      acc(b.maNapRatio,        maNapRatio(day));
+    }
+  }
+
+  // Duration field names (Math.round on average).
+  const durationFields = new Set([
+    'activityBeforeNap', 'activityAfterNap', 'napDuration', 'sleepDuration',
+    'dayLength', 'totalActivity', 'combinedSleepNap',
+  ]);
+
+  // Produce the 7-entry result array.
+  return Array.from({ length: 7 }, (_, i) => {
+    const b = buckets[i];
+    const avg = (slot, isDuration) =>
+      slot.count === 0
+        ? null
+        : isDuration
+          ? Math.round(slot.sum / slot.count)
+          : slot.sum / slot.count;
+
+    return {
+      weekday:           i,
+      label:             DAY_LABELS[i],
+      activityBeforeNap: avg(b.activityBeforeNap, true),
+      activityAfterNap:  avg(b.activityAfterNap,  true),
+      napDuration:       avg(b.napDuration,        true),
+      sleepDuration:     avg(b.sleepDuration,      true),
+      dayLength:         avg(b.dayLength,          true),
+      totalActivity:     avg(b.totalActivity,      true),
+      combinedSleepNap:  avg(b.combinedSleepNap,   true),
+      dayToSleepFactor:  avg(b.dayToSleepFactor,   false),
+      napFraction:       avg(b.napFraction,         false),
+      amPmSplit:         avg(b.amPmSplit,           false),
+      maSleepRatio:      avg(b.maSleepRatio,        false),
+      maNapRatio:        avg(b.maNapRatio,          false),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Sleep debt proxy (MET-13, MET-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rolling sleep-debt proxy over the last windowDays qualifying overnight pairs.
+ *
+ * Uses overnight cross-day pairing (prevDay.bedtime → day.wake) to match the
+ * Comb column arithmetic in aggregateMetrics() (D-06). Index 0 always produces
+ * no pair (no prevDay), so the first qualifying pair is dayRecords[1].
+ *
+ * Caller is responsible for pre-filtering (stage filter + rejected exclusion)
+ * before passing dayRecords in — consistent with aggregateMetrics() and
+ * dayOfWeekAverages() (D-08).
+ *
+ * Pairs where either bedtime (prevDay) or wake (day) is missing are excluded
+ * and do not count toward windowDays (D-05).
+ *
+ * Sign convention: positive = deficit (actual sleep < target).
+ * Negative values are preserved — surplus sleep reduces the rolling sum.
+ * No clamping at zero (D-06).
+ *
+ * Returns null when fewer than windowDays qualifying overnight pairs are
+ * available — cold-start guard (D-07).
+ *
+ * Inputs are integer minutes; the result is an integer with no rounding
+ * needed (D-08 / MET-14 precision).
+ *
+ * @param {object[]} dayRecords         pre-filtered (stage + rejected) day records, oldest-first
+ * @param {number}   windowDays         rolling window size (MET-14: fixed 7)
+ * @param {number}   targetSleepMinutes per-day sleep target in minutes (from settings, D-01)
+ * @returns {number|null} signed sum of (targetSleepMinutes − combinedSleepNap) over the
+ *                        last windowDays qualifying overnight pairs, or null if insufficient data
+ */
+export function sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes) {
+  // Compute overnight-paired combinedSleepNap per qualifying day to match the
+  // aggregateMetrics Comb display column (prevDay.bedtime → day.wake, D-06).
+  const validCombValues = [];
+  for (let i = 1; i < dayRecords.length; i++) {
+    const day     = dayRecords[i];
+    const prevDay = dayRecords[i - 1];
+    const bedStr  = extractTime(prevDay.bedtime);
+    const wakeStr = extractTime(day.wake);
+    if (!bedStr || !wakeStr) continue;
+    const diff     = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    const sleepDur = diff < 0 ? diff + 24 * 60 : diff;
+    const napDur   = napDuration(day);
+    validCombValues.push(napDur !== null ? sleepDur + napDur : sleepDur);
+  }
+
+  // Take last windowDays qualifying entries. Cold-start guard (D-07).
+  const window = validCombValues.slice(-windowDays);
+  if (window.length < windowDays) return null;
+
+  // Sum of (target − actual). Positive = deficit, negative = surplus (D-06).
+  return window.reduce((sum, comb) => sum + (targetSleepMinutes - comb), 0);
 }

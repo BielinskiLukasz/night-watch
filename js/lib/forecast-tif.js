@@ -221,11 +221,55 @@ function wrapToDay(m) {
 }
 
 // ---------------------------------------------------------------------------
+// findBedtimeDayRecord — internal
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the day record that contains the most recently logged bedtime event.
+ * Returns null when no bedtime has been logged (prediction-only case).
+ *
+ * @param {object[]} dayRecords  all pre-bucketed day records
+ * @returns {object|null}
+ */
+function findBedtimeDayRecord(dayRecords) {
+  let latestAt = null;
+  let result   = null;
+
+  for (const day of dayRecords) {
+    if (Array.isArray(day.allEvents) && day.allEvents.length > 0) {
+      for (const ev of day.allEvents) {
+        if (ev.type === 'bedtime' && ev.at && (latestAt === null || ev.at > latestAt)) {
+          latestAt = ev.at;
+          result   = day;
+        }
+      }
+    } else {
+      const slot = day.bedtime;
+      if (slot == null) continue;
+      const atStr = (typeof slot === 'object' && slot.at) ? slot.at : null;
+      if (atStr) {
+        if (latestAt === null || atStr > latestAt) {
+          latestAt = atStr;
+          result   = day;
+        }
+      } else if (extractTime(slot) !== null) {
+        // bare 'HH:MM' — only update if no ISO-dated bedtime has been found yet (FIX-01)
+        if (latestAt === null) result = day;
+      }
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // resolveTodayNapDuration — internal
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve today's nap duration (minutes) for the combined-band correction.
+ * Resolve the nap duration (minutes) for a given day record, used for the
+ * combined-band correction. The caller must pass the day record that matches
+ * the bedtime anchor (same sleep cycle), not always today's record.
  *
  * Priority:
  *   1. Both napStart and napEnd are logged → actual duration.
@@ -234,17 +278,16 @@ function wrapToDay(m) {
  *
  * Returns null when insufficient data is available.
  *
- * @param {object[]} dayRecords   all pre-bucketed day records
+ * @param {object}   dayRecord    the day record whose nap to resolve
  * @param {object}   napStartPred TIF prediction for napStart
  * @param {object}   napEndPred   TIF prediction for napEnd
  * @returns {number|null}
  */
-function resolveTodayNapDuration(dayRecords, napStartPred, napEndPred) {
-  const today = dayRecords[dayRecords.length - 1];
-  if (!today) return null;
+function resolveTodayNapDuration(dayRecord, napStartPred, napEndPred) {
+  if (!dayRecord) return null;
 
-  const actualStart = extractTime(today.napStart);
-  const actualEnd   = extractTime(today.napEnd);
+  const actualStart = extractTime(dayRecord.napStart);
+  const actualEnd   = extractTime(dayRecord.napEnd);
 
   if (actualStart !== null && actualEnd !== null) {
     return timeToMinutes(actualEnd) - timeToMinutes(actualStart);
@@ -452,40 +495,30 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // 2. Slice to tifRollingDays (TIF-13 / D-06: TIF uses its own rolling window, not windowDays)
   const tifRollingDays = settings.tifRollingDays ?? 7;
   const window = dayRecords.slice(-tifRollingDays);
+  const acceptedWindow     = window.filter(d => !d.rejected);
+  const rejectedInWindow   = window.length - acceptedWindow.length;
 
   const trimPct         = settings.trimPct ?? 10;
   const precisionTarget = settings.precisionTarget ?? 60;
 
-  // 3. Helper: count manually rejected days that have a non-null value for a given slot.
-  function manualExcludedCount(slotFn) {
-    return window.filter(d => d.rejected && slotFn(d) !== null).length;
-  }
+  // 3. Collect raw time-minutes for each event type from accepted (non-rejected) days only.
+  const wakeMinutes     = acceptedWindow.map(d => extractTime(d.wake))    .filter(Boolean).map(timeToMinutes);
+  const napStartMinutes = acceptedWindow.map(d => extractTime(d.napStart)).filter(Boolean).map(timeToMinutes);
+  const napEndMinutes   = acceptedWindow.map(d => extractTime(d.napEnd))  .filter(Boolean).map(timeToMinutes);
+  const bedtimeMinutes  = acceptedWindow.map(d => extractTime(d.bedtime)) .filter(Boolean).map(timeToMinutes);
 
-  // 4. Collect raw time-minutes for each event type from ALL days in the window.
-  //    Rejected days are included (TIF trims them, not pre-filters them — B-021 Step 1).
-  const wakeMinutes     = window.map(d => extractTime(d.wake))    .filter(Boolean).map(timeToMinutes);
-  const napStartMinutes = window.map(d => extractTime(d.napStart)).filter(Boolean).map(timeToMinutes);
-  const napEndMinutes   = window.map(d => extractTime(d.napEnd))  .filter(Boolean).map(timeToMinutes);
-  const bedtimeMinutes  = window.map(d => extractTime(d.bedtime)) .filter(Boolean).map(timeToMinutes);
-
-  // 5. Collect duration metrics for each day in the window.
-  const sleepDurations    = window.map(sleepDuration)      .filter(v => v !== null);
-  const napDurations      = window.map(napDuration)        .filter(v => v !== null);
-  // actBeforeNapPerDay: index-aligned with window[]; activityLog[d.date] overrides
+  // 4. Collect duration metrics for each accepted day in the window.
+  const sleepDurations    = acceptedWindow.map(sleepDuration)      .filter(v => v !== null);
+  const napDurations      = acceptedWindow.map(napDuration)        .filter(v => v !== null);
+  // actBeforeNapPerDay: index-aligned with acceptedWindow[]; activityLog[d.date] overrides
   // activityBeforeNap(d) when non-null (TIF-13 / D-09, D-10).
-  const actBeforeNapPerDay = window.map(d =>
+  const actBeforeNapPerDay = acceptedWindow.map(d =>
     activityLog[d.date] != null ? activityLog[d.date] : activityBeforeNap(d)
   );
   const actBeforeNap      = actBeforeNapPerDay.filter(v => v !== null);
-  const actAfterNap       = window.map(activityAfterNap)   .filter(v => v !== null);
-  const dayLengths        = window.map(dayLength)          .filter(v => v !== null);
-  const combinedDurations = window.map(combinedSleepNap)   .filter(v => v !== null);
-
-  // Manual excluded counts per slot
-  const manualExWake     = manualExcludedCount(d => extractTime(d.wake));
-  const manualExNapStart = manualExcludedCount(d => extractTime(d.napStart));
-  const manualExNapEnd   = manualExcludedCount(d => extractTime(d.napEnd));
-  const manualExBedtime  = manualExcludedCount(d => extractTime(d.bedtime));
+  const actAfterNap       = acceptedWindow.map(activityAfterNap)   .filter(v => v !== null);
+  const dayLengths        = acceptedWindow.map(dayLength)          .filter(v => v !== null);
+  const combinedDurations = acceptedWindow.map(combinedSleepNap)   .filter(v => v !== null);
 
   // -------------------------------------------------------------------------
   // Predictions are built in dependency order:
@@ -498,9 +531,9 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   // -------------------------------------------------------------------------
 
   // No-nap-day pre-computation: filtered sub-windows for substitution logic (D-16, D-17, D-18)
-  const noNapDayWindow   = window.filter(d => extractTime(d.napStart) === null);
-  const postNoNapWindow  = window.filter((d, i) => i > 0 && extractTime(window[i - 1].napStart) === null);
-  const isYesterdayNoNap = window.length >= 2 && extractTime(window[window.length - 2].napStart) === null;
+  const noNapDayWindow   = acceptedWindow.filter(d => extractTime(d.napStart) === null);
+  const postNoNapWindow  = acceptedWindow.filter((d, i) => i > 0 && extractTime(acceptedWindow[i - 1].napStart) === null);
+  const isYesterdayNoNap = acceptedWindow.length >= 2 && extractTime(acceptedWindow[acceptedWindow.length - 2].napStart) === null;
 
   const tifPredictions = {};
 
@@ -510,11 +543,11 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napStartLabelledWindows = [];
 
-  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, manualExNapStart);
+  const histNapStart = buildHistoricBand(napStartMinutes, trimPct, rejectedInWindow);
   if (histNapStart) napStartLabelledWindows.push({ label: 'Historic nap-start band', ...histNapStart });
 
   if (wakeAnchorForNap !== null) {
-    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, 0);
+    const actBeforeBand = buildDurationBand(actBeforeNap, wakeAnchorForNap, trimPct, rejectedInWindow);
     if (actBeforeBand) napStartLabelledWindows.push({ label: 'Activity-before-nap band', ...actBeforeBand });
   }
 
@@ -532,13 +565,13 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   const todaySleepDuration = sleepDuration(dayRecords[dayRecords.length - 1]);
   if (wakeAnchorForNap != null && todaySleepDuration != null && todaySleepDuration > 0) {
     const ratios = [];
-    for (let i = 0; i < window.length; i++) {
+    for (let i = 0; i < acceptedWindow.length; i++) {
       const abn = actBeforeNapPerDay[i];
-      const sd = sleepDuration(window[i]);
+      const sd = sleepDuration(acceptedWindow[i]);
       if (abn != null && sd != null && sd > 0) ratios.push(abn / sd);
     }
     const projectedDurations = ratios.map(r => r * todaySleepDuration);
-    const ratioBandResult = buildDurationBand(projectedDurations, wakeAnchorForNap, trimPct, 0);
+    const ratioBandResult = buildDurationBand(projectedDurations, wakeAnchorForNap, trimPct, rejectedInWindow);
     if (ratioBandResult != null) napStartLabelledWindows.push({ label: 'MA/sleep ratio band', ...ratioBandResult });
   }
 
@@ -550,15 +583,15 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const napEndLabelledWindows = [];
 
-  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, manualExNapEnd);
+  const histNapEnd = buildHistoricBand(napEndMinutes, trimPct, rejectedInWindow);
   if (histNapEnd) napEndLabelledWindows.push({ label: 'Historic nap-end band', ...histNapEnd });
 
   if (napStartAnchor !== null) {
-    const napLenBand = buildDurationBand(napDurations, napStartAnchor, trimPct, 0);
+    const napLenBand = buildDurationBand(napDurations, napStartAnchor, trimPct, rejectedInWindow);
     if (napLenBand) napEndLabelledWindows.push({ label: 'Nap-length band', ...napLenBand });
   }
 
-  // MA/nap ratio band: ratio_i = actBeforeNap_i / napDuration_i; projected = ratio_i * todayMA; anchored to napStart
+  // MA/nap ratio band: ratio_i = actBeforeNap_i / napDuration_i; projected = todayMA / ratio_i; anchored to napStart
   const todayActualNapStart = extractTime(dayRecords[dayRecords.length - 1].napStart);
   const todayActualWake = extractTime(dayRecords[dayRecords.length - 1].wake);
   let todayMA = null;
@@ -569,13 +602,13 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   }
   if (napStartAnchor != null && todayMA != null) {
     const napRatios = [];
-    for (let i = 0; i < window.length; i++) {
+    for (let i = 0; i < acceptedWindow.length; i++) {
       const abn = actBeforeNapPerDay[i];
-      const nd = napDuration(window[i]);
-      if (abn != null && nd != null && nd > 0) napRatios.push(abn / nd);
+      const nd = napDuration(acceptedWindow[i]);
+      if (abn != null && abn > 0 && nd != null && nd > 0) napRatios.push(abn / nd);
     }
-    const projectedNapDurations = napRatios.map(r => r * todayMA);
-    const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, 0);
+    const projectedNapDurations = napRatios.map(r => todayMA / r);
+    const napRatioBandResult = buildDurationBand(projectedNapDurations, napStartAnchor, trimPct, rejectedInWindow);
     if (napRatioBandResult != null) napEndLabelledWindows.push({ label: 'MA/nap ratio band', ...napRatioBandResult });
   }
 
@@ -583,13 +616,17 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
   tifPredictions.napEnd = napEndPred;
 
   // ---- Wake prediction ----
-  const bedtimeAnchor    = resolveAnchor('bedtime', dayRecords, tifPredictions);
-  const todayNapDuration = resolveTodayNapDuration(dayRecords, napStartPred, napEndPred);
+  const bedtimeAnchor = resolveAnchor('bedtime', dayRecords, tifPredictions);
+  // Use the nap from the same day as the bedtime anchor (not always today):
+  // when bedtime was logged yesterday, yesterday's nap must be subtracted.
+  // Falls back to today's record when no bedtime is logged yet (predicted anchor).
+  const bedtimeDayRecord = findBedtimeDayRecord(dayRecords) ?? (dayRecords[dayRecords.length - 1] ?? null);
+  const todayNapDuration = resolveTodayNapDuration(bedtimeDayRecord, napStartPred, napEndPred);
 
   const wakeLabelledWindows = [];
 
   // Window 1: historic wake-up band
-  const histWake = buildHistoricBand(wakeMinutes, trimPct, manualExWake);
+  const histWake = buildHistoricBand(wakeMinutes, trimPct, rejectedInWindow);
   if (histWake) wakeLabelledWindows.push({ label: 'Historic wake-up band', ...histWake });
 
   // Window 2: sleep-length band (bedtime + sleep).
@@ -605,7 +642,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const sleepBandLabel = (isNoNapDay && postNoNapSleepDurations.length >= settings.minDays)
       ? 'Post-no-nap sleep-length band'
       : 'Sleep-length band';
-    const sleepBandRaw = buildDurationBand(srcSleepDurations, bedtimeAnchor, trimPct, 0);
+    const sleepBandRaw = buildDurationBand(srcSleepDurations, bedtimeAnchor, trimPct, rejectedInWindow);
     if (sleepBandRaw) {
       wakeLabelledWindows.push({
         label:  sleepBandLabel,
@@ -616,13 +653,13 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     }
   }
 
-  // Window 3: combined (sleep + nap) band, with today's nap subtracted so the
-  // band represents the expected night-sleep duration anchored to bedtime.
-  // Formula: bedtime + historical_combined − today_nap = expected_wake.
+  // Window 3: combined (sleep + nap) band, with the nap from the bedtime's day
+  // subtracted so the band represents the expected night-sleep duration anchored
+  // to bedtime. Formula: bedtime + historical_combined − nap_same_day = expected_wake.
   // Uses actual nap when logged; predicted nap otherwise (resolveTodayNapDuration).
   // Skipped on no-nap days (D-17): nap duration is irrelevant when no nap occurred.
   if (!isNoNapDay && bedtimeAnchor !== null && todayNapDuration !== null) {
-    const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, 0);
+    const combinedBandRaw = buildDurationBand(combinedDurations, bedtimeAnchor, trimPct, rejectedInWindow);
     if (combinedBandRaw) {
       wakeLabelledWindows.push({
         label:  'Sleep + nap combined band',
@@ -642,7 +679,7 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
 
   const bedtimeLabelledWindows = [];
 
-  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, manualExBedtime);
+  const histBedtime = buildHistoricBand(bedtimeMinutes, trimPct, rejectedInWindow);
   if (histBedtime) bedtimeLabelledWindows.push({ label: 'Historic bedtime band', ...histBedtime });
 
   if (wakeAnchor2 !== null) {
@@ -655,12 +692,12 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     const dayLengthLabel = (isNoNapDay && noNapDayLengths.length >= settings.minDays)
       ? 'Day-length band (no-nap days)'
       : 'Day-length band';
-    const dayLenBand = buildDurationBand(srcLengths, wakeAnchor2, trimPct, 0);
+    const dayLenBand = buildDurationBand(srcLengths, wakeAnchor2, trimPct, rejectedInWindow);
     if (dayLenBand) bedtimeLabelledWindows.push({ label: dayLengthLabel, ...dayLenBand });
   }
 
   if (napEndAnchor !== null) {
-    const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, 0);
+    const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, rejectedInWindow);
     if (actAfterBand) bedtimeLabelledWindows.push({ label: 'Activity-after-nap band', ...actAfterBand });
   }
 

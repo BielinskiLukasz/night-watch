@@ -28,6 +28,8 @@ import {
   dayToSleepFactor,
   napFraction,
   amPmSplit,
+  dayOfWeekAverages,
+  sleepDebtProxy,
 } from '../../js/lib/metrics.js';
 
 import { formatDuration } from '../../js/lib/time.js';
@@ -109,9 +111,8 @@ describe('activityBeforeNap(day)', () => {
     assert.strictEqual(activityBeforeNap(makeDay(null, null, '12:30', null)), null);
   });
 
-  it('null napStart (no-nap day) → 0', () => {
-    // No nap means no "activity before nap" segment
-    assert.strictEqual(activityBeforeNap(makeDay('07:00', null, null, null)), 0);
+  it('null napStart (no-nap day) → null', () => {
+    assert.strictEqual(activityBeforeNap(makeDay('07:00', null, null, null)), null);
   });
 });
 
@@ -125,9 +126,8 @@ describe('activityAfterNap(day)', () => {
     assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, '14:30')), 330);
   });
 
-  it('null napEnd (no-nap day) → 0', () => {
-    // No nap means no "activity after nap" segment
-    assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, null)), 0);
+  it('null napEnd (no-nap day) → null', () => {
+    assert.strictEqual(activityAfterNap(makeDay(null, '20:00', null, null)), null);
   });
 
   it('null bedtime → null', () => {
@@ -847,5 +847,212 @@ describe('aggregateMetrics — updated fields (D-14)', () => {
     assert.ok(typeof result.avg.amPmSplit === 'number', 'amPmSplit aggregated');
     assert.strictEqual(result.avg.sleepAfterActivityFactor, undefined, 'SAA not in avg (D-14)');
     assert.ok('sleepAfterActivityFactor' in result.rows[0], 'SAA still in per-row data');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Helper: build a day record using event objects { at: 'YYYY-MM-DDTHH:MM' }
+// for dayOfWeekAverages tests (extractDate requires event objects).
+// null args produce null slots.
+// ---------------------------------------------------------------------------
+function makeEventDay(wakeAt, bedtimeAt, napStartAt, napEndAt, prevBedtimeAt) {
+  return {
+    wake:     wakeAt      ? { at: wakeAt }      : null,
+    bedtime:  bedtimeAt   ? { at: bedtimeAt }   : null,
+    napStart: napStartAt  ? { at: napStartAt }  : null,
+    napEnd:   napEndAt    ? { at: napEndAt }    : null,
+    // prevBedtime stored separately for pairing in caller-constructed arrays
+    _prevBedtimeAt: prevBedtimeAt || null,
+    rejected: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 17. dayOfWeekAverages (MET-11, D-04..D-07)
+// ---------------------------------------------------------------------------
+
+describe('dayOfWeekAverages(dayRecords)', () => {
+  it('empty input: returns exactly 7 entries, all metrics null, index-1 label is Mon', () => {
+    const result = dayOfWeekAverages([]);
+    assert.strictEqual(result.length, 7);
+    for (const entry of result) {
+      assert.strictEqual(entry.activityBeforeNap, null);
+      assert.strictEqual(entry.activityAfterNap, null);
+      assert.strictEqual(entry.napDuration, null);
+      assert.strictEqual(entry.sleepDuration, null);
+    }
+    assert.strictEqual(result[1].label, 'Mon');
+  });
+
+  it('single Monday nap-day: index-1 has correct activityBeforeNap, napDuration, sleepDuration', () => {
+    // prevDay provides bedtime for sleep pairing
+    const prevDay = makeEventDay(null, '2025-01-05T22:30', null, null);
+    const day = makeEventDay('2025-01-06T07:00', '2025-01-06T22:00', '2025-01-06T12:00', '2025-01-06T14:00');
+    const result = dayOfWeekAverages([prevDay, day]);
+    const mon = result[1];
+    // activityBeforeNap: 12:00 - 07:00 = 300 min
+    assert.strictEqual(mon.activityBeforeNap, 300);
+    // napDuration: 14:00 - 12:00 = 120 min
+    assert.strictEqual(mon.napDuration, 120);
+    // sleepDuration: 07:00 - 22:30 (prev) = 8h30m = 510 min
+    assert.strictEqual(mon.sleepDuration, 510);
+    // All other 6 weekdays are null
+    for (let i = 0; i < 7; i++) {
+      if (i !== 1) {
+        assert.strictEqual(result[i].activityBeforeNap, null);
+        assert.strictEqual(result[i].sleepDuration, null);
+      }
+    }
+  });
+
+  it('single Monday no-nap day: nap columns null, sleepDuration non-null', () => {
+    const prevDay = makeEventDay(null, '2025-01-12T22:00', null, null);
+    const day = makeEventDay('2025-01-13T07:00', '2025-01-13T22:00', null, null);
+    const result = dayOfWeekAverages([prevDay, day]);
+    const mon = result[1];
+    assert.strictEqual(mon.activityBeforeNap, null);
+    assert.strictEqual(mon.activityAfterNap, null);
+    assert.strictEqual(mon.napDuration, null);
+    assert.ok(mon.sleepDuration !== null, 'sleepDuration should be non-null on no-nap day');
+  });
+
+  it('mix: two Monday records (one nap, one no-nap) — nap avg from nap-day only, sleep averages both', () => {
+    const prev1 = makeEventDay(null, '2025-01-05T22:30', null, null);
+    const mon1  = makeEventDay('2025-01-06T07:00', '2025-01-06T22:00', '2025-01-06T12:00', '2025-01-06T14:00');
+    const prev2 = makeEventDay(null, '2025-01-12T22:00', null, null);
+    const mon2  = makeEventDay('2025-01-13T07:00', '2025-01-13T22:00', null, null);
+    const result = dayOfWeekAverages([prev1, mon1, prev2, mon2]);
+    const mon = result[1];
+    // napDuration: only from mon1 (120); mon2 is no-nap → not included
+    assert.strictEqual(mon.napDuration, 120);
+    // sleepDuration: average of mon1 (510) and mon2 (540) = 525
+    assert.strictEqual(mon.sleepDuration, Math.round((510 + 540) / 2));
+  });
+
+  it('no-date record (bare HH:MM wake): contributes to no weekday bucket', () => {
+    // bare string wake → extractDate returns null → record skipped
+    const day = { wake: '07:00', bedtime: '22:00', napStart: '12:00', napEnd: '14:00', rejected: false };
+    const result = dayOfWeekAverages([day]);
+    // All entries should be null (the record was skipped)
+    for (const entry of result) {
+      assert.strictEqual(entry.activityBeforeNap, null);
+    }
+  });
+
+  it('Thursday (index 4) and Saturday (index 6) records bucketed correctly; Monday (index 1) stays null', () => {
+    // 2025-01-09 = Thursday; 2025-01-11 = Saturday
+    const thu = makeEventDay('2025-01-09T07:00', '2025-01-09T22:00', '2025-01-09T12:00', '2025-01-09T14:00');
+    const sat = makeEventDay('2025-01-11T07:30', '2025-01-11T21:30', '2025-01-11T12:30', '2025-01-11T14:30');
+    const result = dayOfWeekAverages([thu, sat]);
+    assert.ok(result[4].activityBeforeNap !== null, 'Thursday entry should have data');
+    assert.ok(result[6].activityBeforeNap !== null, 'Saturday entry should have data');
+    assert.strictEqual(result[1].activityBeforeNap, null, 'Monday should be null');
+  });
+
+  it('two records same weekday: activityBeforeNap averages to Math.round of mean', () => {
+    // Monday 2025-01-06: MA = 12:00 - 07:00 = 300 min
+    const day1 = makeEventDay('2025-01-06T07:00', '2025-01-06T22:00', '2025-01-06T12:00', '2025-01-06T14:00');
+    // Monday 2025-01-13: MA = 13:00 - 07:30 = 330 min
+    const day2 = makeEventDay('2025-01-13T07:30', '2025-01-13T22:00', '2025-01-13T13:00', '2025-01-13T15:00');
+    const result = dayOfWeekAverages([day1, day2]);
+    const mon = result[1];
+    // average of 300 and 330 = 315
+    assert.strictEqual(mon.activityBeforeNap, Math.round((300 + 330) / 2));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 18. sleepDebtProxy (MET-13, MET-14)
+// ---------------------------------------------------------------------------
+
+describe('sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes)', () => {
+  const TARGET = 600; // 10h target in minutes
+
+  // Zero-debt day: combinedSleepNap = 600 min (equals target → 0 debt)
+  // wake=07:00=420min, bedtime=21:00=1260min → sleep=420-1260+1440=600 min
+  const ZERO_DAY = makeDay('07:00', '21:00', null, null);
+
+  // Deficit day: combinedSleepNap = 540 min → 60 min debt per day
+  // wake=07:00=420min, bedtime=22:00=1320min → sleep=420-1320+1440=540 min
+  const DEFICIT_DAY = makeDay('07:00', '22:00', null, null);
+
+  // Surplus day: combinedSleepNap = 660 min → −60 min debt per day
+  // wake=07:00=420min, bedtime=20:00=1200min → sleep=420-1200+1440=660 min
+  const SURPLUS_DAY = makeDay('07:00', '20:00', null, null);
+
+  // Null day: no wake/bedtime → combinedSleepNap = null → excluded from window
+  const NULL_DAY = makeDay(null, null, null, null);
+
+  it('returns null for empty input (MET-14 empty edge, D-07)', () => {
+    assert.strictEqual(sleepDebtProxy([], 7, TARGET), null);
+  });
+
+  it('returns null with fewer than windowDays valid records — 2 qualifying pairs (index 0 excluded), windowDays=7 (D-07 cold-start)', () => {
+    // 3 records → 2 qualifying pairs (day[0] skipped — no prevDay), still < 7 → null
+    const days = [DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
+  });
+
+  it('returns a number (not null) with exactly windowDays valid records — boundary (MET-14 boundary)', () => {
+    // 8 records → 7 qualifying pairs (day[0] skipped) → satisfies windowDays=7
+    const days = Array(8).fill(DEFICIT_DAY);
+    const result = sleepDebtProxy(days, 7, TARGET);
+    assert.ok(result !== null, 'should not be null at exactly windowDays qualifying records');
+    assert.ok(typeof result === 'number', 'should be a number');
+  });
+
+  it('returns 0 when all days sleep equals target — each day contributes 0 deficit (MET-14 adjacency)', () => {
+    // 8 records → 7 qualifying pairs; ZERO_DAY→ZERO_DAY overnight = 600 min = target → 0 debt
+    const days = Array(8).fill(ZERO_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 0);
+  });
+
+  it('returns positive value when all days sleep less than target — deficit scenario (D-06)', () => {
+    // Each DEFICIT_DAY→DEFICIT_DAY overnight: wake=07:00(420) - bed=22:00(1320) + 1440 = 540 min
+    // target=600 → debt=60 per pair, 7 pairs → 420
+    const days = Array(8).fill(DEFICIT_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
+  });
+
+  it('returns negative value when all days sleep more than target — surplus, no clamping (D-06)', () => {
+    // Each SURPLUS_DAY→SURPLUS_DAY overnight: wake=07:00(420) - bed=20:00(1200) + 1440 = 660 min
+    // target=600 → debt=−60 per pair, 7 pairs → −420
+    const days = Array(8).fill(SURPLUS_DAY);
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), -420);
+  });
+
+  it('excludes null-combinedSleepNap days — 5 qualifying pairs (NULL_DAY→DEFICIT_DAY skipped), windowDays=7 → null (D-05)', () => {
+    // NULL_DAY has no bedtime → NULL_DAY→DEFICIT_DAY pair skipped (bedStr=null)
+    // Remaining 5 DEFICIT_DAY→DEFICIT_DAY pairs qualify → 5 < 7 → null
+    const days = [
+      NULL_DAY,
+      DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY,
+      DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY,
+    ];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
+  });
+
+  it('takes only last windowDays qualifying records — 11 qualifying pairs, windowDays=7 (rolling slice)', () => {
+    // 4 SURPLUS + 8 DEFICIT = 12 records → 11 qualifying pairs (day[0] skipped)
+    // pairs[0-2]: SURPLUS→SURPLUS = 660 min (surplus, debt=−60)
+    // pairs[3]: SURPLUS→DEFICIT = 660 min (surplus bedtime, debt=−60)
+    // pairs[4-10]: DEFICIT→DEFICIT = 540 min (deficit, debt=+60 each)
+    // Last 7 pairs (positions 4-10): all DEFICIT→DEFICIT → 7 × 60 = 420
+    // Wrong (all 11): 4×(−60) + 7×60 = −240 + 420 = 180
+    const days = [
+      ...Array(4).fill(SURPLUS_DAY),
+      ...Array(8).fill(DEFICIT_DAY),
+    ];
+    assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
+  });
+
+  it('does not mutate the input array (pure function prohibition)', () => {
+    // 8 records → 7 qualifying pairs → reaches reduce (non-null result)
+    const days = Array(8).fill(DEFICIT_DAY);
+    const originalLength = days.length;
+    const originalRef0 = days[0];
+    sleepDebtProxy(days, 7, TARGET);
+    assert.strictEqual(days.length, originalLength, 'array length must be unchanged after call');
+    assert.strictEqual(days[0], originalRef0, 'element references must be unchanged after call');
   });
 });

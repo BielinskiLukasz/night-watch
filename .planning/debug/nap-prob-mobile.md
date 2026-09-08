@@ -4,6 +4,10 @@ trigger: "G-NW-12-4: nap probability line not visible on mobile, works on PC Chr
 created: 2026-08-26T00:00:00Z
 updated: 2026-08-26T00:00:00Z
 symptoms_prefilled: true
+audit_acknowledged:
+  milestone: v1.4
+  at: 2026-09-08
+  status: investigating
 ---
 
 ## Current Focus

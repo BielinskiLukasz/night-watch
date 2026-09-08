@@ -84,6 +84,14 @@ describe('tifForecast() TIF-12 ratio windows', () => {
     );
   });
 
+  it('MA/nap ratio band median equals napStart + (todayMA / ratio) — correct inversion formula', () => {
+    // Fixture: actBeforeNap=330, napDuration=90, todayMA=330 → projected=330/(330/90)=90 min → median=13:00+90=14:30
+    const result = tifForecast(makeRatioFixture(), defaultRatioSettings, {}, false);
+    const napRatioWindow = result.napEnd.sourceWindows.find(w => w.label === 'MA/nap ratio band');
+    assert.ok(napRatioWindow, 'MA/nap ratio band window must be present');
+    assert.strictEqual(napRatioWindow.median, '14:30', 'median should be napStart + todayMA/ratio = 14:30');
+  });
+
   it('MA/sleep ratio band and MA/nap ratio band both carry a median string field', () => {
     const result = tifForecast(makeRatioFixture(), defaultRatioSettings, {}, false);
     const sleepRatioWindow = result.napStart.sourceWindows.find(

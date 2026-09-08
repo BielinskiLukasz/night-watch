@@ -33,19 +33,19 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 21 field names (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
+  it('has entries for all 23 field names (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
       'intenseDays', 'eveningHour', 'noNapBedtimeOffsetMinutes', 'intenseDayOffsetMinutes',
-      'tifRollingDays',
+      'tifRollingDays', 'firstDayOfWeek', 'targetSleepMinutes',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 21);
+    assert.equal(Object.keys(RULES).length, 23);
   });
 });
 
@@ -61,10 +61,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 21 keys (16 prior + 4 Phase 12 + 1 Phase 13 fields)', () => {
+  it('normalized contains all 23 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 21);
+    assert.equal(keys.length, 23);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -420,6 +420,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+    firstDayOfWeek: 'monday', targetSleepMinutes: 600,
   };
 
   it('accepts empty stages array', () => {
@@ -489,6 +490,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     stages: [], activeStageId: null, confirmBeforeLogging: false,
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
+    firstDayOfWeek: 'monday', targetSleepMinutes: 600,
   };
 
   it('accepts null activeStageId', () => {
@@ -721,8 +723,8 @@ describe('validateSettings — tifRollingDays (TIF-13)', () => {
       'Expected error for tifRollingDays field when below min');
   });
 
-  it('rejects 31 (above max=30) in mode:\'save\'', () => {
-    const result = validateSettings(valid({ tifRollingDays: 31 }), { mode: 'save' });
+  it('rejects 91 (above max=90) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ tifRollingDays: 91 }), { mode: 'save' });
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
       'Expected error for tifRollingDays field when above max');
@@ -733,6 +735,103 @@ describe('validateSettings — tifRollingDays (TIF-13)', () => {
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
       'Expected error for non-integer tifRollingDays');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — firstDayOfWeek (D-10, Phase 17)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — firstDayOfWeek (D-10)', () => {
+  it('accepts \'monday\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'monday' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts \'sunday\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'sunday' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+  });
+
+  it('rejects \'saturday\' in mode:\'save\' — not in enum {monday, sunday}', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'saturday' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'firstDayOfWeek'),
+      'Expected error for firstDayOfWeek field');
+  });
+
+  it('rejects empty string in mode:\'save\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: '' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'firstDayOfWeek'),
+      'Expected error for firstDayOfWeek field');
+  });
+
+  it('mode:\'load\' with invalid value \'wednesday\' → ok:true, normalized resets to \'monday\'', () => {
+    const result = validateSettings(valid({ firstDayOfWeek: 'wednesday' }), { mode: 'load' });
+    assert.equal(result.ok, true);
+    assert.strictEqual(result.normalized.firstDayOfWeek, 'monday');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — targetSleepMinutes (MET-13 / D-01 / D-02, Phase 18)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — targetSleepMinutes (MET-13)', () => {
+  it('mode:\'save\' accepts 1 (minimum valid value)', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 1 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Unexpected error for targetSleepMinutes');
+  });
+
+  it('mode:\'save\' accepts 1440 (maximum valid value)', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 1440 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Unexpected error for targetSleepMinutes');
+  });
+
+  it('mode:\'save\' accepts 600 (the default)', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 600 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Unexpected error for targetSleepMinutes');
+  });
+
+  it('mode:\'save\' rejects 0 — below minimum — errors array is non-empty', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 0 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Expected error for targetSleepMinutes when value is 0');
+  });
+
+  it('mode:\'save\' rejects 1441 — above maximum — errors array is non-empty', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 1441 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Expected error for targetSleepMinutes when value is 1441');
+  });
+
+  it('mode:\'save\' rejects non-integer 600.5 — errors array is non-empty', () => {
+    const result = validateSettings(valid({ targetSleepMinutes: 600.5 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'targetSleepMinutes'),
+      'Expected error for non-integer targetSleepMinutes');
+  });
+
+  it('mode:\'load\' resets out-of-range value 0 to DEFAULT_SETTINGS.targetSleepMinutes (600) silently', () => {
+    const warnSpy = mock.method(console, 'warn', () => {});
+    try {
+      warnSpy.mock.resetCalls();
+      const result = validateSettings(valid({ targetSleepMinutes: 0 }), { mode: 'load' });
+      assert.equal(result.ok, true);
+      assert.strictEqual(result.normalized.targetSleepMinutes, DEFAULT_SETTINGS.targetSleepMinutes,
+        'out-of-range value must reset to DEFAULT_SETTINGS.targetSleepMinutes in lenient mode');
+    } finally {
+      warnSpy.mock.restore();
+    }
   });
 });
 

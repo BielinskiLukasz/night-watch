@@ -58,6 +58,22 @@ compared to reality.
 - ✓ Today screen clarity: "Add event" button above prediction cards, hero card label — v1.1
 - ✓ Forecast E2E rewritten with 32-day 4-type fixture — v1.1
 
+**v1.3 — Prediction & TIF Enhancements (shipped 2026-08-31)**
+- ✓ Evening-hour override: when hour ≥ 18 and last event is wake, predict bedtime not nap — v1.3
+- ✓ Wake predictions unioned from hour-band and sleep-duration-band — v1.3
+- ✓ Intense-day flag per event-entry form, stored in history, used as TIF contextual modifier — v1.3
+- ✓ Missed-nap bedtime shift: no nap by threshold hour → earlier bedtime prediction — v1.3
+- ✓ Nap probability score on Today screen (frequency + time + streak + window-passed) — v1.3
+- ✓ TIF nap-start ratio window (activityBeforeNap/sleepDuration), nap-end ratio window (activityBeforeNap/napDuration) — v1.3
+- ✓ TIF rolling-window variant (tifRollingDays, configurable 3–90); MA/AA values preferred when recorded — v1.3
+- ✓ TIF per-window medians; central prediction = average of window medians — v1.3
+- ✓ TIF no-nap-day substitution: day-length bands replace activity-after-nap on no-nap days — v1.3
+- ✓ TIF Accuracy screen: per-event window hit rate, avg window width, ≥80% confidence % — v1.3
+- ✓ Day/Sleep Factor replaces SAA ratio column in Metrics screen — v1.3
+- ✓ TIF raw bounds and confidence score per event shown in Metrics screen — v1.3
+- ✓ MA/sleep ratio and MA/nap ratio columns added to Metrics screen — v1.3
+- ✓ Algorithm selector moved to top of Forecast fieldset; classic/TIF option groups show/hide — v1.3
+
 **v1.2 — Prediction & Metrics (shipped 2026-08-24)**
 - ✓ TIF algorithm opt-in toggle (forecastAlgorithm: classic | tif) persists across sessions — v1.2
 - ✓ TIF trim % (0–40) and precision target (minutes) settings with full persistence — v1.2
@@ -70,20 +86,18 @@ compared to reality.
 - ✓ Historical aggregates (avg, min with date, max with date) for all metrics — v1.2
 - ✓ Stage-scoped Metrics filtering — v1.2
 
-## Current Milestone: v1.3 Prediction & TIF Enhancements
-
-**Goal:** Refine the classic and TIF forecasting engines with contextual rules and ratio-based windows, and extend the Metrics + Accuracy screens to surface TIF-specific data.
-
-**Target features:**
-- Prediction logic refinements: time-based bedtime rule, duration-based prediction, intense-day flag, missing-nap impact on bedtime
-- TIF algorithm extensions: ratio-based windows (activity/sleep → nap-start, activity/nap → nap-end), rolling windows + MA/AA preference
-- TIF metrics & accuracy: TIF accuracy screen, replace SAA with day/sleep factor, TIF window bounds on Metrics screen, nap-fraction + AM/PM split columns
-
-### Active
-
-- [x] Phase 12 — Prediction logic refinements (B-004, B-005, B-006, B-007) — Complete 2026-08-26
-- [ ] Phase 13 — TIF algorithm extensions (B-033, B-037)
-- [ ] Phase 14 — TIF metrics & accuracy (B-031, B-034, B-035, B-036)
+**v1.4 — TIF Fixes & Metrics Depth (shipped 2026-09-08)**
+- ✓ FIX-01: latestAt guard in findBedtimeDayRecord prevents bare-string entries displacing ISO-dated selection — v1.4
+- ✓ FIX-02: rejectedInWindow threaded to all primary band-building calls; postNoNapNapStartTimes retains 0 — v1.4
+- ✓ FIX-03: tifForecast override block in metrics-screen render() preserved and day-order corrected (newest-first) — v1.4
+- ✓ FIX-04: computeTifTrimmedStats JSDoc clarified re: bare HH:MM and ISO inputs both handled — v1.4
+- ✓ FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91 — v1.4
+- ✓ MET-09: 7-day rolling window aggregates for all Metrics screen columns — v1.4
+- ✓ MET-10: 14-day rolling window aggregates for all Metrics screen columns — v1.4
+- ✓ MET-11: Per-weekday average metrics (MA, AA, nap duration, sleep duration) — v1.4
+- ✓ MET-12: Day-of-week collapsible section in Metrics screen — v1.4
+- ✓ MET-13: Sleep debt proxy column (S.Debt(7d)) in Metrics per-day table and rolling aggregates — v1.4
+- ✓ MET-14: targetSleepMinutes setting (default 600 min) with median hint from event log — v1.4
 
 ### Out of Scope
 
@@ -144,15 +158,23 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Test-Driven Development (TDD) is the primary development discipline | Strict red→green→refactor for pure-logic and integration tests; UI code may be written test-after with one E2E test as a regression guard. Every shipped requirement has at least one automated test. Plans split into 'write test' → 'implement' subtasks where it makes sense. | ✓ Good |
 | TIF is additive only; classic forecast.js remains untouched and is the default | TIF ships as opt-in toggle; existing Classic algorithm unchanged | ✓ Good — v1.2 delivered |
 | metrics.js is a shared module consumed by both TIF (duration bands) and Metrics screen | Single source of truth for duration/ratio calculations across both features | ✓ Good — no duplication in either consumer |
+| tifForecast override block in metrics-screen render() is NOT redundant | computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic; tifForecast sourceWindows runs full band-building with rejectedInWindow — without the override the two screens diverge. Discovered during NW-15 UAT. | ✓ Required — restored with day-order fix |
+| tifForecast in metrics-screen.js must receive newest-first days (same as daysBySubjectiveNight output) | tifForecast uses slice(-N) to select the rolling window; oldest-first input would select a different (older) window than Today screen. Day order must match. | ✓ Fixed in NW-15 UAT |
 
-## Current State (v1.2 — shipped 2026-08-24)
+## Current State (v1.4 — shipped 2026-09-08)
 
-Both phases complete. 264 files, ~15,500 LOC added over 45 days. All 17/17 v1.2 requirements satisfied. Test suite: 647+ unit/integration tests + E2E coverage for all new screens and algorithm paths.
+All 4 phases complete. 11/11 requirements satisfied (FIX-01..05, MET-09..14). 918 tests, 0 failures. Tag: `v1.4`.
+
+v1.4 delivered: 5 TIF engine bug fixes, 7-day and 14-day rolling window aggregates, per-weekday pattern rows, and a sleep debt proxy column with configurable target-sleep setting.
 
 **Tech stack as shipped:** Vanilla JS/HTML/CSS, no build, no runtime deps. Layered architecture: `js/lib/` (pure functions) → `js/store/` (stateful pub/sub) → `js/adapters/` (injectable seams) → `js/ui/` (DOM modules). 5 bottom-nav screens: Today, History, Charts, Accuracy, Metrics. Two forecast algorithms: Classic (default) and TIF (opt-in).
 
 **Known issues / tech debt:**
-- None at v1.2 close (0 TODO/FIXME markers, 0 open security threats)
+- None at v1.4 close (0 TODO/FIXME markers, 0 open security threats)
+
+## Previous State (v1.2 — shipped 2026-08-24)
+
+Both v1.2 phases complete. 264 files, ~15,500 LOC added over 45 days. All 17/17 v1.2 requirements satisfied. Test suite: 647+ unit/integration tests + E2E coverage for all new screens and algorithm paths.
 
 ## Previous State (v1.1 — shipped 2026-07-10)
 
@@ -188,6 +210,7 @@ Archive: `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQU
 
 v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`.  
 v1.1 requirements archived to `.planning/milestones/v1.1-REQUIREMENTS.md`.  
+v1.4 requirements archived to `.planning/milestones/v1.4-REQUIREMENTS.md`.  
 Next milestone requirements defined via `/gsd-new-milestone`.
 
 ## Evolution
@@ -208,4 +231,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-26 after Phase NW-12 — Prediction Logic Refinements*
+*Last updated: 2026-09-08 after v1.4 milestone (TIF Fixes & Metrics Depth)*

@@ -15,12 +15,14 @@
 //   - No user input interpolated into dynamic HTML injection anywhere in this module
 
 import {
-  activityAfterSleepFactor,
   aggregateMetrics,
+  dayOfWeekAverages,
+  sleepDebtProxy,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
-import { formatTime, formatDuration } from '../lib/time.js';
+import { formatTime, formatDuration, formatSignedDuration } from '../lib/time.js';
 import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
+import { trimmedMinMax, tifForecast } from '../lib/forecast-tif.js';
 import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -28,15 +30,16 @@ import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Column definitions for the 16-column metrics table (D-09 order).
+ * Column definitions for the 19-column metrics table (D-09 order + MET-14).
  * Order: Date | Wake | Nap Start | Nap End | Bedtime | Sleep | Nap | Nap Frac |
- *        Comb | Day Len | Day/Sleep | →Nap | Nap→ | Act | AM/PM | AAS
+ *        Comb | S.Debt | Day Len | Day/Sleep | →Nap | MA/Sl | MA/Nap | Nap→ | Act | AM/PM | AAS
  *
  * Changes from 14-column layout (D-09, D-13, D-14):
  *   - SAA (sleepAfterActivityFactor) removed per D-14/MET-07
  *   - Nap Frac (napFraction, isRatio) inserted at index 7 per MET-09
  *   - Day/Sleep (dayToSleepFactor, isRatio) inserted at index 10 per MET-07
  *   - AM/PM (amPmSplit, isRatio) inserted at index 14 per MET-10
+ *   - S.Debt (sleepDebt, signed minutes) inserted at index 9 per MET-14
  */
 const COLUMNS = Object.freeze([
   { key: 'date',                    label: 'Date',      isTime: false, isRatio: false, sticky: true },
@@ -48,9 +51,12 @@ const COLUMNS = Object.freeze([
   { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
   { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
   { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
+  { key: 'sleepDebt',              label: 'S.Debt(7d)', isTime: false, isRatio: false, isSigned: true }, // MET-14 rolling 7-day sum
   { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
   { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
   { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
+  { key: 'maSleepRatio',            label: 'MA/Sl',     isTime: false, isRatio: true  },
+  { key: 'maNapRatio',              label: 'MA/Nap',    isTime: false, isRatio: true  },
   { key: 'activityAfterNap',        label: 'Nap→',      isTime: false, isRatio: false },
   { key: 'totalActivity',           label: 'Act',       isTime: false, isRatio: false },
   { key: 'amPmSplit',               label: 'AM/PM',     isTime: false, isRatio: true  }, // NEW MET-10
@@ -133,11 +139,13 @@ function renderEmptyState(root) {
 function formatCellValue(value, colDef, snap) {
   if (value === null || value === undefined) return '—';
 
-  if (colDef.isTime && value) {
+  if (colDef.isTime) {
     return formatTime(value, snap.timeFormat);
-  } else if (colDef.isRatio && value !== null && value !== undefined) {
+  } else if (colDef.isRatio) {
     return value.toFixed(2);
-  } else if (!colDef.isTime && !colDef.isRatio && value !== null && value !== undefined) {
+  } else if (colDef.isSigned) {
+    return formatSignedDuration(value);
+  } else if (!colDef.isTime && !colDef.isRatio) {
     // Duration columns
     return formatDuration(value);
   } else {
@@ -273,24 +281,78 @@ function buildAggregateRow(label, aggregateData, snap) {
   return tr;
 }
 
-// TIF event-type columns (the 4 base columns that receive TIF aggregate averages)
-const TIF_EVENT_TYPES = new Set(['wake', 'napStart', 'napEnd', 'bedtime']);
+/**
+ * Compute trimmed min, median, and max for each base metric column (indices 1–17)
+ * over the TIF rolling window, skipping rejected rows (MET-11).
+ *
+ * @param {object[]} rows   metrics rows (oldest-first) from aggregateMetrics
+ * @param {object}   snap   settings snapshot
+ * @returns {{ min: object, median: object, max: object }}
+ *   Each property is a flat map of { colKey: formattedValue|null }.
+ */
+function computeTifTrimmedStats(rows, snap) {
+  const windowSize = snap.tifRollingDays ?? 7;
+  const trimPct    = snap.trimPct ?? 10;
+
+  // Exclude rejected first, then take the last windowSize non-rejected rows.
+  // This matches buildRollingSection which receives nonRejectedDays.slice(-nDays),
+  // ensuring both sections compute over the same effective N-day sample.
+  const rollingRows = rows.filter(r => !r.rejected).slice(-windowSize);
+
+  const minMap    = {};
+  const medianMap = {};
+  const maxMap    = {};
+
+  for (let i = 1; i < COLUMNS.length; i++) {
+    const col = COLUMNS[i];
+
+    if (col.isTime) {
+      // Metric rows may contain bare 'HH:MM' strings or full ISO strings ('YYYY-MM-DDTHH:MM').
+      // raw.length > 5 extracts the HH:MM slice from ISO strings and passes bare strings through
+      // unchanged — this guard handles both forms and is live code, not dead code.
+      const mins = rollingRows
+        .map(r => {
+          const raw = r[col.key];
+          if (raw == null) return null;
+          const hhmm = raw.length > 5 ? raw.slice(11) : raw;
+          return timeToMinutes(hhmm);
+        })
+        .filter(v => v !== null);
+      mins.sort((a, b) => a - b);
+      const result = trimmedMinMax(mins, trimPct, 0);
+      minMap[col.key]    = result ? minutesToTime(result.min)    : null;
+      medianMap[col.key] = result ? minutesToTime(result.median) : null;
+      maxMap[col.key]    = result ? minutesToTime(result.max)    : null;
+    } else {
+      // Duration and ratio columns — sort numerically, apply trimmedMinMax.
+      const vals = rollingRows
+        .map(r => r[col.key] != null ? r[col.key] : null)
+        .filter(v => v !== null);
+      vals.sort((a, b) => a - b);
+      const result = trimmedMinMax(vals, trimPct, 0);
+      minMap[col.key]    = result ? result.min    : null;
+      medianMap[col.key] = result ? result.median : null;
+      maxMap[col.key]    = result ? result.max    : null;
+    }
+  }
+
+  return { min: minMap, median: medianMap, max: maxMap };
+}
 
 /**
  * Build a TIF aggregate row (min-TIF, median-TIF, or max-TIF).
  *
- * Shows average TIF bounds (algMin / central / algMax) for each event-type column.
- * All non-event-type base columns and all TIF inline columns render '—'.
- * The whole row is hidden by the caller (tr.hidden = !isTif) — D-06.
+ * Shows trimmed statistics for each base column computed by computeTifTrimmedStats.
+ * All TIF inline columns render '—'. The row is hidden by the caller when TIF is off.
  *
  * T-11-05: all cell content via textContent.
  *
- * @param {string} label        row label ('min-TIF', 'median-TIF', 'max-TIF')
- * @param {object} tifAvgs      { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null
- * @param {object} snap         settings snapshot (for timeFormat)
+ * @param {string} label      row label ('min-TIF', 'median-TIF', 'max-TIF')
+ * @param {object} tifStats   flat map { colKey: value|null } from computeTifTrimmedStats
+ * @param {object} snap       settings snapshot (for timeFormat)
  * @returns {HTMLTableRowElement}
  */
-function buildTifAggregateRow(label, tifAvgs, snap) {
+function buildTifAggregateRow(label, tifStats, snap) {
   const tr = document.createElement('tr');
   tr.classList.add('metrics-summary-row', 'metrics-tif-row');
 
@@ -300,15 +362,12 @@ function buildTifAggregateRow(label, tifAvgs, snap) {
   labelCell.textContent = label;
   tr.appendChild(labelCell);
 
-  // Base COLUMNS (indices 1-15): show average for event-type columns; '—' for the rest
+  // Base COLUMNS (indices 1-17): show trimmed stat for each column
   for (let i = 1; i < COLUMNS.length; i++) {
     const col = COLUMNS[i];
     const td = document.createElement('td');
-    if (tifAvgs && TIF_EVENT_TYPES.has(col.key) && tifAvgs[col.key] != null) {
-      td.textContent = formatTime(tifAvgs[col.key], snap.timeFormat); // T-11-05: textContent
-    } else {
-      td.textContent = '—';
-    }
+    const value = tifStats ? tifStats[col.key] : null;
+    td.textContent = formatCellValue(value, col, snap); // T-11-05: textContent
     tr.appendChild(td);
   }
 
@@ -320,6 +379,210 @@ function buildTifAggregateRow(label, tifAvgs, snap) {
   }
 
   return tr;
+}
+
+/**
+ * Build a full-width section-header row (tr) spanning all columns.
+ *
+ * Creates a single td with colspan = colCount and textContent = label.
+ * CSS text-transform: uppercase is applied by style.css, so label is stored
+ * in lowercase ('7-day rolling', 'All-time') per D-02.
+ *
+ * T-11-05: textContent only — label is always a hardcoded static string.
+ *
+ * @param {string} label    Section label ('7-day rolling', '14-day rolling', 'All-time')
+ * @param {number} colCount Total column count (COLUMNS.length + TIF_COLUMNS.length = 30)
+ * @returns {HTMLTableRowElement}
+ */
+function buildSectionHeaderRow(label, colCount) {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.className = 'metrics-section-header';
+  td.colSpan = colCount;
+  td.textContent = label; // T-11-05: hardcoded static string — textContent safe
+  tr.appendChild(td);
+  return tr;
+}
+
+/**
+ * Build a rolling-window aggregate tbody (7-day or 14-day).
+ *
+ * Derives its slice from nonRejectedDays — the caller must already have
+ * applied stage filtering and rejection filtering. This function does NOT
+ * re-filter (D-08).
+ *
+ * Structure: section-header row → Min row → Average row → Max row.
+ * Min/Avg/Max rows always rendered even when fewer than nDays are available (D-10).
+ * TIF placeholder cells (12) are appended to each aggregate row and hidden when
+ * TIF is not active (D-05).
+ *
+ * T-11-05: all cell content via textContent (delegated to buildAggregateRow / buildCell).
+ *
+ * @param {number}   nDays            Window size (7 or 14)
+ * @param {string}   label            Section label ('7-day rolling' or '14-day rolling')
+ * @param {object[]} nonRejectedDays  Stage-filtered, rejection-filtered, oldest-first days
+ * @param {object}   snap             Settings snapshot
+ * @param {boolean}  isTif            True when TIF algorithm is active
+ * @returns {HTMLTableSectionElement}
+ */
+function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
+  // Step 1: available count
+  const available = nonRejectedDays.length;
+
+  // Step 2: cold-start note when fewer than nDays available (D-09)
+  const headerLabel = (available < nDays)
+    ? (label + ' (' + available + ' days available)')
+    : label;
+
+  // Step 3: oldest-first slice of the N most recent non-rejected days
+  const slice = nonRejectedDays.slice(-nDays);
+
+  // Step 4: compute aggregates (returns all-null avg/min/max when slice is [])
+  const result = aggregateMetrics(slice);
+
+  // Step 4a: augment rolling rows with sleepDebt (MET-14).
+  // sliceOffset maps each rolling row back to its position in the full nonRejectedDays
+  // array so sleepDebtProxy receives the full history up to that day — not just the
+  // bounded rolling window. Without this, the cold-start guard (< 7 qualifying records)
+  // misfires for all but the last row in the 7-day section (G-18-6).
+  const sliceOffset = Math.max(0, nonRejectedDays.length - nDays);
+  for (let i = 0; i < result.rows.length; i++) {
+    result.rows[i].sleepDebt = sleepDebtProxy(
+      nonRejectedDays.slice(0, sliceOffset + i + 1),
+      7,
+      snap.targetSleepMinutes
+    );
+  }
+  // Aggregate sleepDebt over the rolling rows (all non-rejected, filter only null).
+  const rollingDebtEntries = result.rows
+    .filter(r => r.sleepDebt !== null)
+    .map(r => ({ value: r.sleepDebt, date: r.date }));
+  if (rollingDebtEntries.length > 0) {
+    const rollingDebtSum = rollingDebtEntries.reduce((acc, e) => acc + e.value, 0);
+    result.avg.sleepDebt = Math.round(rollingDebtSum / rollingDebtEntries.length);
+    result.min.sleepDebt = rollingDebtEntries.reduce((best, e) => e.value < best.value ? e : best, rollingDebtEntries[0]);
+    result.max.sleepDebt = rollingDebtEntries.reduce((best, e) => e.value > best.value ? e : best, rollingDebtEntries[0]);
+  } else {
+    result.avg.sleepDebt = null;
+    result.min.sleepDebt = null;
+    result.max.sleepDebt = null;
+  }
+
+  // Step 5: create tbody with rolling-specific classes
+  const tbody = document.createElement('tbody');
+  tbody.classList.add('metrics-summary-tbody', 'metrics-rolling-tbody');
+
+  // Step 6: section-header row spanning all columns
+  tbody.appendChild(buildSectionHeaderRow(headerLabel, COLUMNS.length + TIF_COLUMNS.length));
+
+  // Step 7: build Min / Average / Max aggregate rows (always rendered, D-10)
+  const minRow = buildAggregateRow('Min',     result.min, snap);
+  const avgRow = buildAggregateRow('Average', result.avg, snap);
+  const maxRow = buildAggregateRow('Max',     result.max, snap);
+
+  // Step 8: append TIF placeholder cells to each row (D-05)
+  // Each rolling aggregate row ends with TIF_COLUMNS.length (= 12) em-dash cells,
+  // hidden when TIF is not active. This prevents column-count mismatch.
+  for (const row of [minRow, avgRow, maxRow]) {
+    for (let j = 0; j < TIF_COLUMNS.length; j++) {
+      const td = document.createElement('td');
+      td.textContent = '—';
+      td.hidden = !isTif;
+      row.appendChild(td);
+    }
+  }
+
+  // Step 9: append rows to tbody
+  tbody.appendChild(minRow);
+  tbody.appendChild(avgRow);
+  tbody.appendChild(maxRow);
+
+  // Step 10: return the completed tbody
+  return tbody;
+}
+
+// ---------------------------------------------------------------------------
+// Day-of-Week Patterns section (MET-12, D-08..D-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the collapsible "Day-of-Week Patterns" <details> element.
+ *
+ * Receives nonRejectedDays — the same stage-filtered + rejected-excluded array
+ * used by rolling sections — so active-stage scoping is automatic (D-07, MET-12).
+ *
+ * Section starts collapsed by default (no `open` attribute, D-12, D-14):
+ * replaceChildren() rebuilds the DOM on every render, so state always resets.
+ *
+ * All cell content is set via textContent only (XSS guard T-17-03).
+ *
+ * @param {object[]} nonRejectedDays  pre-filtered day records (same as rolling sections)
+ * @param {object}   snap             settings snapshot (reads snap.firstDayOfWeek)
+ * @returns {HTMLDetailsElement}
+ */
+function buildDowSection(nonRejectedDays, snap) {
+  const firstDay = snap.firstDayOfWeek ?? 'monday';
+
+  // Compute per-weekday averages from the pre-filtered records.
+  const entries = dayOfWeekAverages(nonRejectedDays);
+
+  // Rotate so the configured first day leads.
+  // Default array is [Sun=0, Mon=1, ..., Sat=6].
+  // 'monday' → [Mon, Tue, Wed, Thu, Fri, Sat, Sun] (slice from index 1, append Sun)
+  // 'sunday' → [Sun, Mon, Tue, Wed, Thu, Fri, Sat] (keep as-is)
+  const ordered = firstDay === 'monday'
+    ? [...entries.slice(1), entries[0]]
+    : [...entries];
+
+  // <details> with no `open` attribute — collapsed by default (D-12).
+  const details = document.createElement('details');
+  details.className = 'metrics-dow-section';
+
+  // <summary> heading — exact text per D-13.
+  const summary = document.createElement('summary');
+  summary.textContent = 'Day-of-Week Patterns';
+  details.appendChild(summary);
+
+  // Standalone 5-column table (D-09).
+  const table = document.createElement('table');
+  table.className = 'metrics-dow-table';
+
+  // thead row: Weekday | MA | AA | Nap | Sleep
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const label of ['Weekday', 'MA', 'AA', 'Nap', 'Sleep']) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.appendChild(th);
+  }
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  // tbody — one row per ordered weekday entry.
+  const tbody = document.createElement('tbody');
+  for (const entry of ordered) {
+    const tr = document.createElement('tr');
+
+    // Weekday label cell (left-aligned via CSS).
+    const labelTd = document.createElement('td');
+    labelTd.textContent = entry.label;
+    tr.appendChild(labelTd);
+
+    // Four metric cells: MA, AA, Nap, Sleep — em-dash when null (MET-12).
+    for (const key of ['activityBeforeNap', 'activityAfterNap', 'napDuration', 'sleepDuration']) {
+      const td = document.createElement('td');
+      const value = entry[key];
+      // All values are durations (integers in minutes) or null.
+      td.textContent = value === null ? '—' : formatDuration(value);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  details.appendChild(table);
+
+  return details;
 }
 
 // ---------------------------------------------------------------------------
@@ -337,7 +600,7 @@ function buildTifAggregateRow(label, tifAvgs, snap) {
  * @param {{
  *   root: HTMLElement,
  *   eventLog: {
- *     daysBySubjectiveNight: (cutoverHour: number) => Array<object>,
+ *     daysBySubjectiveNight: (cutoverHour: number, limit?: number, settings?: object) => Array<object>,
  *     subscribe: (fn: () => void) => () => void,
  *   },
  *   settings: {
@@ -377,8 +640,9 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
   const render = () => {
     const snap = settings.get();
 
-    // Full history via subjective-night bucketing
-    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // Full history via subjective-night bucketing; pass snap so rejectedDays/intenseDays
+    // annotations are applied (mirrors history-screen.js pattern).
+    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour, undefined, snap);
 
     // Empty state: no days logged
     if (!allDays || allDays.length === 0) {
@@ -399,8 +663,40 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     renderStageBadge(stageBadge, snap);
 
     // aggregateMetrics expects oldest-first (prevDay pairing); bucketBy returns newest-first.
-    const metricsResult = aggregateMetrics([...days].reverse());
+    const reversedDays  = [...days].reverse();
+    const metricsResult = aggregateMetrics(reversedDays);
     const { rows, avg, min, max } = metricsResult;
+
+    // Derive non-rejected days from stage-filtered reversedDays (D-08).
+    // Must come from reversedDays (already stage-filtered), NOT from allDays.
+    const nonRejectedDays = reversedDays.filter(r => !r.rejected);
+
+    // Augment per-day rows with sleepDebt (MET-14).
+    // rows[i] corresponds to reversedDays[i] (oldest-first). For each row, pass
+    // the non-rejected days up to and including position i so sleepDebtProxy
+    // can apply its own filter-then-slice window. snap.targetSleepMinutes comes
+    // from the validated settings store (D-01). Note: the plan draft used
+    // snap.settings.targetSleepMinutes but snap IS the settings object here.
+    for (let i = 0; i < rows.length; i++) {
+      const nonRejectedUpToI = reversedDays.slice(0, i + 1).filter(d => !d.rejected);
+      rows[i].sleepDebt = sleepDebtProxy(nonRejectedUpToI, 7, snap.targetSleepMinutes);
+    }
+    // Augment all-time aggregate with sleepDebt avg/min/max.
+    // Only non-rejected rows with a non-null debt contribute (D-08).
+    // First-occurrence wins on ties (oldest-first iteration, strict < / > updates).
+    const debtEntries = rows
+      .filter(r => !r.rejected && r.sleepDebt !== null)
+      .map(r => ({ value: r.sleepDebt, date: r.date }));
+    if (debtEntries.length > 0) {
+      const debtSum = debtEntries.reduce((acc, e) => acc + e.value, 0);
+      avg.sleepDebt = Math.round(debtSum / debtEntries.length);
+      min.sleepDebt = debtEntries.reduce((best, e) => e.value < best.value ? e : best, debtEntries[0]);
+      max.sleepDebt = debtEntries.reduce((best, e) => e.value > best.value ? e : best, debtEntries[0]);
+    } else {
+      avg.sleepDebt = null;
+      min.sleepDebt = null;
+      max.sleepDebt = null;
+    }
 
     // TIF inline columns — compute retroactive bounds map when TIF is active (MET-08, D-11)
     const isTif = snap.forecastAlgorithm === 'tif';
@@ -408,24 +704,46 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     const tifBoundsArray = isTif ? computeTifBoundsHistory(days, snap, activityLog) : [];
     const tifBoundsMap = new Map(tifBoundsArray.map(e => [e.date, e]));
 
-    // TIF aggregate rows helper: average a specific TIF bounds field across all days (MET-11, D-07)
-    // Returns { wake, napStart, napEnd, bedtime } — 'HH:MM' string or null when no non-null entries.
-    // Uses timeToMinutes/minutesToTime from forecast.js (wall-clock strings, no DST issues — CLAUDE.md).
-    function computeTifRowAvg(field) {
-      const result = {};
-      for (const type of ['wake', 'napStart', 'napEnd', 'bedtime']) {
-        const vals = tifBoundsArray
-          .map(e => (e[type] && e[type][field] != null) ? timeToMinutes(e[type][field]) : null)
-          .filter(v => v !== null);
-        result[type] = vals.length > 0
-          ? minutesToTime(Math.round(vals.reduce((s, v) => s + v, 0) / vals.length))
-          : null;
+    // TIF aggregate rows: trimmed stats per column over the rolling window (MET-11)
+    const tifTrimmedStats = isTif ? computeTifTrimmedStats(rows, snap) : null;
+
+    // Override the 4 event-time columns in tifTrimmedStats with values sourced from
+    // the TIF historic band (tifForecast → sourceWindows). This is NOT redundant:
+    //
+    //   computeTifTrimmedStats  — sorts raw event time strings from aggregateMetrics rows
+    //                             and applies a plain trimmedMinMax. No rejection logic.
+    //
+    //   tifForecast sourceWindows — runs the full TIF band-building algorithm, which
+    //                             applies rejectedInWindow to exclude bad days and uses
+    //                             its own trim path. Produces the same numbers shown in
+    //                             the Today screen's historic band.
+    //
+    // Without this override the min-TIF/median-TIF/max-TIF event-time cells diverge
+    // from the Today screen's historic band. See commit 50d491c (original fix) and
+    // NW-15 plan 02 FIX-03 (which incorrectly removed it, reintroducing the bug).
+    //
+    // IMPORTANT: pass `days` (newest-first, as daysBySubjectiveNight returns it), NOT
+    // reversedDays. tifForecast uses slice(-N) internally, so it must receive the same
+    // order the Today screen passes — otherwise the rolling window covers different days
+    // and the historic band values diverge from what Today shows.
+    if (isTif && tifTrimmedStats) {
+      const currentForecast = tifForecast(days, snap, activityLog);
+      const HISTORIC_LABELS = {
+        wake:     'Historic wake-up band',
+        napStart: 'Historic nap-start band',
+        napEnd:   'Historic nap-end band',
+        bedtime:  'Historic bedtime band',
+      };
+      for (const [colKey, label] of Object.entries(HISTORIC_LABELS)) {
+        const pred = currentForecast[colKey];
+        if (!pred?.sourceWindows) continue;
+        const band = pred.sourceWindows.find(w => w.label === label);
+        if (!band) continue;
+        tifTrimmedStats.min[colKey]    = band.min    ?? null;
+        tifTrimmedStats.median[colKey] = band.median ?? null;
+        tifTrimmedStats.max[colKey]    = band.max    ?? null;
       }
-      return result;
     }
-    const tifMinAvgs    = computeTifRowAvg('algMin');
-    const tifMedianAvgs = computeTifRowAvg('central');
-    const tifMaxAvgs    = computeTifRowAvg('algMax');
 
     // Build table
     const table = document.createElement('table');
@@ -450,23 +768,42 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // Summary rows tbody (Avg, Min, Max)
+    // 7-day rolling aggregate tbody (D-06: appears first above all-time)
+    const sevenDayTbody = buildRollingSection(7, '7-day rolling', nonRejectedDays, snap, isTif);
+
+    // 14-day rolling aggregate tbody (D-06: inserted between 7-day and all-time)
+    const fourteenDayTbody = buildRollingSection(14, '14-day rolling', nonRejectedDays, snap, isTif);
+
+    // All-time summary tbody (Avg, Min, Max + TIF rows)
     const summaryTbody = document.createElement('tbody');
     summaryTbody.classList.add('metrics-summary-tbody');
+
+    // Section-header row for All-time section (D-02, D-03)
+    summaryTbody.appendChild(buildSectionHeaderRow('All-time', COLUMNS.length + TIF_COLUMNS.length));
 
     // Build aggregate rows
     const avgRow = buildAggregateRow('Average', avg, snap);
     const minRow = buildAggregateRow('Min', min, snap);
     const maxRow = buildAggregateRow('Max', max, snap);
 
-    summaryTbody.appendChild(avgRow);
+    // Append TIF placeholder cells to all-time aggregate rows (D-05, mirrors buildRollingSection)
+    for (const row of [minRow, avgRow, maxRow]) {
+      for (let j = 0; j < TIF_COLUMNS.length; j++) {
+        const td = document.createElement('td');
+        td.textContent = '—';
+        td.hidden = !isTif;
+        row.appendChild(td);
+      }
+    }
+
     summaryTbody.appendChild(minRow);
+    summaryTbody.appendChild(avgRow);
     summaryTbody.appendChild(maxRow);
 
     // TIF aggregate rows (MET-11, D-06, D-07, D-08) — hidden when TIF is off
-    const minTifRow    = buildTifAggregateRow('min-TIF',    tifMinAvgs,    snap);
-    const medianTifRow = buildTifAggregateRow('median-TIF', tifMedianAvgs, snap);
-    const maxTifRow    = buildTifAggregateRow('max-TIF',    tifMaxAvgs,    snap);
+    const minTifRow    = buildTifAggregateRow('min-TIF',    tifTrimmedStats?.min    ?? null, snap);
+    const medianTifRow = buildTifAggregateRow('median-TIF', tifTrimmedStats?.median ?? null, snap);
+    const maxTifRow    = buildTifAggregateRow('max-TIF',    tifTrimmedStats?.max    ?? null, snap);
     minTifRow.hidden    = !isTif;
     medianTifRow.hidden = !isTif;
     maxTifRow.hidden    = !isTif;
@@ -474,6 +811,10 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     summaryTbody.appendChild(medianTifRow);
     summaryTbody.appendChild(maxTifRow);
 
+    // Table tbody append sequence per D-06, D-07:
+    // thead → 7-day rolling → 14-day rolling → all-time summary → per-day rows
+    table.appendChild(sevenDayTbody);
+    table.appendChild(fourteenDayTbody);
     table.appendChild(summaryTbody);
 
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
@@ -484,8 +825,9 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     }
     table.appendChild(daysTbody);
 
-    // Update scroll container
-    tableScroll.replaceChildren(table);
+    // Build DoW section and update scroll container (MET-12, D-08).
+    const dowSection = buildDowSection(nonRejectedDays, snap);
+    tableScroll.replaceChildren(table, dowSection);
   };
 
   // Initial render.

@@ -29,6 +29,8 @@ import { el, clear } from './dom.js';
 import { validateSettings } from '../lib/settings-validate.js';
 import { parseCSV } from '../lib/csv-parse.js';
 import { migrateV1ToV2, DEFAULT_SETTINGS } from '../lib/db-shape.js';
+import { combinedSleepNap } from '../lib/metrics.js';
+import { formatDuration } from '../lib/time.js';
 
 // Module-level handler references — prevents listener accumulation when Settings
 // is opened multiple times (each open removes the prior handler before adding a new one).
@@ -86,15 +88,43 @@ export function openSettings({ settings, eventLog, storage, id }) {
     if (precisionTargetEl) precisionTargetEl.value = String(s.precisionTarget ?? 60);
     const tifRollingDaysEl = form.elements.namedItem('tifRollingDays');
     if (tifRollingDaysEl) tifRollingDaysEl.value = String(s.tifRollingDays ?? 7);
+    const firstDayOfWeekEl = form.elements.namedItem('firstDayOfWeek');
+    if (firstDayOfWeekEl) firstDayOfWeekEl.value = s.firstDayOfWeek ?? 'monday';
+    const targetSleepEl = form.elements.namedItem('targetSleepMinutes');
+    if (targetSleepEl) targetSleepEl.value = String(s.targetSleepMinutes ?? 600);
     const eveningHourEl = form.elements.namedItem('eveningHour');
     if (eveningHourEl) eveningHourEl.value = String(s.eveningHour ?? 18);
     const noNapOffsetEl = form.elements.namedItem('noNapBedtimeOffsetMinutes');
     if (noNapOffsetEl) noNapOffsetEl.value = String(s.noNapBedtimeOffsetMinutes ?? 30);
     const tifOptionsEl = document.getElementById('tifOptions');
     if (tifOptionsEl) tifOptionsEl.hidden = (s.forecastAlgorithm !== 'tif');
+    const classicOptionsEl = document.getElementById('classicOptions');
+    if (classicOptionsEl) classicOptionsEl.hidden = (s.forecastAlgorithm === 'tif');
   }
 
   populateForm(snap);
+
+  // MET-13 / D-03: populate the median hint from all-time combinedSleepNap data.
+  // Uses eventLog.daysBySubjectiveNight (when eventLog is available) to get day
+  // records, then computes the median via combinedSleepNap and renders via
+  // textContent only (XSS guard T-18-04).
+  const hintEl = document.getElementById('targetSleepMedianHint');
+  if (hintEl) {
+    let days = [];
+    if (eventLog) {
+      days = eventLog.daysBySubjectiveNight(snap.cutoverHour ?? 4);
+    }
+    const vals = days
+      .map(day => combinedSleepNap(day))
+      .filter(v => v !== null)
+      .sort((a, b) => a - b);
+    if (vals.length > 0) {
+      const med = vals[Math.floor(vals.length / 2)];
+      hintEl.textContent = 'Your median: ' + formatDuration(med); // textContent only — T-18-04
+    } else {
+      hintEl.textContent = '';
+    }
+  }
 
   // D10-12: wire forecastAlgorithm change → show/hide #tifOptions
   const forecastAlgorithmEl = form.elements.namedItem('forecastAlgorithm');
@@ -104,7 +134,10 @@ export function openSettings({ settings, eventLog, storage, id }) {
       forecastAlgorithmEl.removeEventListener('change', _forecastAlgorithmChangeHandler);
     }
     _forecastAlgorithmChangeHandler = () => {
-      tifOptionsEl.hidden = (forecastAlgorithmEl.value !== 'tif');
+      const isTif = forecastAlgorithmEl.value === 'tif';
+      tifOptionsEl.hidden = !isTif;
+      const classicEl = document.getElementById('classicOptions');
+      if (classicEl) classicEl.hidden = isTif;
     };
     forecastAlgorithmEl.addEventListener('change', _forecastAlgorithmChangeHandler);
   }
@@ -146,6 +179,8 @@ export function openSettings({ settings, eventLog, storage, id }) {
         noNapBedtimeOffsetMinutes: Number(data.get('noNapBedtimeOffsetMinutes') ?? 30),
         intenseDayOffsetMinutes:   settings.get().intenseDayOffsetMinutes ?? 30,
         intenseDays:               settings.get().intenseDays || [],
+        firstDayOfWeek:            String(data.get('firstDayOfWeek') ?? 'monday'),
+        targetSleepMinutes:        Number(data.get('targetSleepMinutes') ?? 600),
       };
 
       const result = validateSettings(raw, { mode: 'save' });

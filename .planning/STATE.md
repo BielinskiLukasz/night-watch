@@ -1,36 +1,38 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Prediction & TIF Enhancements — PLANNING</summary>
-current_phase: 14
-status: completed
-stopped_at: Phase NW-14 complete — all phases complete
-last_updated: "2026-08-27T19:02:45.612Z"
-state_head: d820cbe1d64d097c207d54b9c8e64599709930b4
+milestone: v1.4
+milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
+status: Awaiting next milestone
+stopped_at: Milestone audit passed — v1.4 complete
+last_updated: "2026-09-08T16:58:08.840Z"
+last_activity: 2026-09-08
+last_activity_desc: Milestone v1.4 completed and archived
+state_head: 7bc21b1e0345e6d088fcca514d742868b2b22815
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 15
-  completed_plans: 15
-last_activity: 2026-08-25
-last_activity_desc: Phase NW-12 verified — status human_needed (2 browser UI checks); core goal achieved
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
+current_phase: 18
+current_phase_name: Sleep Debt Proxy
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-26)
+See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase NW-14 — TIF Metrics, Accuracy & Chart Fixes
+**Current focus:** Phase 18 — Sleep Debt Proxy
 
 ## Current Position
 
-Phase: NW-14
-Next phase: NW-13 (TIF Algorithm Extensions) — not yet planned
-Status: All phases complete
+Phase: Milestone v1.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-08 — Milestone v1.4 completed and archived
 
 ## Phases
 
@@ -39,6 +41,12 @@ Status: All phases complete
 | 10 | TIF Algorithm & Settings | TIF-01..11 (11) | Complete |
 | 11 | Metrics Screen | MET-01..06 (6) | Complete |
 | 12 | Prediction Logic Refinements | PRED-08..12, UI-07 | Complete |
+| 13 | TIF Algorithm Extensions | TIF-12, TIF-13, TIF-15, TIF-16 | Complete |
+| 14 | TIF Metrics, Accuracy & Chart Fixes | TIF-14, MET-07..11, UI-08..10 | Complete |
+| 15 | TIF Engine Bug Fixes | FIX-01..05 | Complete |
+| 16 | Rolling Window Aggregates | MET-09, MET-10 | Complete |
+| 17 | Day-of-Week Patterns | MET-11, MET-12 | Complete |
+| 18 | Sleep Debt Proxy | MET-13, MET-14 | Complete |
 
 ## Performance Metrics
 
@@ -76,6 +84,13 @@ Status: All phases complete
 | Phase NW-14 P05 | 9 | 2 tasks | 3 files |
 | Phase NW-14 P03 | 9 | 3 tasks | 1 files |
 | Phase NW-14 P04 | 7 | 2 tasks | 1 files |
+| Phase NW-15 P01 | 14 | 3 tasks | 2 files |
+| Phase NW-15 P02 | 14 | 3 tasks | 2 files |
+| Phase NW-16 P01 | 30 | 2 tasks | 3 files |
+| Phase NW-17 P01 | 18 | 3 tasks | 11 files |
+| Phase 18 P18-01 | 3 | 1 tasks | 2 files |
+| Phase 18 P18-03 | 10 | 2 tasks | 2 files |
+| Phase 18 P04 | 12 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -104,11 +119,28 @@ Status: All phases complete
 - [Phase 14]: D-12: dayToSleepFactor=dayLength/sleepDuration; napFraction=napDuration/combinedSleepNap; amPmSplit=activityBeforeNap/activityAfterNap — all null on missing/zero denominators
 - [Phase 14]: D-14: sleepAfterActivityFactor removed from aggregateMetrics avg/min/max; stays exported and in per-row data for backward compat
 - [Phase 14]: accuracy-tif.js imports only forecast-tif.js and forecast.js — never metrics.js (circular-import guard per CLAUDE.md)
-- [Phase 14]: [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
+- [Phase 14]: D-10: computeTifBoundsHistory uses tifRollingDays as minDays; null TIF bounds excluded from totals (not treated as miss)
 - [Phase 14]: D-15/D-16/D-17: chart fixes — yScale inverted, 4-series nap/wake/bedtime dots, buildTimeBandSeries uses dayRecords.map
 - [Phase 14]: D-09: 16-column order with napFraction/dayToSleepFactor/amPmSplit added, SAA removed
 - [Phase 14]: TIF inline columns (12) and aggregate rows (3) use el.hidden = !isTif pattern
-- [Phase 14]: [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
+- [Phase 14 Plan 04]: TIF accuracy screen: isTif branch calls computeTifBoundsHistory+computeTifAccuracy; renderAccuracy/renderTifAccuracy helpers; buildTifAccuracyGrid extracts .pct from windowHit/highConf objects
+- [Phase 15]: FIX-01: latestAt === null guard in findBedtimeDayRecord bare-string path prevents ISO-dated selection from being displaced by later bare-string entries
+- [Phase 15]: FIX-02: rejectedInWindow = window.length - acceptedWindow.length threaded to all primary band-building calls; postNoNapNapStartTimes call retains 0
+- [Phase 15]: FIX-03 (plan 02 removed the block; UAT revealed regression and restored it): override block in metrics-screen.js render() must call tifForecast and overwrite event-time columns in tifTrimmedStats with sourceWindows values — computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic and diverges from Today screen
+- [Phase 15]: FIX-03 day-order fix (UAT): override must pass `days` (newest-first, as daysBySubjectiveNight returns) NOT reversedDays — tifForecast uses slice(-N) internally so oldest-first input selects a different rolling window than Today screen
+- [Phase 15]: FIX-04: computeTifTrimmedStats comment updated to clarify bare HH:MM and ISO string inputs both handled by raw.length > 5 guard
+- [Phase 15]: FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91
+- [Phase 15]: UAT: Metrics summary row order changed to Min / Average / Max (Average between bounds)
+- [Phase 16]: nonRejectedDays derived from stage-filtered reversedDays per D-08 prohibition
+- [Phase 16]: buildRollingSection helper encapsulates cold-start note, TIF placeholders, and section-header row per D-09/D-10/D-05
+- [Phase 17]: dayOfWeekAverages uses extractDate(day.wake) for weekday attribution — skips synthetic bare-string records
+- [Phase 17]: Nap metrics only accumulate when day.napStart != null per D-02 (no-nap days excluded)
+- [Phase 17]: DoW section built with no open attribute — native HTML details collapse resets on every replaceChildren rebuild
+- [Phase 18]: Phase 18 Plan 01: sleepDebtProxy uses filter-then-slice null-exclusion rolling window; signed reduce (positive=deficit); null when < windowDays qualifying records (D-05, D-06, D-07)
+- [Phase 18]: Phase 18 Plan 02: targetSleepMinutes default 600 (10h), validated as integer 1-1440, median hint via eventLog.daysBySubjectiveNight in Settings modal
+- [Phase 18]: Phase 18 Plan 18-03: snap.targetSleepMinutes used directly (snap IS the settings object) — plan draft typo snap.settings.targetSleepMinutes corrected
+- [Phase 18]: Phase 18 Plan 18-04: sliceOffset = Math.max(0, nonRejectedDays.length - nDays) applied before rolling sleepDebt loop so proxy receives full history
+- [Phase 18]: Phase 18 Plan 18-04: COLUMNS[9].label changed from 'S.Debt' to 'S.Debt(7d)' to communicate rolling window scope to users
 
 ### Quick Tasks Completed
 
@@ -119,6 +151,9 @@ Status: All phases complete
 | 2026-08-03 | fix-saa-calculation-in-metrics-js-to-inc | Fix SAA calculation in metrics.js to include days without naps |
 | 2026-08-03 | move-add-event-button-to-line-up-with-ot | Move 'Add events' button into quickLog row and rename |
 | 2026-08-24 | update-phase-10-planning-artifacts-mark- | Update Phase 10 planning artifacts: mark TIF-01–TIF-11 [x] in REQUIREMENTS.md, update ROADMAP.md Phase 10 row to [x] Complete with 5/5 plans |
+| 2026-08-28 | fix-tif-aggregate-rows-in-metrics-screen | Fix TIF aggregate rows in metrics screen: replace averages of algMin/algMax with per-column trimmedMinMax over the TIF rolling window, skipping rejected rows, covering all 16 metric columns not just event types |
+| 2026-08-29 | move-algorithm-selector-to-top-of-foreca | Move algorithm selector to top of Forecast & Prediction fieldset; show/hide classic-only and TIF-only fields based on selection |
+| 2026-09-08 | fix-sleepdebtproxy-to-use-overnight-pair | fix sleepDebtProxy to use overnight pairing (prevDay.bedtime → day.wake) matching aggregateMetrics Comb column |
 
 ### Pending Todos
 
@@ -126,14 +161,26 @@ None.
 
 ### Blockers/Concerns
 
-None. Phase NW-12 UAT complete — all 10 tests passed. Checkbox layout fix confirmed (commit 1cf2361); mobile nap probability absence confirmed as by-design cold-start suppression.
+None.
 
 ## Session Continuity
 
-Last session: 2026-08-27T16:16:30.382Z
-Stopped at: Phase NW-14 complete — all phases complete
+Last session: 2026-09-05T17:03:16.478Z
+Stopped at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
 Resume file: None
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close, most recent first:
+
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| debug_sessions | nap-prob-mobile | investigating | 2026-09-08 | v1.4 |
+| uat_gaps | NW-09-ux-polish/09-UAT.md | unknown (archived v1.1) | 2026-09-08 | v1.4 |
+| uat_gaps | NW-04-history-screen-edit-delete/04-HUMAN-UAT.md | passed (archived v1.0) | 2026-09-08 | v1.4 |
+| verification_gaps | NW-04-history-screen-edit-delete/04-VERIFICATION.md | human_needed (archived v1.0) | 2026-09-08 | v1.4 |
+| deferred_items | NW-06-life-stages/deferred-items.md: CFG-01/02/09 failing tests | acknowledged (archived v1.0) | 2026-09-08 | v1.4 |
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 13` to plan Phase NW-13 (TIF Algorithm Extensions)
+- Start the next milestone with /gsd-new-milestone

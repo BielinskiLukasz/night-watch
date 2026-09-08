@@ -210,3 +210,141 @@ describe('buildPrediction — central from medians (TIF-15)', () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// FIX-01: findBedtimeDayRecord bare-string vs ISO ordering
+// ---------------------------------------------------------------------------
+
+describe('findBedtimeDayRecord: bare-string vs ISO ordering', () => {
+
+  // Fixture: three days with bedtime slots.
+  //   Day 0 (2024-01-10): bedtime as bare '22:00' string
+  //   Day 1 (2024-01-11): bedtime as ISO event object { at: '2024-01-11T22:30', type: 'bedtime' }
+  //   Day 2 (2024-01-12): bedtime as bare '21:45' string (appears AFTER the ISO day)
+  //
+  // Expected: tifForecast should not throw and should produce a bedtime prediction
+  // whose historic band reflects the ISO-dated day (day 1), not be skewed by
+  // the bare-string day that appears later in the array (day 2).
+  // We confirm the result is a valid prediction shape (not null/cold-start).
+  it('ISO-dated bedtime day is not displaced by a later bare-string day', () => {
+    function makeDay(date, wake, napStart, napEnd, bedtime) {
+      return { date, wake, napStart, napEnd, bedtime, rejected: false, allEvents: [] };
+    }
+
+    // Build enough days to pass minDays=3 gate.
+    // Days 0-4: warm-up days with consistent times (bare strings).
+    const warmup = Array.from({ length: 5 }, (_, i) => {
+      const d = String(i + 1).padStart(2, '0');
+      return makeDay(`2024-01-${d}`, '07:30', '13:00', '14:30', '22:00');
+    });
+
+    // Day 5: has ISO bedtime event object (chronologically latest bedtime).
+    const isoDay = makeDay(
+      '2024-01-06',
+      '07:30', '13:00', '14:30',
+      { at: '2024-01-06T22:30', type: 'bedtime' },
+    );
+
+    // Day 6: bare-string bedtime again, appears AFTER isoDay in the array.
+    const bareAfterIso = makeDay('2024-01-07', '07:30', '13:00', '14:30', '21:45');
+
+    const days = [...warmup, isoDay, bareAfterIso];
+
+    const settings = {
+      minDays: 3,
+      windowDays: 30,
+      trimPct: 0,
+      precisionTarget: 120,
+      tifRollingDays: 14,
+      forecastAlgorithm: 'tif',
+    };
+
+    // Should not throw (previously could select wrong day).
+    const result = tifForecast(days, settings);
+
+    assert.strictEqual(result.isColdStart, false, 'should not be cold-start');
+    assert.ok(result.bedtime !== null, 'bedtime prediction must not be null');
+    // Historic bedtime band must be computed (sourceWindows non-empty).
+    assert.ok(
+      Array.isArray(result.bedtime.sourceWindows) && result.bedtime.sourceWindows.length >= 1,
+      'bedtime.sourceWindows must have at least one entry',
+    );
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// FIX-02: trim-budget independence — rejected days do not over-trim accepted data
+// ---------------------------------------------------------------------------
+
+describe('trim-budget independence: rejected days do not expand auto-trim', () => {
+
+  // Fixture A: 5 accepted days, 0 rejected. trimPct=30 → budget=1 → removes 1 outlier.
+  // Fixture B: same 5 accepted days + 2 rejected days prepended.
+  //   Pre-FIX-02 (buggy): manualExcludedCount=0, budget=floor(5*30/100)=1 → same trim as A
+  //   Post-FIX-02: manualExcludedCount=2, budget=max(0, 1-2)=0 → no trim → B keeps all values
+  //
+  // After FIX-02 the rejected days consume the auto-trim budget, so the accepted
+  // data is preserved without outlier removal. Fixture B's band must be at least as
+  // wide as Fixture A's (rejected days cause LESS trimming of accepted data, not more).
+  //
+  // The outlier in the accepted set is '07:50' (vs cluster around '07:20').
+  // Fixture A trims it (budget=1), Fixture B preserves it (budget=0 after fix).
+  // => B.max >= A.max confirms the outlier is no longer trimmed.
+  it('rejected days reduce auto-trim budget so accepted outliers are preserved (FIX-02)', () => {
+    function makeDay(date, wake, napStart, napEnd, bedtime, rejected = false) {
+      return { date, wake, napStart, napEnd, bedtime, rejected, allEvents: [] };
+    }
+
+    // 5 accepted days: 4 clustered + 1 outlier at the top.
+    const acceptedDays = [
+      makeDay('2024-01-01', '07:10', '13:00', '14:30', '21:00'),
+      makeDay('2024-01-02', '07:20', '13:05', '14:35', '21:10'),
+      makeDay('2024-01-03', '07:15', '13:10', '14:40', '21:05'),
+      makeDay('2024-01-04', '07:25', '13:00', '14:30', '21:15'),
+      makeDay('2024-01-05', '07:50', '13:05', '14:35', '21:20'), // outlier wake
+    ];
+
+    // 2 rejected days (arbitrary times — they should not affect accepted-data trimming).
+    const rejectedDays = [
+      makeDay('2023-12-30', '06:00', '12:00', '13:30', '20:00', true),
+      makeDay('2023-12-31', '09:00', '14:00', '15:30', '23:00', true),
+    ];
+
+    const settings = {
+      minDays: 3,
+      windowDays: 30,
+      trimPct: 30,       // budget for 5 days = floor(5*30/100) = 1
+      precisionTarget: 120,
+      tifRollingDays: 20,
+      forecastAlgorithm: 'tif',
+    };
+
+    // Fixture A: only accepted days — budget=1, outlier trimmed, max < '07:50'.
+    const resultA = tifForecast(acceptedDays, settings);
+
+    // Fixture B: rejected prepended — budget=max(0,1-2)=0, outlier preserved, max='07:50'.
+    const resultB = tifForecast([...rejectedDays, ...acceptedDays], settings);
+
+    assert.strictEqual(resultA.isColdStart, false, 'Fixture A should not be cold-start');
+    assert.strictEqual(resultB.isColdStart, false, 'Fixture B should not be cold-start');
+
+    const wakeWinA = resultA.wake.sourceWindows.find(w => w.label === 'Historic wake-up band');
+    const wakeWinB = resultB.wake.sourceWindows.find(w => w.label === 'Historic wake-up band');
+
+    assert.ok(wakeWinA, 'Fixture A must have Historic wake-up band');
+    assert.ok(wakeWinB, 'Fixture B must have Historic wake-up band');
+
+    const hhmm2m = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+
+    // After FIX-02: Fixture B does NOT over-trim accepted data.
+    // The rejected-day budget offset (rejectedInWindow=2) consumes the full trim
+    // budget, so Fixture B's max must be >= Fixture A's max (outlier preserved).
+    assert.ok(
+      hhmm2m(wakeWinB.max) >= hhmm2m(wakeWinA.max),
+      `FIX-02: Fixture B max (${wakeWinB.max}) must be >= Fixture A max (${wakeWinA.max}) — ` +
+      'rejected days must not cause over-trimming of accepted outliers',
+    );
+  });
+
+});

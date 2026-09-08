@@ -1,5 +1,49 @@
 # Release Notes
 
+## 🟩 **v1.4.0**
+*Release date: 2026‑09‑08*
+
+Four-phase TIF Fixes & Metrics Depth milestone — 11 requirements satisfied, all UAT passed, no regressions.
+
+### Fixes
+
+**Phase 15 — TIF Engine Bug Fixes**
+
+- **`findBedtimeDayRecord` latestAt guard** (FIX-01): The function now compares ISO-format strings correctly so bare `HH:MM` entries can no longer displace a later ISO-dated bedtime when selecting the most-recent candidate.
+- **`rejectedInWindow` threading** (FIX-02): The rejection flag is now passed through to all primary band-building call sites; `postNoNapNapStartTimes` correctly retains a zero-length array (rather than `undefined`) when no post-no-nap entries qualify, preventing downstream NaN propagation.
+- **Metrics screen TIF override block** (FIX-03): The `tifForecast` override block in `metrics-screen.js` `render()` was unintentionally removed in a previous refactor. It is restored and receives days in newest-first order — matching `daysBySubjectiveNight` output — so the TIF rolling window selects the same N days as the Today screen.
+- **`computeTifTrimmedStats` comment accuracy** (FIX-04): JSDoc updated to clarify that both bare `HH:MM` and full ISO timestamp inputs are handled; the note about "bare HH:MM only" was misleading.
+- **`tifRollingDays` test description** (FIX-05): The upper-bound description in `settings-validate.test.js` is corrected from `31` to `91`, matching the validator's actual constraint.
+
+### Features
+
+**Phase 16 — Rolling Window Aggregates**
+
+- **7-day rolling aggregates** (MET-09): The Metrics screen historical-aggregates section now includes a row showing the 7-day rolling average for every column (MA, AA, nap duration, sleep duration, combined, day length, sleep debt, all ratio columns).
+- **14-day rolling aggregates** (MET-10): A 14-day rolling average row is shown alongside the 7-day row in the same aggregates section.
+
+**Phase 17 — Day-of-Week Patterns**
+
+- **Per-weekday averages** (MET-11): Average MA, AA, nap duration, and sleep duration are computed per day-of-week across the full history window (or active stage).
+- **Day-of-week collapsible section** (MET-12): A collapsible "Day of Week" panel at the bottom of the Metrics screen shows the per-weekday pattern table. Collapsed by default; persists open/closed state within the session.
+
+**Phase 18 — Sleep Debt Proxy**
+
+- **Sleep debt proxy column** (MET-13): `S.Debt(7d)` — the rolling 7-day accumulated sleep deficit (sum of `targetSleepMinutes − actualSleepMinutes` over the prior 7 days) — is added as a column in the Metrics per-day table and is included in the 7-day and 14-day rolling aggregate rows.
+- **Target sleep setting** (MET-14): A new "Target sleep" field in Settings (default 600 min) defines the daily sleep goal used by the sleep debt calculation. A hint showing the median sleep length from the most-recent 30 logged days is displayed alongside the input.
+
+### Test suite
+
+| Layer | v1.3 baseline | v1.4 | Delta |
+|---|---|---|---|
+| Unit + Integration | 753 | 795 | +42 |
+| E2E (Playwright / Chromium) | ~111 | 123 | +12 |
+| **Total** | **~864** | **918** | **~+54** |
+
+795 unit/integration tests pass; 0 regressions against v1.3 suite.
+
+---
+
 ## 🟩 **v1.3.0**
 *Release date: 2026‑08‑29*
 

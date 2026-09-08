@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-08-25 (removed B-021, B-026 — shipped in v1.2; promoted B-004–007, B-031, B-033–037 → v1.3)
-Last assigned ID: **B-037** — next new item must be **B-038**
+Last updated: 2026-09-02 (added B-045–B-046)
+Last assigned ID: **B-046** — next new item must be **B-047**
 
 ---
 
@@ -889,3 +889,244 @@ For each existing window that uses historical distributions (e.g. activity-befor
 - **Rolling windows**: add `rollingTrimmedMinMax(values, N, trimPct)` helper — takes the last N values from the series before computing `trimmedMinMax`. Slot the rolling window as an additional entry in each event type's window array; the intersection logic is unchanged.
 - **Settings**: add `tifRollingDays: number | null` to `DEFAULT_SETTINGS` and the Settings modal (Forecast & Prediction section, TIF sub-group). Guard: show only when `forecastAlgorithm === 'tif'`.
 - Unit-test `resolveActivityBeforeNap` with recorded vs. absent MA; unit-test `rollingTrimmedMinMax` with N < series length and N > series length.
+
+---
+
+## Prediction normalization, event quality flags, and screen reorganization (captured 2026-08-31)
+
+### B-038 · Normalize prediction: show only the next relevant event (nap may be skipped)
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.3 — refines the forecaster output pipeline in `today-screen.js` and the forecast libs
+
+**What:** Change prediction display so only the single next upcoming event is shown as the hero prediction, and nap events are skipped from the sequence when it is too late in the day for a nap to occur. Currently all prediction cards are rendered regardless of the current time. Normalization means: given the current time and the last logged event, determine which event type is realistically next, skip nap-start/nap-end if the nap window has passed, and surface only that event as the primary prediction.
+
+**Why:** Showing a nap-start prediction at 20:00 is misleading — the nap window is closed. Parents rely on the hero card to know what to expect next; surfacing stale or unreachable events erodes trust in the predictions.
+
+**Open questions when this gets planned:**
+
+- What threshold defines "too late for a nap"? A configurable cutoff hour (e.g., 16:00), or derived from historical nap-end data?
+- If the nap is skipped, should nap-start and nap-end cards be hidden entirely, dimmed, or replaced with a "nap window closed" label?
+- Should this logic live in the forecaster (return `null` for unreachable events) or in the Today screen renderer (filter cards before display)?
+- Interaction with B-007 (missing nap impact on bedtime): if nap is skipped, bedtime prediction should shift earlier — these two items should be planned together.
+
+**Implementation notes:**
+
+- Add a `nextReachableEvent(lastEvent, currentHour, settings)` helper (likely in `forecast.js` or a new `forecast-normalize.js`) that returns the event type that is realistically next given the time of day.
+- In `today-screen.js`: pass current clock hour to a filter before rendering prediction cards; suppress or mark cards whose event type is no longer reachable today.
+- No data shape changes — this is a presentation-layer + forecaster output filter.
+
+---
+
+### B-039 · Mark event as unknown/unclear; exclude from prediction
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-Phase 4 (history edit/delete) — requires an edit flow to apply the flag
+
+**What:** Allow a logged event to be marked as "unknown" or "unclear" — either with an approximate hour (e.g., "happened around 14:00 but unsure") or with no time at all. Events carrying this flag are excluded from the prediction algorithm's historical series so they do not skew forecasts. The flag is stored on the event record; the UI shows a visual indicator (e.g., a `?` badge) on flagged events in the history view.
+
+**Why:** Parents sometimes log events from memory hours later, or note that a sleep boundary was ambiguous (e.g., the child dozed briefly but it is unclear if it counts as a nap). Including low-confidence data in prediction training degrades forecast accuracy. Giving users a way to flag uncertain events preserves the record without poisoning the model.
+
+**Open questions when this gets planned:**
+
+- Two sub-modes: (a) unclear time — event type is known but the exact time is not; (b) unclear event — both type and time are uncertain. Should these be one flag or two?
+- Where does the flag appear in the UI? A checkbox in the manual-entry popup? A long-press action on a history row?
+- Should flagged events still appear on the Today screen and History screen, or be greyed out?
+- Prediction exclusion: remove from the historical series entirely, or include with reduced weight?
+- Data shape: add `unclear: boolean` (or `confidence: 'normal' | 'approximate' | 'unknown'`) to the event record. Requires schema migration guard in `db-shape.js`.
+
+**Implementation notes:**
+
+- Data: add `unclear: boolean` field to event records; default `false`. Update `db-shape.js` schema validation to allow the field (additive — no version bump required per the V2-additive-idempotent rule).
+- Forecast exclusion: in `forecast.js` and `forecast-tif.js` series builders, filter out events where `event.unclear === true` before computing historical windows.
+- UI: add a checkbox/toggle to `manual-entry.js`; add a `?` badge in `history-screen.js` for flagged events. Use `textContent` / `dom.js` helpers — no `innerHTML`.
+- Unit tests: verify that unclear events are excluded from rolling window inputs; verify schema round-trip.
+
+---
+
+### B-040 · Fix charts data: display the same metric values as the Metrics screen
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next charts or metrics phase — audit before adding new chart types
+
+**What:** Audit and reconcile the data transforms used by the Charts screen (`js/lib/chart-data.js`) against the per-day metric calculations in `js/lib/metrics.js`. Where the two diverge — e.g., different formulas for sleep duration, activity windows, or nap duration — fix `chart-data.js` to use the same values that appear on the Metrics screen. The Charts screen should display metric data, not independently re-derived values that may differ.
+
+**Why:** If the Sleep Length chart shows a different number than the "Sleep duration" column on the Metrics screen for the same day, users lose confidence in both screens. Consistency is more important than micro-optimizing either formula in isolation. Shared calculation from `metrics.js` is the correct source of truth.
+
+**Open questions when this gets planned:**
+
+- Which specific chart series diverge from `metrics.js`? Run a side-by-side comparison for sleep duration, nap duration, and activity gaps on at least 5 known days to identify gaps.
+- Should `chart-data.js` import directly from `metrics.js`, or should the chart renderers receive pre-computed metric rows? Direct import is simpler and removes duplication; receiving pre-computed rows avoids the circular-import risk (check the invariants in CLAUDE.md first).
+- Is the divergence in formula (e.g., cutover-hour handling) or in data pipeline (e.g., `chart-data.js` sees raw events, `metrics.js` sees day-bucketed records)?
+
+**Implementation notes:**
+
+- Audit: for each `build*Series` function in `chart-data.js`, compare the computation with its counterpart in `metrics.js`. Note any formula differences.
+- Fix: where a metric is already computed in `metrics.js`, call the same function (or import the same helper) rather than re-deriving inline.
+- Circular-import guard: `chart-data.js` currently does not import from `metrics.js`. Check whether adding that import is safe (see CLAUDE.md `metrics.js` circular-import note) before proceeding; if not, extract the shared helper to a standalone util.
+- Unit tests: pin the numeric output of `buildSleepLengthSeries` against known fixture inputs and verify it matches `dayMetrics().sleepDuration` for the same days.
+
+---
+
+### B-041 · Move TIF columns from Metrics screen to Accuracy screen
+
+**Source:** user input (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** after B-031 (TIF accuracy on Accuracy screen) and B-035 (TIF window bounds on Metrics screen) are planned — this item reorganizes the output of those two
+
+**What:** Relocate TIF-specific columns currently displayed on the Metrics screen (e.g., TIF window bounds, confidence scores surfaced via B-035) to the Accuracy screen instead. The Metrics screen should show per-day sleep and activity measurements; algorithm-specific prediction quality data belongs on the Accuracy screen alongside the existing classic-forecaster accuracy grid (B-031).
+
+**Why:** The Metrics screen is about what happened (sleep duration, activity windows, nap fraction). The Accuracy screen is about how well the algorithm predicted what would happen. Mixing prediction metadata into the Metrics screen conflates two distinct concerns and makes both screens harder to scan. Grouping all accuracy/quality data on the Accuracy screen gives users a single place to evaluate forecast performance.
+
+**Open questions when this gets planned:**
+
+- Should TIF columns appear as an additional section on the Accuracy screen (below the classic grid or as a tab — see B-031 layout options A/B/C), or replace the classic columns when TIF is active?
+- Which specific columns migrate: `finalStart`/`finalEnd` bounds, confidence score, window width? Or all TIF-derived fields?
+- After migration, does the Metrics screen still need any TIF-related display (e.g., a single "Today's TIF confidence" indicator), or is it fully TIF-free?
+- Interaction with B-031: if B-031 is planned first, design the Accuracy screen layout to accommodate the migrated columns without a second restructuring.
+
+**Implementation notes:**
+
+- Remove TIF column definitions from `js/ui/metrics-screen.js` COLUMNS array and from `js/lib/metrics.js` `aggregateMetrics()` if they were added for B-035.
+- Add equivalent columns to the Accuracy screen renderer (`js/ui/accuracy-screen.js` or equivalent). Follow the B-031 layout decision for where they appear.
+- Ensure the `accuracy-tif.js` circular-import guard is respected: columns on the Accuracy screen should read from `accuracy-tif.js` output, not from `metrics.js`.
+- Update any E2E tests that assert TIF column presence on the Metrics screen.
+
+---
+
+### B-042 · App Version Number Display
+
+**Source:** product idea — reported 2026-08-31; mirrors B-013 in med-stock
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next available patch or alongside any Settings modal work
+
+**What:** Show the current app version somewhere visible in the UI — most naturally in the Settings modal footer or a small "About" row at the bottom of the settings panel. The version string should be a single authoritative constant (e.g., `v1.0.0`) that is updated manually alongside `package.json` on each release.
+
+**Why:** Without a visible version, users cannot report "which version broke X" and the developer cannot correlate bug reports to releases. A one-line version display costs almost nothing to add and eliminates ambiguity when debugging issues reported by household members or found during manual UAT.
+
+**Open questions when this gets planned:**
+
+- Where exactly: Settings modal footer, a small badge in the PWA header, or a dedicated "About" row at the bottom of the Settings panel?
+- Should the build date be shown alongside the version for easier correlation during development?
+- Tap-to-copy behaviour — useful for pasting into a bug report?
+- Single source of truth location: a `VERSION` constant in a dedicated `js/lib/version.js` file (imported by `app.js` and the settings UI), or a literal in `app.js` directly?
+
+**Implementation notes:**
+
+- No build step in this project, so Vite's `import.meta.env` approach (used in med-stock) is not available. Instead, define `export const VERSION = 'v1.0.0'` in a new `js/lib/version.js` file; update it manually on each release alongside `package.json`.
+- Import `VERSION` in `js/ui/settings-modal.js` and append a small footer row: `<p class="version-label">Nightwatch ${VERSION}</p>`.
+- Style with existing muted-text CSS token so it does not compete visually with the settings fields.
+- `sw.js` `PRECACHE_LIST` and `tests/unit/sw-precache.test.js` must be updated to include `js/lib/version.js` if it is added as a new app-shell file.
+
+---
+
+## Metrics screen consistency follow-ups (captured 2026-08-31, deferred from NW-16 UAT)
+
+These two items were surfaced as deferred follow-ups during NW-16 (rolling-window-aggregates) UAT and are consistency improvements to the Metrics screen that make the section-header and statistics patterns uniform across all sections.
+
+### B-043 · Add metrics-section-header rows for TIF and daily-data sections
+
+**Source:** NW-16 UAT deferred follow-up (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen polish phase — or bundled with the first metrics follow-up that touches `js/ui/metrics-screen.js`
+
+**What:** NW-16 added `buildSectionHeaderRow` calls (rendering `<tr class="metrics-section-header">`) to the three new rolling-window aggregate sections (7-day, 14-day, and all-time). The TIF metrics section and the daily-data section currently lack equivalent header rows. Add `metrics-section-header` rows to both so the visual hierarchy is consistent across all sections of the metrics table.
+
+**Why:** Without a section header, the TIF section and the daily-data section start abruptly with data rows, while the three new rolling-window sections each begin with a labelled divider row. Consistent section headers make the table easier to scan and align with the UI pattern established in NW-16.
+
+**Open questions when this gets planned:**
+
+- What labels should the TIF-section header and the daily-data section header use? Candidates: "TIF Prediction" and "Daily Data" respectively — confirm with the existing section heading text.
+- Should the header rows use the same colspan and CSS as the rolling-window headers (i.e., `colspan="17"` matching the current column count)?
+- If a new phase adds columns (e.g., B-043 B-044), update the colspan in the same PR rather than leaving it stale.
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`, locate the section-building code for the TIF section and the daily-data section.
+- Call `buildSectionHeaderRow(label, columnCount)` (already exists from NW-16) at the start of each section, using the section's display label as the argument.
+- No changes to `js/lib/metrics.js` or any data layer — purely UI rendering.
+- Update `tests/e2e/metrics.spec.js` if it asserts on row count or section structure within those two sections.
+
+---
+
+### B-044 · Add event-time statistics (min/avg/max) for wake, nap start, nap end, and bedtime
+
+**Source:** NW-16 UAT deferred follow-up (2026-08-31)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen feature phase — moderate scope, pairs naturally with B-043
+
+**What:** Add statistics rows (min, avg, max) for the four event times — wake, nap start, nap end, and bedtime — to the rolling-window sections (7-day, 14-day) and the all-time section of the Metrics screen. Currently the rolling-window sections show statistics for duration and activity metrics but not for the absolute clock times of each event. Showing min/avg/max event times gives users a direct view of how consistent (or variable) the sleep schedule is over each window.
+
+Example: "Wake time — Min: 06:45 · Avg: 07:12 · Max: 08:00" as a row in the 7-day section.
+
+**Why:** The spreadsheet workflow this app replaces tracked exact event times alongside durations. Rolling-window event-time statistics answer the parent's primary question — "is the wake time getting more consistent?" — without them having to mentally scan individual daily rows. Adding these statistics rounds out the rolling-window sections and brings the metrics screen closer to feature parity with the original spreadsheet.
+
+**Open questions when this gets planned:**
+
+- Which time format should be used for min/avg/max display — the user's configured `timeFormat` (12h/24h), the same helper used by the rest of the metrics screen?
+- For the avg calculation: average of the clock minutes since midnight (treating all times as minutes since 00:00) is correct for within-day events; confirm that no event type can span midnight in a way that breaks the average (i.e., wake time is always post-cutover, bedtime is always pre-cutover from the next day's perspective).
+- Should these rows appear only when there are enough days in the window (same `minDays` gate as the rolling aggregate sections), or always with a "—" when data is sparse?
+- Column layout: three sub-columns (Min / Avg / Max) per event type as separate cells, or a single merged cell with all three values?
+
+**Implementation notes:**
+
+- In `js/lib/metrics.js`: add helpers to compute min, avg, and max of a time series expressed in minutes-since-midnight — e.g., `eventTimeStats(days, eventField)` returning `{ min, avg, max }` in minutes. Apply the same null-filtering used by existing aggregate helpers.
+- In `js/ui/metrics-screen.js`: add row builders for each event type's stats triple in `buildRollingSection` and the all-time section. Use the existing `formatTime(minutes, timeFormat)` helper for display.
+- Column count: each event-time stats row adds cells to the existing row structure — confirm total column count remains consistent and update the `colspan` in section headers (B-043) accordingly.
+- Unit tests: one test per event type covering nap-present, nap-absent (null filtered), and single-day edge case.
+- E2E tests: add assertions in `tests/e2e/metrics.spec.js` that the event-time stats rows render in the rolling sections with the correct label text.
+
+---
+
+## Metrics screen collapse improvements (captured 2026-09-02, from Phase 17 UAT)
+
+### B-045 · Collapsible aggregate rows (Min / Average / Max / TIF) in Metrics screen
+
+**Source:** user input during Phase 17 UAT (2026-09-02)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** next metrics-screen polish phase — small standalone change
+
+**What:** Move the Min / Average / Max summary rows and the TIF aggregate rows from the main metrics table into a separate `<table>` wrapped in a `<details>/<summary>` collapse control (same pattern as the DoW section added in Phase 17). The main table would then show only per-day rows; the aggregate section would be collapsed by default.
+
+**Why:** Metrics screen has grown dense. Collapsing the aggregate summary rows de-clutters the default view while keeping the data one click away — mirrors the DoW collapse pattern and improves scannability on small screens.
+
+**Open questions when this gets planned:**
+
+- Summary label: "Aggregates" / "Summary rows" / "Min · Avg · Max"?
+- Should 7-day, 14-day, and all-time sections each get their own collapse, or one shared collapse for all aggregate rows?
+- Collapsed by default (consistent with DoW) or open by default (aggregates are high-value)?
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`: extract aggregate rows (Min / Average / Max / TIF) into a separate `<table class="metrics-aggregate-table">` wrapped in `<details class="metrics-aggregate-section">` with no `open` attribute.
+- Follow the same `buildDowSection` pattern: `document.createElement('details')`, `summary.textContent = 'Summary'`, `replaceChildren` on the scroll container.
+- CSS: reuse or extend `.metrics-dow-section` styles — same margin and overflow-x treatment.
+- No changes to `js/lib/metrics.js` or any data layer.
+
+---
+
+### B-046 · Collapsible daily-data table in Metrics screen
+
+**Source:** user input during Phase 17 UAT (2026-09-02)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** paired with B-045 — same metrics-screen polish phase
+
+**What:** Wrap the main per-day metrics table in a `<details>/<summary>` collapse control so the full day-by-day log can be collapsed. Useful once the Metrics screen also has rolling-window aggregates (NW-16), DoW averages (NW-17), and aggregate rows (B-045) — the per-day log is the most verbose section and benefits most from a collapse toggle.
+
+**Why:** As more sections are added to the Metrics screen the per-day table becomes the dominant source of scroll. A collapse option lets users who primarily consult aggregates or DoW averages hide the daily detail without losing access to it.
+
+**Open questions when this gets planned:**
+
+- Summary label: "Daily Data" / "All days (N)"?
+- Collapsed or open by default? Open is probably safer since the daily table is the primary content; collapsed hides data that some users visit the screen for.
+- Should the row count appear in the summary label (e.g., "Daily Data — 92 days") to signal content volume without expanding?
+
+**Implementation notes:**
+
+- In `js/ui/metrics-screen.js`: wrap the existing `tableScroll` div (or the `<table>` itself) in a `<details>` element. The `<summary>` label can include a dynamic day count.
+- No `open` attribute or an explicit `open` attribute depending on the "open by default" decision above.
+- CSS: same `.metrics-dow-section` pattern.
+- Update E2E tests in `tests/e2e/metrics.spec.js` that query table rows directly — they may need to first expand the `<details>` if it is collapsed by default.
