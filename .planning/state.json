@@ -1,0 +1,68 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.4 — TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>",
+  "phases": [
+    {
+      "number": "1",
+      "name": "8. Foundation → Accuracy",
+      "status": "complete"
+    },
+    {
+      "number": "9",
+      "name": "UX Polish",
+      "status": "complete"
+    },
+    {
+      "number": "10",
+      "name": "TIF Algorithm & Settings",
+      "status": "complete"
+    },
+    {
+      "number": "11",
+      "name": "Metrics Screen",
+      "status": "complete"
+    },
+    {
+      "number": "12",
+      "name": "Prediction Logic Refinements",
+      "status": "complete"
+    },
+    {
+      "number": "13",
+      "name": "TIF Algorithm Extensions",
+      "status": "complete"
+    },
+    {
+      "number": "14",
+      "name": "TIF Metrics, Accuracy & Chart Fixes",
+      "status": "complete"
+    },
+    {
+      "number": "15",
+      "name": "TIF Engine Bug Fixes",
+      "status": "complete"
+    },
+    {
+      "number": "16",
+      "name": "Rolling Window Aggregates",
+      "status": "complete"
+    },
+    {
+      "number": "17",
+      "name": "Day-of-Week Patterns",
+      "status": "complete"
+    },
+    {
+      "number": "18",
+      "name": "Sleep Debt Proxy",
+      "status": "in_progress"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 18 of 4 · ready to verify"
+  },
+  "updated_at": "2026-09-03T09:59:34.384Z"
+}
