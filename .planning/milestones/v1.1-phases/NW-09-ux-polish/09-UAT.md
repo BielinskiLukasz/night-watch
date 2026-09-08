@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v1.4
+  at: 2026-09-08
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 9 UAT — UX Polish
 
 **Session started:** 2026-07-10
@@ -26,12 +33,14 @@
 ## Bugs Found and Fixed
 
 ### Bug 1 — Edit mode not resetting on tab switch (UI-07 / D9-04)
+
 **Symptom:** After entering edit mode on History, switching to Today and back kept the button as "Done editing" with controls still visible.
 **Root cause:** The tab system uses CSS show/hide, not DOM remounting. The `editMode` local variable in `mountHistoryScreen` was never reset.
 **Fix:** `mountHistoryScreen` now returns `resetEditMode()`. `app.js` calls it via `onTabChange` whenever the user leaves the History tab.
 **Commits:** `3866bac`
 
 ### Bug 2 — Confirm-before-logging dialog not pre-filling type or time (LOG-10 / CFG-10)
+
 **Symptom:** Dialog opened with empty time fields and always showed "Woke up" regardless of which quick-log button was clicked.
 **Root cause:** `openManualEntry` pre-fill was gated on `mode === 'edit' && existing`. The confirm-before-logging path uses `mode: 'add'` with `existing` set, so the condition was never true.
 **Fix:** Broadened condition to `if (existing)` — pre-fills whenever an existing object is provided, regardless of mode.
@@ -40,5 +49,6 @@
 ## Cosmetic Fix
 
 ### Spacing below "+ Add event" button (UI-08)
+
 **Symptom:** No visual gap between the "+ Add event" button and the hero card below it.
 **Fix:** Added `margin-bottom: 1rem` to `.addEventBtn` in style.css.

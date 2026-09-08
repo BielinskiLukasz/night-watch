@@ -86,22 +86,18 @@ compared to reality.
 - ✓ Historical aggregates (avg, min with date, max with date) for all metrics — v1.2
 - ✓ Stage-scoped Metrics filtering — v1.2
 
-## Current Milestone: v1.4 TIF Fixes & Metrics Depth
-
-**Goal:** Fix two correctness bugs in the TIF forecast engine introduced during post-v1.3 quick tasks, then deepen the Metrics screen with rolling window aggregates, day-of-week rhythm patterns, and a sleep debt proxy signal.
-
-**Target features:**
-- TIF bug fixes: `findBedtimeDayRecord` latestAt ordering, rejected-day pre-filter semantics, redundant tifForecast render call, misleading comment + stale test name
-- Rolling aggregates: 7-day and 14-day windowed stats across all metric columns
-- Day-of-week patterns: per-weekday averages for MA, AA, nap duration, sleep duration
-- Sleep debt proxy: rolling accumulated sleep deficit shown in Metrics and usable as TIF input
-
-### Active
-
-- [x] Phase 15 — TIF bug fixes (FIX-01..FIX-05)
-- [ ] Phase 16 — Rolling aggregates (MET-09, MET-10)
-- [ ] Phase 17 — Day-of-week patterns (MET-11, MET-12)
-- [ ] Phase 18 — Sleep debt proxy (MET-13, MET-14)
+**v1.4 — TIF Fixes & Metrics Depth (shipped 2026-09-08)**
+- ✓ FIX-01: latestAt guard in findBedtimeDayRecord prevents bare-string entries displacing ISO-dated selection — v1.4
+- ✓ FIX-02: rejectedInWindow threaded to all primary band-building calls; postNoNapNapStartTimes retains 0 — v1.4
+- ✓ FIX-03: tifForecast override block in metrics-screen render() preserved and day-order corrected (newest-first) — v1.4
+- ✓ FIX-04: computeTifTrimmedStats JSDoc clarified re: bare HH:MM and ISO inputs both handled — v1.4
+- ✓ FIX-05: settings-validate.test.js tifRollingDays upper-bound description corrected from 31 to 91 — v1.4
+- ✓ MET-09: 7-day rolling window aggregates for all Metrics screen columns — v1.4
+- ✓ MET-10: 14-day rolling window aggregates for all Metrics screen columns — v1.4
+- ✓ MET-11: Per-weekday average metrics (MA, AA, nap duration, sleep duration) — v1.4
+- ✓ MET-12: Day-of-week collapsible section in Metrics screen — v1.4
+- ✓ MET-13: Sleep debt proxy column (S.Debt(7d)) in Metrics per-day table and rolling aggregates — v1.4
+- ✓ MET-14: targetSleepMinutes setting (default 600 min) with median hint from event log — v1.4
 
 ### Out of Scope
 
@@ -165,14 +161,16 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | tifForecast override block in metrics-screen render() is NOT redundant | computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic; tifForecast sourceWindows runs full band-building with rejectedInWindow — without the override the two screens diverge. Discovered during NW-15 UAT. | ✓ Required — restored with day-order fix |
 | tifForecast in metrics-screen.js must receive newest-first days (same as daysBySubjectiveNight output) | tifForecast uses slice(-N) to select the rolling window; oldest-first input would select a different (older) window than Today screen. Day order must match. | ✓ Fixed in NW-15 UAT |
 
-## Current State (v1.4 — in progress, Phase 15 complete 2026-08-31)
+## Current State (v1.4 — shipped 2026-09-08)
 
-Phase 15 (TIF Engine Bug Fixes) complete. 5 planned fixes delivered across 2 plans; 2 additional correctness fixes discovered and applied during UAT (FIX-03 regression + day-ordering bug in tifForecast call). Test suite: 756+ unit/integration tests, 0 failures. Metrics summary row order updated to Min / Average / Max.
+All 4 phases complete. 11/11 requirements satisfied (FIX-01..05, MET-09..14). 918 tests, 0 failures. Tag: `v1.4`.
+
+v1.4 delivered: 5 TIF engine bug fixes, 7-day and 14-day rolling window aggregates, per-weekday pattern rows, and a sleep debt proxy column with configurable target-sleep setting.
 
 **Tech stack as shipped:** Vanilla JS/HTML/CSS, no build, no runtime deps. Layered architecture: `js/lib/` (pure functions) → `js/store/` (stateful pub/sub) → `js/adapters/` (injectable seams) → `js/ui/` (DOM modules). 5 bottom-nav screens: Today, History, Charts, Accuracy, Metrics. Two forecast algorithms: Classic (default) and TIF (opt-in).
 
 **Known issues / tech debt:**
-- None at Phase 15 close (0 TODO/FIXME markers, 0 open security threats)
+- None at v1.4 close (0 TODO/FIXME markers, 0 open security threats)
 
 ## Previous State (v1.2 — shipped 2026-08-24)
 
@@ -212,6 +210,7 @@ Archive: `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQU
 
 v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`.  
 v1.1 requirements archived to `.planning/milestones/v1.1-REQUIREMENTS.md`.  
+v1.4 requirements archived to `.planning/milestones/v1.4-REQUIREMENTS.md`.  
 Next milestone requirements defined via `/gsd-new-milestone`.
 
 ## Evolution
@@ -232,4 +231,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 — Phase NW-15 complete; Phase NW-16 (Rolling Window Aggregates) next*
+*Last updated: 2026-09-08 after v1.4 milestone (TIF Fixes & Metrics Depth)*

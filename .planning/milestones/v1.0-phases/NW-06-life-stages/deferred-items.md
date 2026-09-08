@@ -8,6 +8,7 @@
 **Not caused by:** Any Phase 6 changes
 
 ### Failing tests:
+
 - CFG-01: subject name appears in h1.subjectName and document.title after Save (D2-11)
 - CFG-01: empty subjectName → h1 + document.title both read "Nightwatch" via fallback (D2-11)
 - CFG-01: XSS-safe — HTML entities in subjectName render as literal text (Pitfall #5 / T-2-13)
@@ -19,8 +20,10 @@
 - CFG-09: switching back to 24h — AM/PM select disappears, HH input restores 0-23
 - CFG-09: time format persists across reload — 12h picker reappears on a fresh load
 - CFG-09: 12h mode — event row time renders as H:MM AM/PM in the Today list
+  status: acknowledged
 
 ### Discovery context:
+
 Discovered during Phase 6, Plan 05 full test suite verification (Task 3).
 These failures existed before any Phase 6 changes and are not caused by
 the CSV import stages wiring introduced in 06-05.

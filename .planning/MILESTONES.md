@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.4 TIF Fixes & Metrics Depth (Shipped: 2026-09-08)
+
+**Phases completed:** 4 phases, 8 plans, 13 tasks
+
+**Key accomplishments:**
+
+- Fixed two forecast-tif.js correctness bugs: bare-string/ISO bedtime ordering guard (FIX-01) and rejectedInWindow threaded to all primary trimmedMinMax band calls (FIX-02)
+- Removed redundant tifForecast double-invocation from render(), corrected computeTifTrimmedStats comment, fixed stale test description for tifRollingDays upper bound.
+- 7-day and 14-day rolling aggregate sections added to Metrics screen using buildRollingSection helper with cold-start notes, TIF placeholder cells, and section-header CSS styling.
+- Collapsible per-weekday averages table in Metrics screen backed by `dayOfWeekAverages()` TDD-tested pure function and `firstDayOfWeek` settings control.
+- sleepDebtProxy() pure function added to js/lib/metrics.js: filter-then-slice rolling window returning signed debt sum or null on cold-start
+- targetSleepMinutes setting (default 600 min / 10h) wired schema-to-modal with combinedSleepNap median hint via TDD RED/GREEN
+- S.Debt (rolling 7-day sleep debt) column wired into all three Metrics screen aggregate sections and per-day rows via sleepDebtProxy import; E2E spec updated to 31 columns with S.Debt header assertion
+- S.Debt column relabelled to 'S.Debt(7d)' and sliceOffset fix removes cold-start misfires in rolling aggregate sections
+
+---
+
 ## v1.2 Prediction & Metrics (Shipped: 2026-08-24)
 
 **Phases completed:** 2 phases, 15 plans, 19 tasks  

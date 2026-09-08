@@ -6,6 +6,7 @@ score: 4/4 must-haves verified
 overrides_applied: 0
 re_verification: false
 human_verification:
+
   - test: "Open app and navigate to History tab; verify day-column table renders"
     expected: "Table displays with columns: Date, Wake, Nap Start, Nap End, Bedtime, Rejected, Actions; shows dates descending (most recent first)"
     why_human: "Visual table layout and column ordering require human verification of alignment and readability"
@@ -21,6 +22,10 @@ human_verification:
   - test: "Full test suite: npm test (when Node.js is available)"
     expected: "Unit tests pass (133+); Integration tests pass (133+); E2E tests pass (23); no regressions from Phase 1-3"
     why_human: "Automated tests deferred — Node.js not available in verification environment. Executor noted tests are syntactically valid."
+audit_acknowledged:
+  milestone: v1.4
+  at: 2026-09-08
+  status: human_needed
 ---
 
 # Phase 4: History Screen & Edit/Delete Verification Report
@@ -136,6 +141,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 **Test:** Open the app and navigate through the full History screen workflow
 
 **Expected:** 
+
 - Header displays two tabs: "Today" and "History" with proper styling
 - Today tab is active by default (aria-selected="true")
 - Clicking History tab shows the day-column table and hides Today screen
@@ -152,6 +158,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 ### 2. Edit Event Workflow
 
 **Test:** 
+
 1. Navigate to History tab
 2. Click [Edit] button on a wake time event
 3. Verify modal opens with pre-populated date/time
@@ -161,6 +168,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 7. Switch to Today tab and verify forecast changed
 
 **Expected:** 
+
 - Modal opens with title indicating edit mode
 - Form fields (date, hour, minute) show the event's current values
 - Save button updates the event in History
@@ -175,6 +183,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 ### 3. Delete Event Workflow
 
 **Test:**
+
 1. Navigate to History tab
 2. Note the current number of day rows
 3. Click [Delete] on any day row
@@ -186,6 +195,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 9. Switch to Today and verify forecast updated
 
 **Expected:**
+
 - Confirmation dialog: "Delete all events for {date}? This cannot be undone."
 - Clicking OK removes the row immediately
 - History table is empty if all days deleted
@@ -199,6 +209,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 ### 4. Rejected Flag Toggle Workflow
 
 **Test:**
+
 1. Navigate to History tab
 2. Locate any day row
 3. Toggle the Rejected checkbox (click it)
@@ -212,6 +223,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 11. Verify rejected state persists (checkbox still checked, row still grayed)
 
 **Expected:**
+
 - Checkbox toggles immediately (no confirmation needed)
 - Row opacity changes within ~50-100ms
 - Forecast on Today screen re-computes synchronously
@@ -225,6 +237,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 ### 5. Tab Persistence and Navigation
 
 **Test:**
+
 1. Navigate to History tab
 2. Edit an event (change a time)
 3. Verify table updates
@@ -234,6 +247,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 7. Verify the table is still there with the edited value
 
 **Expected:**
+
 - Tab navigation is instant
 - Data from edits is not lost when switching tabs
 - Table scrolls to top on re-visit (D4-08)
@@ -248,6 +262,7 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 **Test:** Run `npm test` in the terminal (requires Node.js 18+ and npm installed)
 
 **Expected:** 
+
 - Unit tests: 133+ tests passing (no regressions from Phase 1-3)
 - Integration tests: 133+ tests passing (edit-delete-flow, rejected-days-forecast-sync)
 - E2E tests: 23 tests passing (19 existing + 4 new for rejected toggle)
@@ -263,11 +278,13 @@ No probes specified in phase plan. Phase 4 is UI/interaction based and requires 
 **XSS Verification:** Grep confirmed 0 `innerHTML =` assignments in Phase 4 code. All dynamic values (times, dates, event IDs) written via `textContent`, `.checked`, or `setAttribute()`. T-04-04 (XSS mitigation) is satisfied.
 
 **Data-Flow Integrity:** 
+
 - Edit/delete operations re-fetch event data fresh from eventLog before mutation (T-04-07 stale-reference mitigation)
 - Settings updates use immutable pattern: `[...currentRejected]` creates new array before `settings.update()`
 - All mutations fire subscribers synchronously (Phase 3 pattern); no race conditions
 
 **State Consistency:** 
+
 - `activeTab` persists at module scope; subscription re-renders do not reset it
 - `day.rejected` derived from `settings.rejectedDays` on every render (no cached stale state)
 - Forecast is pure function; called on every subscriber trigger

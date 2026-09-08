@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.4
-milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — COMPLETE
-current_phase: 18
-current_phase_name: Sleep Debt Proxy
-status: complete
+milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
+status: Awaiting next milestone
 stopped_at: Milestone audit passed — v1.4 complete
-last_updated: "2026-09-08T16:40:13Z"
+last_updated: "2026-09-08T16:58:08.840Z"
 last_activity: 2026-09-08
-last_activity_desc: Milestone audit passed (11/11 requirements, 918 tests green)
-state_head: 0240fe2e39bb9e0e3f781ea0b2333da4c4145693
+last_activity_desc: Milestone v1.4 completed and archived
+state_head: 7bc21b1e0345e6d088fcca514d742868b2b22815
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 8
   completed_plans: 8
+current_phase: 18
+current_phase_name: Sleep Debt Proxy
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: 18 (Sleep Debt Proxy) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-09-03 — Phase 18 execution started
+Phase: Milestone v1.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-08 — Milestone v1.4 completed and archived
 
 ## Phases
 
@@ -46,7 +46,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 | 15 | TIF Engine Bug Fixes | FIX-01..05 | Complete |
 | 16 | Rolling Window Aggregates | MET-09, MET-10 | Complete |
 | 17 | Day-of-Week Patterns | MET-11, MET-12 | Complete |
-| 18 | Sleep Debt Proxy | MET-13, MET-14 | Not started |
+| 18 | Sleep Debt Proxy | MET-13, MET-14 | Complete |
 
 ## Performance Metrics
 
@@ -169,6 +169,18 @@ Last session: 2026-09-05T17:03:16.478Z
 Stopped at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
 Resume file: None
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close, most recent first:
+
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| debug_sessions | nap-prob-mobile | investigating | 2026-09-08 | v1.4 |
+| uat_gaps | NW-09-ux-polish/09-UAT.md | unknown (archived v1.1) | 2026-09-08 | v1.4 |
+| uat_gaps | NW-04-history-screen-edit-delete/04-HUMAN-UAT.md | passed (archived v1.0) | 2026-09-08 | v1.4 |
+| verification_gaps | NW-04-history-screen-edit-delete/04-VERIFICATION.md | human_needed (archived v1.0) | 2026-09-08 | v1.4 |
+| deferred_items | NW-06-life-stages/deferred-items.md: CFG-01/02/09 failing tests | acknowledged (archived v1.0) | 2026-09-08 | v1.4 |
+
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 18` to plan Phase NW-18 (Sleep Debt Proxy — MET-13, MET-14)
+- Start the next milestone with /gsd-new-milestone
