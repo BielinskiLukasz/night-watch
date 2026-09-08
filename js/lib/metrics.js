@@ -525,20 +525,24 @@ export function dayOfWeekAverages(dayRecords) {
 // ---------------------------------------------------------------------------
 
 /**
- * Rolling sleep-debt proxy over the last windowDays qualifying records.
+ * Rolling sleep-debt proxy over the last windowDays qualifying overnight pairs.
+ *
+ * Uses overnight cross-day pairing (prevDay.bedtime → day.wake) to match the
+ * Comb column arithmetic in aggregateMetrics() (D-06). Index 0 always produces
+ * no pair (no prevDay), so the first qualifying pair is dayRecords[1].
  *
  * Caller is responsible for pre-filtering (stage filter + rejected exclusion)
  * before passing dayRecords in — consistent with aggregateMetrics() and
  * dayOfWeekAverages() (D-08).
  *
- * Days where combinedSleepNap is null (missing wake or bedtime data) are
- * excluded and do not count toward windowDays (D-05).
+ * Pairs where either bedtime (prevDay) or wake (day) is missing are excluded
+ * and do not count toward windowDays (D-05).
  *
  * Sign convention: positive = deficit (actual sleep < target).
  * Negative values are preserved — surplus sleep reduces the rolling sum.
  * No clamping at zero (D-06).
  *
- * Returns null when fewer than windowDays non-null qualifying records are
+ * Returns null when fewer than windowDays qualifying overnight pairs are
  * available — cold-start guard (D-07).
  *
  * Inputs are integer minutes; the result is an integer with no rounding
@@ -548,18 +552,28 @@ export function dayOfWeekAverages(dayRecords) {
  * @param {number}   windowDays         rolling window size (MET-14: fixed 7)
  * @param {number}   targetSleepMinutes per-day sleep target in minutes (from settings, D-01)
  * @returns {number|null} signed sum of (targetSleepMinutes − combinedSleepNap) over the
- *                        last windowDays qualifying records, or null if insufficient data
+ *                        last windowDays qualifying overnight pairs, or null if insufficient data
  */
 export function sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes) {
-  // Collect qualifying records: only days where combinedSleepNap is non-null.
-  // Take the last windowDays entries (rolling slice — D-05, D-07).
-  const validDays = dayRecords
-    .filter(day => combinedSleepNap(day) !== null)
-    .slice(-windowDays);
+  // Compute overnight-paired combinedSleepNap per qualifying day to match the
+  // aggregateMetrics Comb display column (prevDay.bedtime → day.wake, D-06).
+  const validCombValues = [];
+  for (let i = 1; i < dayRecords.length; i++) {
+    const day     = dayRecords[i];
+    const prevDay = dayRecords[i - 1];
+    const bedStr  = extractTime(prevDay.bedtime);
+    const wakeStr = extractTime(day.wake);
+    if (!bedStr || !wakeStr) continue;
+    const diff     = timeToMinutes(wakeStr) - timeToMinutes(bedStr);
+    const sleepDur = diff < 0 ? diff + 24 * 60 : diff;
+    const napDur   = napDuration(day);
+    validCombValues.push(napDur !== null ? sleepDur + napDur : sleepDur);
+  }
 
-  // Cold-start guard: not enough qualifying records yet (D-07).
-  if (validDays.length < windowDays) return null;
+  // Take last windowDays qualifying entries. Cold-start guard (D-07).
+  const window = validCombValues.slice(-windowDays);
+  if (window.length < windowDays) return null;
 
-  // Sum of (target − actual) across the window. Positive = deficit, negative = surplus (D-06).
-  return validDays.reduce((sum, day) => sum + (targetSleepMinutes - combinedSleepNap(day)), 0);
+  // Sum of (target − actual). Positive = deficit, negative = surplus (D-06).
+  return window.reduce((sum, comb) => sum + (targetSleepMinutes - comb), 0);
 }
