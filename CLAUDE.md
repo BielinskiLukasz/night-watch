@@ -76,7 +76,7 @@ js/
     forecast-tif.js     # Opt-in TIF algorithm; imports helpers from forecast.js
     accuracy.js         # Retroactive accuracy scoring for classic algorithm
     accuracy-tif.js     # Retroactive TIF backtesting engine; must NOT import metrics.js (circular)
-    metrics.js          # Per-day sleep metrics; shared by forecast-tif.js and metrics-screen.js
+    metrics.js          # Per-day sleep metrics (durations, ratios, weekday patterns, sleep debt proxy); shared by forecast-tif.js and metrics-screen.js
     chart-data.js       # Pure data transforms for Charts screen visualizations
     day-bucket.js       # Groups events into sleep-days using the cutover-hour setting
     db-shape.js         # Schema validation + V1→V2 migration; source of DEFAULT_SETTINGS
@@ -122,6 +122,8 @@ tests/
 - **PRECACHE_LIST must exclude test-only adapters.** `clock-fixed.js` and `storage-memory.js` must not appear in `sw.js`'s `PRECACHE_LIST`; `tests/unit/sw-precache.test.js` enforces this and will fail if an app-shell file is added without updating the list.
 
 - **`metrics.js` circular-import guard** — `metrics.js` is consumed by both `forecast-tif.js` and `metrics-screen.js`. It imports `timeToMinutes` from `forecast.js` but keeps a local copy of `extractTime` to avoid a cycle (`forecast-tif.js` → `metrics.js` → `forecast.js` is fine; the reverse direction would be circular).
+
+- **`sleepDebtProxy` overnight-pairing skip** — `sleepDebtProxy(dayRecords, windowDays, target)` always iterates from `i = 1` (it pairs `dayRecords[i-1].bedtime → dayRecords[i].wake`). `dayRecords[0]` is never a target day, so callers need at least `windowDays + 1` records for a full window. The function returns `null` when the window is short — this is intentional cold-start guard behaviour, not a bug.
 
 - **`accuracy-tif.js` circular-import guard** — imports from `forecast-tif.js` and `forecast.js` only. Must NOT import from `metrics.js` (which imports `forecast.js`, and `forecast-tif.js` already imports `metrics.js` — closing that loop would be circular). `settings-validate.js` has the same constraint: it imports `DEFAULT_SETTINGS` from `db-shape.js` rather than `settings.js` to avoid a `settings.js` → `settings-validate.js` → `settings.js` cycle.
 
