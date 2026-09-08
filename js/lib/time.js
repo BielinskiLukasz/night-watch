@@ -178,3 +178,21 @@ export function formatDuration(minutes) {
   const mins = rounded % 60;
   return `${hours}h ${mins}m`;
 }
+
+/**
+ * Format a signed duration in minutes with a single leading sign and no '0h' prefix.
+ * Used for sleep debt values which can be negative (surplus) or positive (deficit).
+ * Negative: '-Xh Ym' or '-Ym' when h=0. Positive: 'Xh Ym' or 'Ym' when h=0.
+ *
+ * @param {number} minutes signed integer minutes
+ * @returns {string}
+ */
+export function formatSignedDuration(minutes) {
+  const rounded = Math.round(minutes);
+  const sign = rounded < 0 ? '-' : '';
+  const abs = Math.abs(rounded);
+  const hours = Math.floor(abs / 60);
+  const mins = abs % 60;
+  if (hours === 0) return `${sign}${mins}m`;
+  return `${sign}${hours}h ${mins}m`;
+}

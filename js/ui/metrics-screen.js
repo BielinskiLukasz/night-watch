@@ -20,7 +20,7 @@ import {
   sleepDebtProxy,
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
-import { formatTime, formatDuration } from '../lib/time.js';
+import { formatTime, formatDuration, formatSignedDuration } from '../lib/time.js';
 import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
 import { trimmedMinMax, tifForecast } from '../lib/forecast-tif.js';
 import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
@@ -51,7 +51,7 @@ const COLUMNS = Object.freeze([
   { key: 'napDuration',             label: 'Nap',       isTime: false, isRatio: false },
   { key: 'napFraction',             label: 'Nap Frac',  isTime: false, isRatio: true  }, // NEW MET-09
   { key: 'combinedSleepNap',        label: 'Comb',      isTime: false, isRatio: false },
-  { key: 'sleepDebt',              label: 'S.Debt(7d)', isTime: false, isRatio: false }, // MET-14 rolling 7-day sum
+  { key: 'sleepDebt',              label: 'S.Debt(7d)', isTime: false, isRatio: false, isSigned: true }, // MET-14 rolling 7-day sum
   { key: 'dayLength',               label: 'Day Len',   isTime: false, isRatio: false },
   { key: 'dayToSleepFactor',        label: 'Day/Sleep', isTime: false, isRatio: true  }, // NEW MET-07
   { key: 'activityBeforeNap',       label: '→Nap',      isTime: false, isRatio: false },
@@ -143,6 +143,8 @@ function formatCellValue(value, colDef, snap) {
     return formatTime(value, snap.timeFormat);
   } else if (colDef.isRatio) {
     return value.toFixed(2);
+  } else if (colDef.isSigned) {
+    return formatSignedDuration(value);
   } else if (!colDef.isTime && !colDef.isRatio) {
     // Duration columns
     return formatDuration(value);

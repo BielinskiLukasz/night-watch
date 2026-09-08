@@ -20,6 +20,7 @@ import {
   to24h,
   to12h,
   formatDuration,
+  formatSignedDuration,
 } from '../../js/lib/time.js';
 
 describe('roundTo5 (round-to-nearest per Pitfall #1 / Assumption A1)', () => {
@@ -223,5 +224,33 @@ describe('formatDuration (D11-20, D11-22 — display as "Xh Ym")', () => {
   test('formatDuration(449.4) rounds down to 449 (7h 29m)', () => {
     const result = formatDuration(449.4);
     assert.equal(result, '7h 29m');
+  });
+});
+
+describe('formatSignedDuration (MET-14 — signed sleep debt display)', () => {
+  const cases = [
+    // positive (deficit): no sign prefix, no 0h
+    [265,  '4h 25m'],
+    [240,  '4h 0m'],
+    [40,   '40m'],
+    [0,    '0m'],
+    // negative (surplus): single leading minus, no 0h, minutes always positive
+    [-265, '-4h 25m'],
+    [-240, '-4h 0m'],
+    [-40,  '-40m'],
+    [-15,  '-15m'],
+    // edge: exactly 1h
+    [60,   '1h 0m'],
+    [-60,  '-1h 0m'],
+  ];
+  for (const [minutes, expected] of cases) {
+    test(`formatSignedDuration(${minutes}) === '${expected}'`, () => {
+      assert.equal(formatSignedDuration(minutes), expected);
+    });
+  }
+
+  test('formatSignedDuration rounds fractional input', () => {
+    assert.equal(formatSignedDuration(-265.4), '-4h 25m');
+    assert.equal(formatSignedDuration(40.6),   '41m');
   });
 });
