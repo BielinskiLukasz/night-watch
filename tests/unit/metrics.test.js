@@ -987,37 +987,43 @@ describe('sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes)', () => {
     assert.strictEqual(sleepDebtProxy([], 7, TARGET), null);
   });
 
-  it('returns null with fewer than windowDays valid records — 3 valid, windowDays=7 (D-07 cold-start)', () => {
+  it('returns null with fewer than windowDays valid records — 2 qualifying pairs (index 0 excluded), windowDays=7 (D-07 cold-start)', () => {
+    // 3 records → 2 qualifying pairs (day[0] skipped — no prevDay), still < 7 → null
     const days = [DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY];
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
   });
 
   it('returns a number (not null) with exactly windowDays valid records — boundary (MET-14 boundary)', () => {
-    const days = Array(7).fill(DEFICIT_DAY);
+    // 8 records → 7 qualifying pairs (day[0] skipped) → satisfies windowDays=7
+    const days = Array(8).fill(DEFICIT_DAY);
     const result = sleepDebtProxy(days, 7, TARGET);
     assert.ok(result !== null, 'should not be null at exactly windowDays qualifying records');
     assert.ok(typeof result === 'number', 'should be a number');
   });
 
   it('returns 0 when all days sleep equals target — each day contributes 0 deficit (MET-14 adjacency)', () => {
-    const days = Array(7).fill(ZERO_DAY);
+    // 8 records → 7 qualifying pairs; ZERO_DAY→ZERO_DAY overnight = 600 min = target → 0 debt
+    const days = Array(8).fill(ZERO_DAY);
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 0);
   });
 
   it('returns positive value when all days sleep less than target — deficit scenario (D-06)', () => {
-    // Each DEFICIT_DAY: sleep=540, target=600 → debt=60 per day, 7 days → 420
-    const days = Array(7).fill(DEFICIT_DAY);
+    // Each DEFICIT_DAY→DEFICIT_DAY overnight: wake=07:00(420) - bed=22:00(1320) + 1440 = 540 min
+    // target=600 → debt=60 per pair, 7 pairs → 420
+    const days = Array(8).fill(DEFICIT_DAY);
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
   });
 
   it('returns negative value when all days sleep more than target — surplus, no clamping (D-06)', () => {
-    // Each SURPLUS_DAY: sleep=660, target=600 → debt=−60 per day, 7 days → −420
-    const days = Array(7).fill(SURPLUS_DAY);
+    // Each SURPLUS_DAY→SURPLUS_DAY overnight: wake=07:00(420) - bed=20:00(1200) + 1440 = 660 min
+    // target=600 → debt=−60 per pair, 7 pairs → −420
+    const days = Array(8).fill(SURPLUS_DAY);
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), -420);
   });
 
-  it('excludes null-combinedSleepNap days — 6 valid + 1 null = 7 total, windowDays=7 → null (D-05)', () => {
-    // Only 6 qualify (NULL_DAY excluded), fewer than windowDays=7 → null
+  it('excludes null-combinedSleepNap days — 5 qualifying pairs (NULL_DAY→DEFICIT_DAY skipped), windowDays=7 → null (D-05)', () => {
+    // NULL_DAY has no bedtime → NULL_DAY→DEFICIT_DAY pair skipped (bedStr=null)
+    // Remaining 5 DEFICIT_DAY→DEFICIT_DAY pairs qualify → 5 < 7 → null
     const days = [
       NULL_DAY,
       DEFICIT_DAY, DEFICIT_DAY, DEFICIT_DAY,
@@ -1026,20 +1032,23 @@ describe('sleepDebtProxy(dayRecords, windowDays, targetSleepMinutes)', () => {
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), null);
   });
 
-  it('takes only last windowDays qualifying records — 10 valid days, windowDays=7 (rolling slice)', () => {
-    // First 3 days: surplus (sleep=660, debt=−60 each)
-    // Last 7 days: deficit (sleep=540, debt=+60 each)
-    // Correct (last 7 only): 7 × 60 = 420
-    // Wrong (all 10): 3×(−60) + 7×60 = −180 + 420 = 240
+  it('takes only last windowDays qualifying records — 11 qualifying pairs, windowDays=7 (rolling slice)', () => {
+    // 4 SURPLUS + 8 DEFICIT = 12 records → 11 qualifying pairs (day[0] skipped)
+    // pairs[0-2]: SURPLUS→SURPLUS = 660 min (surplus, debt=−60)
+    // pairs[3]: SURPLUS→DEFICIT = 660 min (surplus bedtime, debt=−60)
+    // pairs[4-10]: DEFICIT→DEFICIT = 540 min (deficit, debt=+60 each)
+    // Last 7 pairs (positions 4-10): all DEFICIT→DEFICIT → 7 × 60 = 420
+    // Wrong (all 11): 4×(−60) + 7×60 = −240 + 420 = 180
     const days = [
-      ...Array(3).fill(SURPLUS_DAY),
-      ...Array(7).fill(DEFICIT_DAY),
+      ...Array(4).fill(SURPLUS_DAY),
+      ...Array(8).fill(DEFICIT_DAY),
     ];
     assert.strictEqual(sleepDebtProxy(days, 7, TARGET), 420);
   });
 
   it('does not mutate the input array (pure function prohibition)', () => {
-    const days = Array(7).fill(DEFICIT_DAY);
+    // 8 records → 7 qualifying pairs → reaches reduce (non-null result)
+    const days = Array(8).fill(DEFICIT_DAY);
     const originalLength = days.length;
     const originalRef0 = days[0];
     sleepDebtProxy(days, 7, TARGET);
