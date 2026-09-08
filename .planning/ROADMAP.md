@@ -5,7 +5,7 @@
 - **[v1.0](milestones/v1.0-ROADMAP.md)** — 8 phases, 46 plans, 51/51 requirements, 495 tests; shipped 2026-06-30 (tag: `v1.0.0`)
 - **[v1.1](milestones/v1.1-ROADMAP.md)** — 1 phase, 6 plans, 9/9 requirements, 635 tests; shipped 2026-07-10 (tag: `v1.1.0`)
 - **[v1.2](milestones/v1.2-ROADMAP.md)** — 2 phases, 15 plans, 17/17 requirements; shipped 2026-08-24 (tag: `v1.2.0`)
-- **v1.3** — 3 phases, prediction logic refinements + TIF extensions; shipped 2026-08-27
+- **[v1.2](milestones/v1.3-ROADMAP.md)** — 3 phases, prediction logic refinements + TIF extensions; shipped 2026-08-27
 - **v1.4** — TIF bug fixes + Metrics depth (rolling aggregates, day-of-week patterns, sleep debt proxy); active
 
 ## Phases

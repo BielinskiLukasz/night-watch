@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.4
-milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>
+milestone_name: TIF Fixes & Metrics Depth (Phases 15–18) — COMPLETE
 current_phase: 18
 current_phase_name: Sleep Debt Proxy
-status: verifying
-stopped_at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
-last_updated: "2026-09-05T17:03:19.437Z"
+status: complete
+stopped_at: Milestone audit passed — v1.4 complete
+last_updated: "2026-09-08T16:40:13Z"
 last_activity: 2026-09-08
-last_activity_desc: Completed quick task 260908-oir: fix sleepDebtProxy overnight pairing
+last_activity_desc: Milestone audit passed (11/11 requirements, 918 tests green)
 state_head: 0240fe2e39bb9e0e3f781ea0b2333da4c4145693
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
   completed_plans: 8
 ---
