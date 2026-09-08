@@ -1,7 +1,7 @@
 # Nightwatch
 
 ![Status](https://img.shields.io/badge/status-stable-brightgreen)
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML-5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS-3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/ECMAScript-2022-F7DF1E?logo=javascript&logoColor=black)
@@ -87,7 +87,7 @@ All data lives in the browser's `localStorage` or in a downloaded JSON file — 
 | Charts | Sleep-length line chart, time-band scatter plot (Wake & Bedtime Bands — 4 event series, Y-axis inverted so earlier times are at bottom, post-midnight dedup), nap-pattern indicator, activity-vs-sleep correlation chart |
 | Calendar heatmap | Sleep length by calendar day |
 | Accuracy dashboard | Three-metric scoring (within max_delta, within max_delta/2, actual inside predicted band) across all four event types; when TIF is active, a second TIF-specific grid shows per-event-type window hit rate, average window width in minutes, and percentage of days with confidence score ≥ 80% |
-| Metrics screen | Dedicated 5th-tab table with 16 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), ratio scores (AAS, Day/Sleep Factor), Nap Fraction, AM/PM Split; when TIF is active, TIF window bounds and confidence score per event are shown inline, plus min/median/max TIF aggregate rows; stage-scoped filter toggle |
+| Metrics screen | Dedicated 5th-tab table with 16 columns per logged day: raw times (Wake, Nap Start, Nap End, Bedtime), duration metrics (Sleep, Nap, Combined, Day Length), activity intervals (→Nap, Nap→), ratio scores (AAS, Day/Sleep Factor), Nap Fraction, AM/PM Split, Sleep Debt (7-day rolling); when TIF is active, TIF window bounds and confidence score per event are shown inline, plus min/median/max TIF aggregate rows; stage-scoped filter toggle; 7-day and 14-day rolling window aggregates for all columns; collapsible per-weekday pattern section (MA, AA, nap duration, sleep duration averages) |
 
 ### Platform
 
@@ -177,6 +177,7 @@ All settings are available in the **Settings** panel. Changes take effect immedi
 | TIF trim % | 10 | Percentage of outlier days trimmed symmetrically before computing TIF intersection windows (0–40); only shown when TIF is selected |
 | TIF precision target | 60 min | Maximum displayed window width in minutes; intersections wider than this are narrowed, centered on the midpoint; only shown when TIF is selected |
 | TIF rolling days | — | Number of most-recent days used for the TIF rolling sub-window variant; when set, each TIF window also computes a rolling variant and prefers MA/AA values over derived durations; only shown when TIF is selected |
+| Target sleep | 600 min | Daily sleep target used to compute the rolling 7-day sleep debt proxy column in the Metrics screen; a hint showing the median sleep length from the last 30 days is displayed alongside the field |
 
 ### Life stages
 
@@ -271,6 +272,10 @@ The app targets current evergreen browsers using only baseline platform APIs (`l
 | v1.3 | 12 | Prediction Logic Refinements | ✅ Complete |
 | v1.3 | 13 | TIF Algorithm Extensions | ✅ Complete |
 | v1.3 | 14 | TIF Metrics, Accuracy & Chart Fixes | ✅ Complete |
+| v1.4 | 15 | TIF Engine Bug Fixes | ✅ Complete |
+| v1.4 | 16 | Rolling Window Aggregates | ✅ Complete |
+| v1.4 | 17 | Day-of-Week Patterns | ✅ Complete |
+| v1.4 | 18 | Sleep Debt Proxy | ✅ Complete |
 
 Full phase details and backlog in [`.planning/ROADMAP.md`](.planning/ROADMAP.md).
 
