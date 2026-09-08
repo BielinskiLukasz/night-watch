@@ -7,8 +7,8 @@ current_phase_name: Sleep Debt Proxy
 status: verifying
 stopped_at: Completed 18-04-PLAN.md — gap closure for G-18-5 and G-18-6
 last_updated: "2026-09-05T17:03:19.437Z"
-last_activity: 2026-09-03
-last_activity_desc: Phase 18 execution started
+last_activity: 2026-09-08
+last_activity_desc: Completed quick task 260908-oir: fix sleepDebtProxy overnight pairing
 state_head: 0240fe2e39bb9e0e3f781ea0b2333da4c4145693
 progress:
   total_phases: 4
@@ -153,6 +153,7 @@ Last activity: 2026-09-03 — Phase 18 execution started
 | 2026-08-24 | update-phase-10-planning-artifacts-mark- | Update Phase 10 planning artifacts: mark TIF-01–TIF-11 [x] in REQUIREMENTS.md, update ROADMAP.md Phase 10 row to [x] Complete with 5/5 plans |
 | 2026-08-28 | fix-tif-aggregate-rows-in-metrics-screen | Fix TIF aggregate rows in metrics screen: replace averages of algMin/algMax with per-column trimmedMinMax over the TIF rolling window, skipping rejected rows, covering all 16 metric columns not just event types |
 | 2026-08-29 | move-algorithm-selector-to-top-of-foreca | Move algorithm selector to top of Forecast & Prediction fieldset; show/hide classic-only and TIF-only fields based on selection |
+| 2026-09-08 | fix-sleepdebtproxy-to-use-overnight-pair | fix sleepDebtProxy to use overnight pairing (prevDay.bedtime → day.wake) matching aggregateMetrics Comb column |
 
 ### Pending Todos
 
