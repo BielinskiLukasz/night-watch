@@ -2,8 +2,8 @@
 
 Ideas and scope items captured outside the active roadmap. Anything here is *not* in v1 — it has either been deferred by explicit decision, surfaced during UAT, or earmarked for a later milestone. Items graduate to a `ROADMAP.md` phase when picked up (`/gsd-review-backlog` to promote, `/gsd-phase add` to materialize).
 
-Last updated: 2026-09-02 (added B-045–B-046)
-Last assigned ID: **B-046** — next new item must be **B-047**
+Last updated: 2026-09-08 (added B-047, B-048, B-049, B-050, B-051, B-052)
+Last assigned ID: **B-052** — next new item must be **B-053**
 
 ---
 
@@ -1130,3 +1130,258 @@ Example: "Wake time — Min: 06:45 · Avg: 07:12 · Max: 08:00" as a row in the 
 - No `open` attribute or an explicit `open` attribute depending on the "open by default" decision above.
 - CSS: same `.metrics-dow-section` pattern.
 - Update E2E tests in `tests/e2e/metrics.spec.js` that query table rows directly — they may need to first expand the `<details>` if it is collapsed by default.
+
+---
+
+## Nap probability score redesign (captured 2026-09-08)
+
+### B-047 · Redesign nap probability as a data-driven day-level prediction
+
+**Source:** user input (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.4 — requires `dayOfWeekAverages` (Phase 17) and `sleepDebtProxy` (Phase 18) to be available as inputs
+
+**What:** Redesign `napProbability()` in `js/lib/forecast.js` so it answers "will this child nap today?" as a **data-driven, time-independent prediction** computed once at wake time — not a real-time score that evolves as the clock progresses.
+
+**Current problem:** The current algorithm mixes two incompatible questions:
+- "Has enough time passed for a nap to be likely?" (`elapsedWakeTime`, `windowPassed` — clock-based signals that change every hour)
+- "Is today historically a nap day?" (`napFrequency`, `noNapStreak` — data-based, fixed at wake time)
+
+The result is a score that drifts upward through the morning and collapses to 0 at P90 nap-start, regardless of historical patterns. This is misleading: a child with 90% nap frequency should not show 15% at 10:00 just because not enough time has elapsed.
+
+**Remove entirely:**
+- `elapsedWakeTime` (30%) — clock signal, irrelevant for a day-level prediction
+- `windowPassed` (10%) — clock signal; the "window closed" state should be a separate UI display concern, not collapse the score
+
+**Keep and retune:**
+- `napFrequency` — core signal; fraction of recent days that had a nap
+
+**Add (all data already available post-v1.4):**
+- **Day-of-week nap rate** — from `dayOfWeekAverages()` (Phase 17): if today is Monday and Mondays historically have 90% nap rate, that is a strong independent signal
+- **Short-night / sleep-debt signal** — from `sleepDebtProxy()` (Phase 18): high accumulated deficit → higher nap probability; short previous night relative to rolling average also lifts probability
+- **No-nap streak** — reframe: a long consecutive no-nap streak may signal the child is transitioning out of naps (lower probability), not just a temporary miss; keep the signal but possibly steepen the decay
+
+**Proposed weights (starting point, tune with real data):**
+
+| Signal | Weight | Source |
+|---|---|---|
+| Rolling nap frequency (window) | 35% | existing `napProbability` signal 1 |
+| Day-of-week nap rate | 30% | `dayOfWeekAverages()` from `metrics.js` |
+| Sleep-debt / short-night signal | 20% | `sleepDebtProxy()` from `metrics.js` |
+| No-nap streak penalty | 15% | existing `napProbability` signal 3 |
+
+**Score lifecycle:**
+- Computed once when wake is logged (or at the start of the day if wake is not yet logged, using the prior day's bedtime as anchor).
+- Does **not** change as the clock progresses.
+- UI displays "window closed" label separately when current time passes P90 of historical nap-start — but the underlying probability score is unchanged.
+
+**Open questions when this gets planned:**
+- What is the exact formula for the sleep-debt signal? Options: (a) `clamp(debtMinutes / targetNightSleep, 0, 1)`, (b) binary flag (debt > threshold → 1, else 0), (c) linear ramp from 0 at zero-debt to 1 at 2× target deficit.
+- Should the day-of-week signal be the raw per-weekday nap fraction from `dayOfWeekAverages`, or smoothed with the overall rolling frequency to avoid cold-start weekday noise (e.g., only 1 Monday in the window)?
+- Cold-start handling: if `dayOfWeekAverages` has no data for today's weekday (too few days in window), fall back to overall `napFrequency` for that signal slot.
+- Should `NAP_SCORE_WEIGHTS` remain a frozen export (currently used in tests) or become a settings-configurable value?
+- UI: does the "window closed" label continue to appear at P90 nap-start, now decoupled from the score? Confirm with B-038 (normalize prediction to next event) — these two items interact.
+
+**Implementation notes:**
+- Change `napProbability(dayRecords, settings, context)` signature: remove `currentHour`, `currentMinute` from context (no longer needed). Add `todayDayOfWeek: number` (0=Sun…6=Sat) and `sleepDebtMinutes: number | null`.
+- Remove `sig2` (elapsedWakeTime) and `sig4` (windowPassed / hard-collapse-to-0) entirely.
+- Add `sig2_dow`: pull per-weekday nap fraction from `dayOfWeekAverages(dayRecords)[todayDayOfWeek]`; fall back to `sig1` (overall frequency) when weekday has no data.
+- Add `sig3_debt`: normalize `sleepDebtMinutes` to 0–1 using target sleep as the denominator; clamp; null → 0.5 (neutral).
+- Reweight `sig1` (napFrequency) to 35%, remove `sig3` (noNapStreak) weight adjustment but keep the signal at 15%.
+- In `today-screen.js`: pass `todayDayOfWeek` (from `new Date().getDay()`) and `sleepDebtMinutes` (from `sleepDebtProxy(forecastDays, 7, snap.targetSleepMinutes)`) into the updated context. Remove `currentMinute` from the call-site.
+- Decouple the "window closed" display label from the score: keep the `=== 0` return path as a **separate UI flag** (`napWindowClosed: boolean`) rather than collapsing the probability to 0.
+- Update unit tests in `tests/unit/forecast.test.js`: remove clock-based test cases; add weekday-signal and debt-signal test cases.
+
+---
+
+## Standalone nap prediction improvement (captured 2026-09-08)
+
+### B-048 · Anchor Classic nap prediction to today's wake time
+
+**Source:** user input (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.4 — can ship independently of B-047 (nap probability redesign); both touch nap prediction but via different mechanisms
+
+**What:** Improve the Classic algorithm's nap-start and nap-end predictions by anchoring them to today's actual (or predicted) wake time, rather than using pure historical percentile distributions of absolute clock times. Currently `js/lib/forecast.js` computes nap-start/nap-end predictions purely from P10/P50/P90 of historical absolute clock times — today's wake time has no influence.
+
+Two candidate approaches (to decide at planning time):
+
+1. **Wake-anchored activity offset** — compute P10/P50/P90 of the historical `napStart − wake` gap (activity-before-nap duration); project nap-start as `todayWake + P50(gap)`. This directly mirrors TIF window 2 but applied to the Classic forecaster with percentile bounds instead of trimmed min/max.
+
+2. **Conditional distribution** — bin historical nap-start times by wake-time bucket (e.g., wake before 07:30 vs. after) and select the percentile distribution from the matching bucket. Simpler to implement but requires enough historical days per bucket.
+
+Either approach also applies to nap-end: anchor via nap-start (actual or predicted) + P10/P50/P90 of historical nap duration, rather than using raw nap-end clock times.
+
+**Why:** The Classic algorithm's nap prediction is the weakest of all its forecasts because nap timing is driven by activity-after-wake, not the absolute clock hour. A child who wakes at 06:30 will nap earlier than one who wakes at 08:00 — a pure percentile of historical nap-start hours ignores this. The TIF algorithm already handles this via window 2 (activity-before-nap band); the Classic algorithm deserves the same improvement for users who do not use TIF.
+
+**Open questions when this gets planned:**
+
+- Which approach (wake-anchored gap vs. conditional distribution) fits better given the existing `forecast.js` architecture? Gap-based is more aligned with TIF and avoids bucket-size cold-start issues.
+- Should this change apply only when today's wake time is already logged, or also use the predicted wake time as an anchor?
+- Should the existing raw-clock-time percentiles remain as a fallback when `napStart − wake` gap history is too short?
+- Interaction with B-047 (nap probability redesign): B-047 answers "will a nap happen"; this item answers "when will the nap start/end". They are independent and can ship in either order.
+- Interaction with B-038 (normalize prediction to next event): if today's wake is not yet logged, which anchor should be used?
+
+**Implementation notes:**
+
+- In `js/lib/forecast.js`: add `buildNapGapSeries(dayRecords)` that returns `(napStart − wake)` in minutes for each day where both events exist. Apply the same rolling window and outlier logic as the existing series builders.
+- Compute `P10/P50/P90` of the gap series using the existing `percentile()` helper; project nap-start as `wakeAnchor + P10/P50/P90(gap)`.
+- For nap-end: `buildNapDurationSeries(dayRecords)` (may already exist or be easy to add); project nap-end as `napStartAnchor + P10/P50/P90(duration)`.
+- `wakeAnchor`: use `lastEvent.at` if last event is a wake; otherwise use the P50 wake prediction from the same forecast pass.
+- Preserve backward compatibility: if gap history is below `minDays`, fall back to the current raw-clock-time percentiles.
+- Unit tests: add fixture with known wake times and nap gaps; verify that nap-start prediction shifts correctly when wake time shifts.
+
+---
+
+## New accuracy scoring system (captured 2026-09-08, spec in NEW_ACC.md)
+
+### B-049 · Linear-decay per-event accuracy score (tolerance-window based)
+
+**Source:** NEW_ACC.md spec written by user (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** can ship as a standalone accuracy-engine replacement or alongside an Accuracy screen rework; independent of algorithm choice (Classic or TIF)
+
+**What:** Replace the existing accuracy scoring in `js/lib/accuracy.js` with a tolerance-window linear-decay formula. The new score is computed per event per day and averaged to a daily score:
+
+- `D = |actual − forecast|` in minutes
+- `D = 0` → 100%
+- `D ≤ W` → linear decay: `100 − (50/W) × D` (100% at 0, 50% at W)
+- `W < D ≤ 2W` → continues: `50 − (50/W) × (D − W)` (50% at W, 0% at 2W)
+- `D > 2W` → 0%
+
+Where `W` is a user-defined tolerance window in minutes (e.g., 25 min). The daily score is the average of all per-event scores for that day. Both per-event scores and the daily average are stored/surfaced.
+
+The formula applies uniformly to all event types: wake, nap-start, nap-end, bedtime (with or without nap). There is no special case per event type — the tolerance window `W` is the only parameter.
+
+**Why:** The current accuracy system uses a binary hit/miss or fixed-band approach that gives no credit for near-misses and no penalty gradient for how far off the prediction was. A linear-decay score makes accuracy more interpretable: a 10-minute miss on a 25-minute window is meaningfully better than a 24-minute miss, and the score reflects that. The 50%-at-W / 0%-at-2W shape preserves the intuition that "within window" is clearly good and "double the window" is clearly useless.
+
+**Open questions when this gets planned:**
+
+- Should `W` be a single global setting (one tolerance for all events) or per-event-type (wake might have a wider acceptable window than nap-start)?
+- Where does `W` live in `DEFAULT_SETTINGS`? Candidates: `accuracyToleranceMinutes: 25` (global) or `accuracyTolerance: { wake: 30, napStart: 20, napEnd: 20, bedtime: 30 }`.
+- Should the old scoring remain available for comparison, or be fully replaced? Full replacement is simpler; a toggle adds complexity.
+- Should the Accuracy screen display per-event scores in the existing grid columns, or add a new "Score" column alongside the existing hit-rate columns?
+- Interaction with B-031 (TIF accuracy): the linear-decay score applies to the Classic forecaster's point prediction (P50). For TIF, the existing "inside window" hit metric remains more natural — confirm whether to apply linear-decay to TIF's midpoint too.
+
+**Implementation notes:**
+
+- New pure function `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` in `js/lib/accuracy.js` — three numbers in, one number (0–100) out. No side effects.
+- `dailyAccuracyScore(dayScores)` = `sum(scores) / scores.length` (guard: empty array → null).
+- Update `computeAccuracy(dayRecords, forecastFn, snap)` to call `eventAccuracyScore` per event and accumulate `dailyScore` alongside the existing `delta` / `hit` columns.
+- Add `toleranceMinutes` to `DEFAULT_SETTINGS` (sourced from `db-shape.js`) and `settings-validate.js` rules.
+- Unit tests: pin the exact output of `eventAccuracyScore` against the example table in NEW_ACC.md (14:45→90%, 14:25→50%, 14:05→10%, 15:15→50%, 15:40→0%).
+- E2E: add an assertion that the Accuracy screen renders the daily score column.
+
+---
+
+## New wake-time forecasting algorithm (captured 2026-09-08, spec in NEW_ALG.md)
+
+### B-050 · Dual-model median blend with interval stability check (Algorithm C)
+
+**Source:** NEW_ALG.md spec written by user (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.4 — third algorithm alongside Classic and TIF; opt-in via `forecastAlgorithm` setting
+
+**What:** Add a third forecast algorithm (call it "C" or "Blend") targeting wake-time prediction, based on two independent historical models blended with an interval stability check. Full spec is in `NEW_ALG.md`; summary:
+
+**Model A1** — distribution of historical wake times (last 90 days, 25% extremes trimmed). Produces median wake time.
+
+**Model A2** — mapping of bedtime → wake time (last 90 days, 25% extremes trimmed). Given tonight's bedtime (actual or predicted), produces a median wake time.
+
+**Step A — Point estimate:** average of the two medians → `A`.
+
+**Step B — Interval stability check:**
+- `B1 = [min₁, max₁]` from trimmed A1 distribution
+- `B2 = [min₂, max₂]` from trimmed A2 distribution
+- If B1 and B2 **overlap**: compute intersection `B_intersect`. If `A` is inside → use `A` directly. If `A` is outside → shrink: `Final = 0.7 × A + 0.3 × center(B_intersect)`.
+- If B1 and B2 **do not overlap**: use `A` as point estimate, `B_combined = [min(min₁,min₂), max(max₁,max₂)]` as the uncertainty interval.
+
+The output is a single point prediction (Final) plus an uncertainty interval — compatible with the existing `{ P50, P10, P90 }` shape used by the Today screen (P50 = Final, P10/P90 = interval bounds).
+
+**Why:** Classic uses only the clock-time distribution (A1). TIF intersects multiple activity-anchored windows. This algorithm adds A2 (bedtime→waketime mapping) as an independent second signal and uses interval overlap to detect when the two models agree — producing a tighter, more confident prediction when they do, and an honest wider interval when they diverge. The 90-day / 25%-trim parameters are empirically motivated by the spreadsheet workflow.
+
+**Open questions when this gets planned:**
+
+- Algorithm C predicts wake time specifically. Should it also predict nap/bedtime using analogous pairs (e.g., wake→nap-start for nap-start; nap-end→bedtime + bedtime-distribution for bedtime)?
+- The shrinkage factor 0.7/0.3 is a starting point from the spec — should it be a configurable setting or a fixed constant?
+- How does this algorithm interact with TIF? Both can be active, or only one at a time (single `forecastAlgorithm` toggle)?
+- Cold-start: minimum days needed for A2 (bedtime→wake mapping) to be reliable — same `minDays` gate as Classic, or a separate threshold?
+- Should `trimPct` (25%) reuse the existing TIF `trimPct` setting or be a separate constant?
+
+**Implementation notes:**
+
+- New file `js/lib/forecast-blend.js` (mirrors `forecast-tif.js` structure). Exports `blendForecast(dayRecords, snap)` returning the same top-level prediction shape as `forecast.js` and `forecast-tif.js`.
+- `buildWakeTimeSeries(dayRecords, window)` — absolute wake times, trimmed.
+- `buildBedtimeToWakeMapSeries(dayRecords, window, currentBedtime)` — maps each historical bedtime to the next wake; project via median offset from `currentBedtime`.
+- `intervalOverlap(b1, b2)` — returns intersection or null (pure util, unit-testable).
+- Wire into `js/app.js` under `forecastAlgorithm: 'blend'`; update `js/ui/settings-modal.js` selector.
+- `sw.js` PRECACHE_LIST and `tests/unit/sw-precache.test.js` must include `js/lib/forecast-blend.js`.
+- Unit tests: cover overlap case (A inside), overlap case (A outside → shrinkage), non-overlap case; test with known fixture data.
+
+---
+
+## Platform capability enhancements (captured 2026-09-08)
+
+### B-051 · Autosave export to user-chosen folder (File System Access API)
+
+**Source:** user input (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.4 — requires File System Access API (Chromium 86+); graceful degradation for unsupported browsers
+
+**What:** Allow the user to pick a persistent save directory (OneDrive, Dropbox, or any local folder) once via `showDirectoryPicker()`. On every event log or settings change that would normally require a manual export, automatically write the canonical JSON export to that directory — creating or overwriting a fixed filename (e.g., `nightwatch-export.json`). The chosen directory handle is persisted in IndexedDB (the File System Access API requires a persisted handle for cross-session access). A "Change folder" button in Settings resets the handle.
+
+**Why:** The current workflow requires a manual "Export JSON" action to create a durable backup. Parents who forget to export lose data if `localStorage` is cleared. Autosaving to a synced folder (OneDrive/Dropbox) converts the app to a near-zero-risk setup: the JSON is always fresh, always backed up offsite, and can be re-imported on any device. This closes the biggest data-loss risk in the current architecture.
+
+**Open questions when this gets planned:**
+
+- Should the directory handle be persisted in IndexedDB or via `localStorage`? The File System Access API's `FileSystemDirectoryHandle` can be serialized to IndexedDB via `idbKeyval` — but that introduces a dependency. A small inline IndexedDB wrapper avoids the dependency.
+- Fallback for unsupported browsers (Firefox, Safari): show a banner explaining why autosave is unavailable and keep the manual Export button visible.
+- Write frequency: on every event add/edit/delete? Or debounced (e.g., 2 s after the last change)? Debounce is safer for rapid edits.
+- Filename: fixed (`nightwatch-export.json`) or date-stamped (creates multiple files, harder to import)? Fixed is simpler and matches the "file-as-truth" philosophy.
+- Should the autosave directory handle be cleared if the app detects the folder is no longer accessible (permission revoked)?
+
+**Implementation notes:**
+
+- New module `js/lib/autosave.js`: `pickSaveDirectory()` (calls `showDirectoryPicker({ mode: 'readwrite' })`), `saveToDisk(dirHandle, jsonString)` (calls `dirHandle.getFileHandle(name, { create: true })` + `createWritable()` + `write()` + `close()`), `persistHandle(handle)` / `restoreHandle()` (IndexedDB via inline wrapper — no npm package).
+- Guard: `if (!('showDirectoryPicker' in window)) { /* show unsupported UI */ }`.
+- Wire into `js/store/event-log.js` and `js/store/settings.js` `subscribe` callbacks: after a successful persist, call `saveToDisk` if a handle is available.
+- Settings modal: add an "Autosave folder" row with a "Choose folder" button (calls `pickSaveDirectory`) and a "Remove" button; show the folder name when set.
+- `sw.js` PRECACHE_LIST and `tests/unit/sw-precache.test.js` must include `js/lib/autosave.js`.
+- E2E test: Playwright's `page.on('filechooser')` cannot intercept `showDirectoryPicker` — test the fallback-banner rendering in an environment where the API is unavailable (mock `window.showDirectoryPicker = undefined`).
+
+---
+
+### B-052 · Split bedtime model: separate predictions for post-nap vs. no-nap days
+
+**Source:** user input (2026-09-08)
+**Status:** captured · not scheduled
+**Earliest sensible slot:** post-v1.4 — extends `js/lib/forecast.js` (Classic) and `js/lib/forecast-tif.js` (TIF); pairs with B-007 (missing-nap bedtime shift, already shipped in Phase 12)
+
+**What:** Train two separate bedtime prediction models on distinct historical subsets:
+
+1. **Nap-end model** — bedtime predictions for days where a nap occurred (`napEnd` is present). Historical series: bedtimes from nap days only. Inputs: nap-end time (anchor) + bedtime distribution from nap-day subset.
+2. **No-nap model** — bedtime predictions for days with no nap (`napEnd` absent). Historical series: bedtimes from no-nap days only. Inputs: wake time (anchor) + bedtime distribution from no-nap subset.
+
+At prediction time, select the model based on whether today's nap-end has already been logged:
+- If `napEnd` is logged today → use the nap-end model.
+- If the nap window has passed without a nap (or B-038 flags nap skipped) → use the no-nap model.
+- If neither is determined yet → blend both predictions (weighted by historical nap probability from B-047).
+
+**Why:** PRED-11 (Phase 12 / B-007) added a fixed bedtime-shift modifier when no nap occurs. That is a single-value adjustment, not a separate distribution. In practice, the bedtime distributions for nap days and no-nap days can have different means, spreads, and anchors — a child who skipped a nap often goes to bed 45–90 minutes earlier, but the exact distribution of no-nap bedtimes is not well captured by shifting the nap-day median. A split model uses the right evidence for each scenario.
+
+**Open questions when this gets planned:**
+
+- Minimum sample size per subset: if fewer than `minDays` no-nap days exist in the rolling window, fall back to the single-model prediction + the PRED-11 shift modifier. Define a per-subset cold-start guard.
+- For the nap-end model: should bedtime be predicted as an absolute time or as `napEnd + offset` (activity-after-nap duration)? The offset approach is more robust when nap-end varies widely. This mirrors TIF window 3 (bedtime band anchored to nap-end via AA ratio).
+- Interaction with B-037 (TIF: rolling-window sources and MA/AA preference): if TIF is active, the split-model concept maps cleanly to TIF's existing window 3 — confirm whether B-052 is Classic-only or should also refine TIF's bedtime window selection.
+- Interaction with B-038 (normalize to next event): the "which model to use" decision requires knowing whether a nap happened today — same signal B-038 uses to skip nap cards. Coordinate the two items so the signal is computed once and shared.
+- Should the blend weight (when neither model is determined) use the nap-probability score from B-047 directly, or a separate historical no-nap fraction?
+
+**Implementation notes:**
+
+- In `js/lib/forecast.js`: add `buildBedtimeSeriesNapDay(dayRecords)` and `buildBedtimeSeriesNoNapDay(dayRecords)` — same rolling-window + percentile logic as the existing bedtime series builder, but filtered to nap-present / nap-absent days respectively.
+- Compute `P10/P50/P90` for each subset; select the active series in `computeForecast()` based on the today-nap determination.
+- For the blend path: `blendedP50 = napProb × napDayP50 + (1 − napProb) × noNapP50` (same for P10/P90).
+- Today-nap determination: reuse the `windowPassed` flag (after B-047 decouples it from the probability score) or a new `todayNapLogged(dayRecords, clock)` helper.
+- Unit tests: fixture with mixed nap/no-nap days; verify that the nap-day model and no-nap model produce different P50 values; verify blend output at 50% nap probability.
+- Interaction with PRED-11 shift: once the split model is in place, the PRED-11 `noNapShift` setting becomes redundant for the Classic algorithm — document and optionally deprecate it.
