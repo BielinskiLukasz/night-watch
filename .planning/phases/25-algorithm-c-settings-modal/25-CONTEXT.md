@@ -1,4 +1,4 @@
-# Phase 19: Algorithm C & Settings Modal - Context
+# Phase 25: Algorithm C & Settings Modal - Context
 
 **Gathered:** 2026-09-14
 **Status:** Ready for planning
@@ -33,7 +33,7 @@ Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` �
 
 ### Nap Predictions (Algorithm C — Phase 19 local implementation)
 
-- **D-07:** Wake-anchored gap series built locally in `forecast-blend.js` for Phase 19. Phase 20 extracts `buildNapGapSeries` into `forecast.js` and removes the local copy. Do not import from `forecast.js` for this logic in Phase 19; keep it self-contained. — **Reversibility:** reversible (Phase 20 refactors this)
+- **D-07:** Wake-anchored gap series built locally in `forecast-blend.js` for Phase 25. Phase 19 (Split Bedtime & Wake-Anchored Nap) extracts `buildNapGapSeries` into `forecast.js` before this phase runs, so `forecast-blend.js` can import it directly from `forecast.js` — no need for a local copy at Phase 25 time. — **Reversibility:** reversible
 
 - **D-08:** Nap-start: two-model blend. Model 1 = wake-anchored gap: `wakeAnchor + P10/P50/P90(napStart − wake)` gap distribution. Model 2 = historic nap-start time-of-day percentiles `P10/P50/P90(napStart times)`. Stability check applied per D-02 pattern (2 intervals). — **Reversibility:** reversible
 
@@ -130,5 +130,5 @@ None — discussion stayed within phase scope.
 
 ---
 
-*Phase: 19-algorithm-c-settings-modal*
+*Phase: 25-algorithm-c-settings-modal*
 *Context gathered: 2026-09-14*

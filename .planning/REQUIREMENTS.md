@@ -68,33 +68,33 @@
 
 | Requirement | Backlog | Phase | Status |
 |-------------|---------|-------|--------|
-| PRED-13 | B-050 | Phase 19 | Pending |
-| PRED-14 | B-050 | Phase 19 | Pending |
-| PRED-15 | B-050 | Phase 19 | Pending |
-| PRED-16 | B-050 | Phase 19 | Pending |
-| PRED-17 | B-050 | Phase 19 | Pending |
-| PRED-18 | B-052 | Phase 20 | Pending |
-| PRED-19 | B-052 | Phase 20 | Pending |
-| PRED-20 | B-048 | Phase 20 | Pending |
-| PRED-21 | B-048 | Phase 20 | Pending |
-| PRED-22 | B-048 | Phase 20 | Pending |
-| NAP-01 | B-047 | Phase 21 | Pending |
-| NAP-02 | B-047 | Phase 21 | Pending |
-| NAP-03 | B-047 | Phase 21 | Pending |
-| NAP-04 | B-047 | Phase 21 | Pending |
-| PRED-23 | B-038 | Phase 22 | Pending |
-| PRED-24 | B-038 | Phase 22 | Pending |
-| ACC-01 | B-049 | Phase 23 | Pending |
-| ACC-02 | B-049 | Phase 23 | Pending |
-| ACC-03 | B-049 | Phase 23 | Pending |
-| ACC-04 | B-049 | Phase 23 | Pending |
-| UI-11 | B-041 | Phase 24 | Pending |
-| UI-12 | B-032 | Phase 19 | Pending |
-| UI-13 | B-038 | Phase 22 | Pending |
-| PLAT-01 | B-051 | Phase 25 | Pending |
-| PLAT-02 | B-051 | Phase 25 | Pending |
-| PLAT-03 | B-051 | Phase 25 | Pending |
-| PLAT-04 | B-051 | Phase 25 | Pending |
+| PRED-13 | B-050 | Phase 25 | Pending |
+| PRED-14 | B-050 | Phase 25 | Pending |
+| PRED-15 | B-050 | Phase 25 | Pending |
+| PRED-16 | B-050 | Phase 25 | Pending |
+| PRED-17 | B-050 | Phase 25 | Pending |
+| PRED-18 | B-052 | Phase 19 | Pending |
+| PRED-19 | B-052 | Phase 19 | Pending |
+| PRED-20 | B-048 | Phase 19 | Pending |
+| PRED-21 | B-048 | Phase 19 | Pending |
+| PRED-22 | B-048 | Phase 19 | Pending |
+| NAP-01 | B-047 | Phase 20 | Pending |
+| NAP-02 | B-047 | Phase 20 | Pending |
+| NAP-03 | B-047 | Phase 20 | Pending |
+| NAP-04 | B-047 | Phase 20 | Pending |
+| PRED-23 | B-038 | Phase 21 | Pending |
+| PRED-24 | B-038 | Phase 21 | Pending |
+| ACC-01 | B-049 | Phase 22 | Pending |
+| ACC-02 | B-049 | Phase 22 | Pending |
+| ACC-03 | B-049 | Phase 22 | Pending |
+| ACC-04 | B-049 | Phase 22 | Pending |
+| UI-11 | B-041 | Phase 23 | Pending |
+| UI-12 | B-032 | Phase 25 | Pending |
+| UI-13 | B-038 | Phase 21 | Pending |
+| PLAT-01 | B-051 | Phase 24 | Pending |
+| PLAT-02 | B-051 | Phase 24 | Pending |
+| PLAT-03 | B-051 | Phase 24 | Pending |
+| PLAT-04 | B-051 | Phase 24 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 27 total
@@ -103,4 +103,4 @@
 
 ---
 *Requirements defined: 2026-09-08*
-*Last updated: 2026-09-08 — PRED-18/PRED-19 moved from Phase 19 to Phase 20 (split bedtime belongs with wake-anchored nap work)*
+*Last updated: 2026-09-14 — Algorithm C (Phase 19) moved to Phase 25; phases 20–25 shifted to 19–24 to build foundational nap/accuracy work before the blending algorithm*

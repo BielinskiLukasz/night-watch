@@ -1,10 +1,10 @@
-# Phase 19: Algorithm C & Settings Modal - Discussion Log
+# Phase 25: Algorithm C & Settings Modal - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
 
 **Date:** 2026-09-14
-**Phase:** 19-algorithm-c-settings-modal
+**Phase:** 25-algorithm-c-settings-modal
 **Areas discussed:** Bedtime three-band math (prior session 2026-09-08), Nap predictions scope, Algorithm C settings exposure
 
 ---
