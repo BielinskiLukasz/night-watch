@@ -57,7 +57,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   **Plans:** 2 plans
   Plans:
   - [x] 19-01-PLAN.md — New helper exports: percentileFromArray, buildNapGapSeries, buildNapDurationSeries, buildBedtimeSeriesNapDay, buildBedtimeSeriesNoNapDay (TDD tracer + expansion)
-  - [ ] 19-02-PLAN.md — forecast() split bedtime routing + wake-anchored nap + schema cleanup (D-09/D-10 checkpoint)
+  - [x] 19-02-PLAN.md — forecast() split bedtime routing + wake-anchored nap + schema cleanup (D-09/D-10 checkpoint)
 
 - [ ] **Phase 20: Nap Probability Redesign** — Refactor `napProbabilityScore` in `js/lib/forecast.js`: drop clock-based `elapsedWakeTime` (30%) and `windowPassed` (10%) inputs, add `dayOfWeekNapRate` (30%) from `dayOfWeekAverages()` in `metrics.js` and `sleepDebtSignal` (20%) from `sleepDebtProxy()` in `metrics.js`, keep `napFrequency` (35%) and `noNapStreakPenalty` (15%); weights sum to 100%; unit tests cover all five signals and weight totals; no circular imports (`forecast.js` may import from `metrics.js` — verify direction) (requirements: NAP-01, NAP-02, NAP-03, NAP-04)
 
