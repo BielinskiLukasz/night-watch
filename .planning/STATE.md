@@ -22,11 +22,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-31)
+See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 19 — Split Bedtime & Wake-Anchored Nap
+**Current focus:** Phase 20 — nap probability redesign
 
 ## Current Position
 
@@ -174,7 +174,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-14T20:27:07.624Z
+Last session: 2026-09-14
 Stopped at: Phase 19 complete, ready to plan Phase 20
 Resume file: None
 

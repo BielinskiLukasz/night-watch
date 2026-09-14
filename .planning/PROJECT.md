@@ -99,6 +99,10 @@ compared to reality.
 - ✓ MET-13: Sleep debt proxy column (S.Debt(7d)) in Metrics per-day table and rolling aggregates — v1.4
 - ✓ MET-14: targetSleepMinutes setting (default 600 min) with median hint from event log — v1.4
 
+**v2.0 — Prediction Engine & Autosave (Phase 19, 2026-09-14)**
+- ✓ Split bedtime model: separate nap-day vs no-nap-day P10/P50/P90 distributions with probability-weighted blend — Phase 19 (PRED-18, PRED-19)
+- ✓ Wake-anchored nap-start/end: Classic nap anchored to today's wake via activity-gap percentiles; nap-end via duration percentiles — Phase 19 (PRED-20, PRED-21, PRED-22)
+
 ### Out of Scope
 
 - **Multi-profile switching** — single subject in v1; multi-subject would change persistence shape. Defer to v2.
@@ -160,6 +164,9 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | metrics.js is a shared module consumed by both TIF (duration bands) and Metrics screen | Single source of truth for duration/ratio calculations across both features | ✓ Good — no duplication in either consumer |
 | tifForecast override block in metrics-screen render() is NOT redundant | computeTifTrimmedStats uses plain trimmedMinMax with no rejection logic; tifForecast sourceWindows runs full band-building with rejectedInWindow — without the override the two screens diverge. Discovered during NW-15 UAT. | ✓ Required — restored with day-order fix |
 | tifForecast in metrics-screen.js must receive newest-first days (same as daysBySubjectiveNight output) | tifForecast uses slice(-N) to select the rolling window; oldest-first input would select a different (older) window than Today screen. Day order must match. | ✓ Fixed in NW-15 UAT |
+| Phase 19 D-09: PRED-11 `noNapFired` block permanently removed from `forecast()` | Split bedtime model (nap-day vs no-nap-day series) supersedes the blunt evening-hour missed-nap bedtime shift; removing PRED-11 eliminates double-application of bedtime adjustments | ✓ Shipped Phase 19 |
+| Phase 19 D-10: `noNapBedtimeOffsetMinutes` removed from schema, migration, and validator | Superseded by the split-series model which derives the offset implicitly from historical data; the crude fixed-offset approximation is no longer needed | ✓ Shipped Phase 19 |
+| Phase 19 D-13: pre-forecast context assembly in `today-screen.js` | `todayWakeHHMM`, `napProbabilityScore`, and `todayNapStartHHMM` are pre-computed before `forecast()` is called, then passed as context; keeps `forecast()` a pure function that does not touch the DOM or call `napProbability()` itself | ✓ Shipped Phase 19 |
 
 ## Current Milestone: v2.0 Prediction Engine & Autosave
 
@@ -167,17 +174,23 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 
 **Target features:**
 - New multi-band Algorithm C (all 4 events) with dual-model median blend + interval stability check; settings modal selector UX (B-050 + B-032)
-- Split bedtime model: separate nap-day vs no-nap-day distributions (B-052)
-- Classic nap anchored to today's wake time via activity-gap percentiles (B-048)
+- ~~Split bedtime model: separate nap-day vs no-nap-day distributions (B-052)~~ ✓ Phase 19
+- ~~Classic nap anchored to today's wake time via activity-gap percentiles (B-048)~~ ✓ Phase 19
 - Nap probability redesign: data-driven, time-independent (B-047)
 - Prediction normalization: show only next reachable event (B-038)
 - Linear-decay per-event accuracy scoring with tolerance window (B-049)
 - Move TIF window columns from Metrics → Accuracy screen (B-041)
 - Autosave export to user-chosen directory via File System Access API (B-051)
 
-## Current State (v1.4 — shipped 2026-09-08)
+## Current State (v2.0-partial — Phase 19 complete 2026-09-14)
 
-All 4 phases complete. 11/11 requirements satisfied (FIX-01..05, MET-09..14). 918 tests, 0 failures. Tag: `v1.4`.
+Phase 19 complete. 825 unit + integration tests, 0 failures. Split bedtime model (nap-day / no-nap-day distributions with probability-weighted blend) and wake-anchored nap-start/end predictions shipped to Classic algorithm. PRED-11 `noNapFired` block removed; `noNapBedtimeOffsetMinutes` setting purged from schema.
+
+**Next:** Phase 20 — nap-probability redesign.
+
+## Previous State (v1.4 — shipped 2026-09-08)
+
+All 4 v1.4 phases complete. 11/11 requirements satisfied (FIX-01..05, MET-09..14). 918 tests, 0 failures. Tag: `v1.4`.
 
 v1.4 delivered: 5 TIF engine bug fixes, 7-day and 14-day rolling window aggregates, per-weekday pattern rows, and a sleep debt proxy column with configurable target-sleep setting.
 
@@ -245,4 +258,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-08 after starting v2.0 milestone (Prediction Engine & Autosave)*
+*Last updated: 2026-09-14 after Phase 19 (Split Bedtime & Wake-Anchored Nap)*
