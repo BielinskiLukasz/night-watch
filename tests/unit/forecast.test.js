@@ -2820,3 +2820,96 @@ describe('buildBedtimeSeriesNoNapDay(dayRecords, settings)', () => {
     assert.strictEqual(result.central, 1320); // 22:00
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 19 — forecast() split bedtime routing (PRED-18/19, D-12) — Task 2
+// ---------------------------------------------------------------------------
+
+describe('forecast() split bedtime routing (PRED-18/19)', () => {
+  // Settings WITHOUT noNapBedtimeOffsetMinutes (D-10 prohibition)
+  const splitSettings = {
+    minDays: 3, windowDays: 10, maxDelta: 60,
+    intenseDayOffsetMinutes: 30, eveningHour: 18,
+  };
+
+  // Helpers: nap-day and no-nap-day records with distinct bedtimes
+  // nap-days use bedtime "21:00" (1260 min), no-nap-days use "22:00" (1320 min)
+  function napDayRecord(bedtime = '21:00') {
+    return makeDay('07:00', bedtime, '10:00', '11:00');
+  }
+  function noNapDayRecord(bedtime = '22:00') {
+    return makeDay('07:00', bedtime, null, null);
+  }
+
+  it('napStartLogged=true routes to nap-day sub-window, not overall window', () => {
+    // 3 nap-days (21:00=1260) + 5 no-nap-days (22:00=1320)
+    // Overall P50 = 22:00 (no-nap days dominate at 5 vs 3)
+    // Nap-day sub-window P50 = 21:00
+    // Expected: bedtime.central = '21:00' (from nap-day sub-series)
+    const records = [
+      napDayRecord(), napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(), noNapDayRecord(),
+      noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: true, isIntenseToday: false, currentHour: 10,
+    });
+    assert.ok(!result.isColdStart, 'should not be cold start with 8 records');
+    assert.ok(result.bedtime, 'bedtime prediction should be present');
+    assert.ok(!result.bedtime.probabilityBand, 'should be normal prediction shape, not probability band');
+    assert.strictEqual(result.bedtime.central, '21:00',
+      'napStartLogged=true should use nap-day sub-window (21:00), not overall (22:00)');
+  });
+
+  it('napProbabilityScore=70 with both sub-series >= minDays: blends central proportionally', () => {
+    // 3 nap-days (21:00=1260) + 3 no-nap-days (22:00=1320), score=70
+    // Blend: Math.round(0.7*1260 + 0.3*1320) = Math.round(882+396) = Math.round(1278) = 1278
+    // minutesToTime(1278) → Math.round(1278/5)*5 = 256*5 = 1280 → "21:20"
+    const records = [
+      napDayRecord(), napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: false, napProbabilityScore: 70, isIntenseToday: false, currentHour: 10,
+    });
+    assert.ok(!result.isColdStart);
+    assert.ok(!result.bedtime.probabilityBand, 'should be normal prediction shape');
+    assert.strictEqual(result.bedtime.central, '21:20',
+      'score=70 blend: Math.round(0.7*1260 + 0.3*1320)=1278 → minutesToTime(1278)="21:20"');
+  });
+
+  it('napProbabilityScore=null falls back to overall calculatePercentiles (no evening-hour gate)', () => {
+    // 3 nap-days (21:00=1260) + 3 no-nap-days (22:00=1320), currentHour=22
+    // Old PRED-11 fired at currentHour=22 → no-nap sub-window → "22:00"
+    // New D-07: score=null → overall P50 = (1260+1320)/2 = 1290 → "21:30"
+    const records = [
+      napDayRecord(), napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: false, napProbabilityScore: null, isIntenseToday: false, currentHour: 22,
+    });
+    assert.ok(!result.isColdStart);
+    assert.ok(!result.bedtime.probabilityBand);
+    assert.strictEqual(result.bedtime.central, '21:30',
+      'null score should fall back to overall window central (21:30), not PRED-11 no-nap sub-window (22:00)');
+  });
+
+  it('score present but both sub-series thin (< minDays): falls back to overall without offset shift', () => {
+    // 2 nap-days + 2 no-nap-days (each < minDays=3) → both sub-series return null
+    // Old PRED-11 at currentHour=22 → no-nap sub-window (2 < 3) → subWindowBedtime falls back to
+    //   overall - noNapBedtimeOffsetMinutes(=30) → 1290-30=1260 → "21:00"
+    // New D-08: sub-series null → fall back to plain overall → 1290 → "21:30"
+    const records = [
+      napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: false, napProbabilityScore: 70, isIntenseToday: false, currentHour: 22,
+    });
+    assert.ok(!result.isColdStart, 'should not be cold start: 4 non-rejected records >= minDays=3');
+    assert.ok(!result.bedtime.probabilityBand);
+    assert.strictEqual(result.bedtime.central, '21:30',
+      'thin sub-series should fall back to overall without offset (21:30), not PRED-11 shifted (21:00)');
+  });
+});
