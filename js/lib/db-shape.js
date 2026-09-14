@@ -63,7 +63,6 @@ export const DEFAULT_SETTINGS = Object.freeze({
   tifRollingDays:    7,         // TIF-13 / D-07: rolling window length for TIF algorithm (valid: 3–90 days)
   intenseDays:               [],  // PRED-10 / D-01: day-of-week names for "intense days" scheduling
   eveningHour:               18,  // PRED-08 / D-06: hour (0–23) at which bedtime takes priority over nap
-  noNapBedtimeOffsetMinutes: 30,  // PRED-11 / D-08: minutes to shift bedtime on no-nap days
   intenseDayOffsetMinutes:   30,  // PRED-10 / D-08: minutes to shift bedtime on intense days
   firstDayOfWeek:        'monday',  // D-10 / MET-12: first day shown in DoW table ('monday'|'sunday')
   targetSleepMinutes:    600,       // MET-13 / D-01: per-day sleep target in minutes (default 10h)
@@ -135,9 +134,6 @@ export function migrateV1ToV2(blob, defaultSettings) {
     }
     if (blob.settings && !('eveningHour' in blob.settings)) {
       blob.settings.eveningHour = 18;
-    }
-    if (blob.settings && !('noNapBedtimeOffsetMinutes' in blob.settings)) {
-      blob.settings.noNapBedtimeOffsetMinutes = 30;
     }
     if (blob.settings && !('intenseDayOffsetMinutes' in blob.settings)) {
       blob.settings.intenseDayOffsetMinutes = 30;

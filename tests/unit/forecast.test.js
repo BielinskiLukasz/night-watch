@@ -2365,24 +2365,6 @@ describe('PRED-11 no-nap bedtime shift', () => {
       'PRED-11 must not fire when currentHour < eveningHour');
   });
 
-  it('PRED-11 fires when currentHour >= eveningHour and napStartLogged=false, no-nap sub-window < minDays → shifts by offset', () => {
-    // Window: 2 no-nap days (napStart=null, bedtime '21:00' and '21:30'),
-    //         1 nap day (napStart='13:00', bedtime '22:00')
-    // Full-window P50 of bedtimes: [1260, 1290, 1320] → pos=0.5*(3+1)=2 → k=1 → 1290 → '21:30'
-    // No-nap sub-window: 2 days (bedtime '21:00', '21:30')
-    // minDays=3 → 2 < 3 → fallback: full-window P50(1290) - 30 = 1260 → '21:00'
-    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
-    const days = [
-      makeNapDay('07:00', '21:00', null, null),          // no nap
-      makeNapDay('07:00', '21:30', null, null),          // no nap
-      makeNapDay('07:00', '22:00', '13:00', '14:00'),   // has nap
-    ];
-    const context = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
-    const result = forecast(days, settingsMinDays3, context);
-    assert.strictEqual(result.bedtime.central, '21:00',
-      'thin no-nap sub-window: bedtime should shift by -noNapBedtimeOffsetMinutes from full-window P50');
-  });
-
   it('PRED-11 fires with no-nap sub-window >= minDays → uses no-nap P50 for bedtime', () => {
     // 4 no-nap days (bedtime '20:30'..'21:00'), 3 nap days (bedtime '22:00'..'22:30')
     // No-nap P50 < full-window P50 (because no-nap days go to bed earlier)
@@ -2405,33 +2387,6 @@ describe('PRED-11 no-nap bedtime shift', () => {
     // No-nap modifier should produce an earlier bedtime than the full-window prediction
     assert.ok(resultNoNap.bedtime.central < resultNormal.bedtime.central,
       'no-nap modifier should shift bedtime earlier than full-window prediction');
-  });
-
-  it('PRED-11 takes precedence over PRED-10 when both isIntenseToday=true and no-nap fires', () => {
-    // Both PRED-10 (intense) and PRED-11 (no-nap) conditions active.
-    // PRED-11 must win. Result should equal what PRED-11 alone produces.
-    const settingsMinDays3 = { ...baseSettings, minDays: 3 };
-    const days = [
-      makeNapDay('07:00', '20:30', null, null, false, false),   // no nap, normal
-      makeNapDay('07:00', '20:45', null, null, false, false),   // no nap, normal
-      makeNapDay('07:00', '21:00', null, null, false, false),   // no nap, normal
-      makeNapDay('07:00', '22:00', '13:00', '14:00', false, true),  // nap day, intense
-    ];
-    // Context: both intense and no-nap fire
-    const contextBoth      = { napStartLogged: false, currentHour: 19, isIntenseToday: true };
-    const contextNoNapOnly = { napStartLogged: false, currentHour: 19, isIntenseToday: false };
-    const contextIntenseOnly = { napStartLogged: true, currentHour: 19, isIntenseToday: true };
-    const resultBoth        = forecast(days, settingsMinDays3, contextBoth);
-    const resultNoNapOnly   = forecast(days, settingsMinDays3, contextNoNapOnly);
-    // PRED-11 takes precedence: result with both conditions should equal no-nap-only result
-    assert.strictEqual(resultBoth.bedtime.central, resultNoNapOnly.bedtime.central,
-      'PRED-11 must take precedence over PRED-10 when both conditions are active');
-    // And the PRED-10-only result should differ (intense shift gives different bedtime)
-    // (just verify the contexts produce different outputs, confirming the precedence matters)
-    const resultIntenseOnly = forecast(days, settingsMinDays3, contextIntenseOnly);
-    // They may or may not be the same — but resultBoth must equal resultNoNapOnly.
-    assert.strictEqual(resultBoth.bedtime.central, resultNoNapOnly.bedtime.central,
-      'resultBoth must match resultNoNapOnly (PRED-11 wins)');
   });
 
   it('wake prediction is NOT affected by PRED-11 (modifier is bedtime-only)', () => {

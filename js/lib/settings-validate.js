@@ -60,7 +60,6 @@ export const RULES = Object.freeze({
   tifRollingDays:    { type: 'integer', min: 3, max: 90 },                   // TIF-13 / D-07
   intenseDays:               { type: 'string[]' },                            // PRED-10: day-of-week names
   eveningHour:               { type: 'integer', min: 0, max: 23 },           // PRED-08 / D-06
-  noNapBedtimeOffsetMinutes: { type: 'integer', min: 0, max: 120 },          // PRED-11 / D-08
   intenseDayOffsetMinutes:   { type: 'integer', min: 0, max: 120 },          // PRED-10 / D-08
   firstDayOfWeek:   { type: 'enum', values: new Set(['monday', 'sunday']) }, // D-10 / MET-12
   targetSleepMinutes: { type: 'integer', min: 1, max: 1440 },               // MET-13 / D-02: positive integer, 1 min to 24h

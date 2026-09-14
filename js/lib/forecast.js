@@ -625,12 +625,15 @@ function extractTime(slot) {
  *
  * @param {object} settings  settings snapshot from settings.get()
  *   Expected fields: minDays, maxDelta, statBlend, windowDays,
- *   eveningHour, intenseDayOffsetMinutes, noNapBedtimeOffsetMinutes
+ *   eveningHour, intenseDayOffsetMinutes
  *
- * @param {object} [context={}]  today's contextual state for bedtime modifiers
- * @param {boolean} [context.isIntenseToday=false]   true when today is an intense day (PRED-10)
- * @param {boolean} [context.napStartLogged=false]   true when a nap-start was logged today (PRED-11)
- * @param {number}  [context.currentHour=0]          current local hour 0–23 (PRED-11 threshold check)
+ * @param {object} [context={}]  today's contextual state for bedtime and nap modifiers
+ * @param {boolean} [context.isIntenseToday=false]      true when today is an intense day (PRED-10)
+ * @param {boolean} [context.napStartLogged=false]      true when a nap-start was logged today (PRED-18)
+ * @param {number}  [context.currentHour=0]             current local hour 0–23
+ * @param {string|null} [context.todayWakeHHMM=null]    today's wake time 'HH:MM', or null (PRED-21)
+ * @param {number|null} [context.napProbabilityScore=null] 0–100 nap probability score (PRED-19, D-05)
+ * @param {string|null} [context.todayNapStartHHMM=null] today's logged nap-start 'HH:MM', or null (PRED-22)
  *
  * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd? }}
  *   When isColdStart=true: no prediction fields present.
@@ -685,9 +688,15 @@ export function forecast(dayRecords, settings, context = {}) {
     };
   }
 
-  // Destructure context for PRED-10 / PRED-11 contextual bedtime modifiers (D-03 / D-08)
-  const { isIntenseToday = false, napStartLogged = false, currentHour = 0 } = context;
-  const eveningHour = settings.eveningHour ?? 18;
+  // Destructure context for bedtime modifiers (PRED-10, PRED-18/19, PRED-21/22)
+  const {
+    isIntenseToday = false,
+    napStartLogged = false,
+    currentHour = 0,
+    todayWakeHHMM = null,
+    napProbabilityScore = null,
+    todayNapStartHHMM = null,
+  } = context;
 
   // PRED-09 (D-10): find the most recent bedtime in the window for duration-band
   let lastBedtimeHHMM = null;
@@ -733,37 +742,52 @@ export function forecast(dayRecords, settings, context = {}) {
     };
   })();
 
-  // PRED-10 / PRED-11: compute contextual bedtime prediction.
-  // PRED-11 takes precedence over PRED-10 when both conditions are met.
+  // PRED-18/19/10: compute contextual bedtime prediction.
+  // D-12 routing order: (1) split-series selection, (2) PRED-10 intense-day shift stacks on top.
   const bedtimePred = (() => {
-    // PRED-11: no-nap-day shift — fires when evening arrived and no nap logged today
-    const noNapFired = !napStartLogged && currentHour >= eveningHour;
-    if (noNapFired) {
-      // Sub-window: days where no napStart was recorded (null napStart slot)
-      const noNapResult = subWindowBedtime(
-        window,
-        d => extractTime(d.napStart) == null,
-        settings.noNapBedtimeOffsetMinutes ?? 30,
-        settings,
-      );
-      if (noNapResult !== null) {
-        // D3-04: check probability-band fallback
-        const bedtimeTimes = window
-          .filter(d => extractTime(d.bedtime) != null)
-          .map(d => timeToMinutes(extractTime(d.bedtime)))
-          .sort((a, b) => a - b);
-        const band = generateProbabilityBand(bedtimeTimes, noNapResult.min, noNapResult.max, maxDelta);
-        if (band) return { probabilityBand: band };
-        return {
-          central: minutesToTime(noNapResult.central),
-          min:     minutesToTime(noNapResult.min),
-          max:     minutesToTime(noNapResult.max),
-        };
-      }
-      // noNapResult null (no bedtime data at all) → fall through to normal bedtime
+    // Shared: full-window bedtime times for probability-band check (D3-04)
+    const bedtimeTimes = window
+      .filter(d => extractTime(d.bedtime) != null)
+      .map(d => timeToMinutes(extractTime(d.bedtime)))
+      .sort((a, b) => a - b);
+
+    // Helper: apply band check and convert integer-minute result to HH:MM shape
+    function selectBedtime(result) {
+      const band = generateProbabilityBand(bedtimeTimes, result.min, result.max, maxDelta);
+      if (band) return { probabilityBand: band };
+      return {
+        central: minutesToTime(result.central),
+        min:     minutesToTime(result.min),
+        max:     minutesToTime(result.max),
+      };
     }
 
-    // PRED-10: intense-day modifier — fires when today is an intense day
+    // Step 1 — split-series selection (PRED-18/19, D-12)
+    if (napStartLogged) {
+      // Nap was logged today → use nap-day sub-window (PRED-18)
+      const napDaySeries = buildBedtimeSeriesNapDay(window, settings);
+      if (napDaySeries !== null) {
+        return selectBedtime(napDaySeries);
+      }
+      // null (thin sub-window) → fall through to PRED-10 / overall
+    } else if (napProbabilityScore !== null) {
+      // Nap status undetermined → blend proportionally by score (PRED-19, D-05)
+      const napDaySeries = buildBedtimeSeriesNapDay(window, settings);
+      const noNapDaySeries = buildBedtimeSeriesNoNapDay(window, settings);
+      if (napDaySeries !== null && noNapDaySeries !== null) {
+        const ratio = napProbabilityScore / 100;
+        const blended = {
+          central: Math.round(ratio * napDaySeries.central + (1 - ratio) * noNapDaySeries.central),
+          min:     Math.min(napDaySeries.min, noNapDaySeries.min),
+          max:     Math.max(napDaySeries.max, noNapDaySeries.max),
+        };
+        return selectBedtime(blended);
+      }
+      // One or both sub-series null (D-08) → fall through to PRED-10 / overall
+    }
+    // napProbabilityScore === null (D-07) → fall through to PRED-10 / overall
+
+    // Step 2 — PRED-10: intense-day shift stacks orthogonally on top of split model (D-11)
     if (isIntenseToday) {
       const intenseResult = subWindowBedtime(
         window,
@@ -772,21 +796,11 @@ export function forecast(dayRecords, settings, context = {}) {
         settings,
       );
       if (intenseResult !== null) {
-        const bedtimeTimes = window
-          .filter(d => extractTime(d.bedtime) != null)
-          .map(d => timeToMinutes(extractTime(d.bedtime)))
-          .sort((a, b) => a - b);
-        const band = generateProbabilityBand(bedtimeTimes, intenseResult.min, intenseResult.max, maxDelta);
-        if (band) return { probabilityBand: band };
-        return {
-          central: minutesToTime(intenseResult.central),
-          min:     minutesToTime(intenseResult.min),
-          max:     minutesToTime(intenseResult.max),
-        };
+        return selectBedtime(intenseResult);
       }
     }
 
-    // Normal bedtime — no contextual modifier applies
+    // Normal bedtime — overall rolling-window percentiles (no contextual modifier)
     return forecastEvent(d => extractTime(d.bedtime));
   })();
 
