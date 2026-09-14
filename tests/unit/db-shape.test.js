@@ -32,8 +32,8 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 23 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 23);
+  it('has exactly 22 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18; noNapBedtimeOffsetMinutes removed D-10)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 22);
   });
 
   it('has tifRollingDays: 7 default (TIF-13)', () => {
@@ -52,8 +52,9 @@ describe('DEFAULT_SETTINGS', () => {
     assert.deepStrictEqual(DEFAULT_SETTINGS.intenseDays, []);
   });
 
-  it('has noNapBedtimeOffsetMinutes: 30 default (PRED-11)', () => {
-    assert.strictEqual(DEFAULT_SETTINGS.noNapBedtimeOffsetMinutes, 30);
+  it('does NOT have noNapBedtimeOffsetMinutes in DEFAULT_SETTINGS (D-10: removed Phase 19)', () => {
+    assert.ok(!('noNapBedtimeOffsetMinutes' in DEFAULT_SETTINGS),
+      'noNapBedtimeOffsetMinutes was removed per D-10 (Phase 19 Plan 02)');
   });
 
   it('has intenseDayOffsetMinutes: 30 default (PRED-10)', () => {
@@ -457,7 +458,7 @@ describe('migrateV1ToV2 — Phase 12 forward-compat migration', () => {
     infoSpy.mock.restore();
   });
 
-  it('v2 blob without Phase 12 fields: migrateV1ToV2 injects all 4 new fields', () => {
+  it('v2 blob without Phase 12 fields: migrateV1ToV2 injects 3 remaining fields (noNapBedtimeOffsetMinutes removed D-10)', () => {
     const blob = {
       version: 2,
       settings: {
@@ -474,10 +475,10 @@ describe('migrateV1ToV2 — Phase 12 forward-compat migration', () => {
       'intenseDays must be injected as [] for v2 blob missing it');
     assert.strictEqual(result.settings.eveningHour, 18,
       'eveningHour must be injected as 18 for v2 blob missing it');
-    assert.strictEqual(result.settings.noNapBedtimeOffsetMinutes, 30,
-      'noNapBedtimeOffsetMinutes must be injected as 30 for v2 blob missing it');
     assert.strictEqual(result.settings.intenseDayOffsetMinutes, 30,
       'intenseDayOffsetMinutes must be injected as 30 for v2 blob missing it');
+    assert.ok(!('noNapBedtimeOffsetMinutes' in result.settings),
+      'noNapBedtimeOffsetMinutes must not be injected (removed D-10)');
   });
 
   it('v2 blob with existing Phase 12 fields: migrateV1ToV2 does not clobber them', () => {
@@ -487,7 +488,7 @@ describe('migrateV1ToV2 — Phase 12 forward-compat migration', () => {
         subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
         confirmBeforeLogging: false, forecastAlgorithm: 'classic', trimPct: 10,
         precisionTarget: 60, intenseDays: ['monday'], eveningHour: 20,
-        noNapBedtimeOffsetMinutes: 45, intenseDayOffsetMinutes: 60,
+        intenseDayOffsetMinutes: 60,
       },
       events: [],
       activityLog: {},
@@ -498,18 +499,18 @@ describe('migrateV1ToV2 — Phase 12 forward-compat migration', () => {
       'existing intenseDays must not be clobbered');
     assert.strictEqual(result.settings.eveningHour, 20,
       'existing eveningHour must not be clobbered');
-    assert.strictEqual(result.settings.noNapBedtimeOffsetMinutes, 45,
-      'existing noNapBedtimeOffsetMinutes must not be clobbered');
     assert.strictEqual(result.settings.intenseDayOffsetMinutes, 60,
       'existing intenseDayOffsetMinutes must not be clobbered');
+    // noNapBedtimeOffsetMinutes: orphan key from old blobs is silently ignored (D-10, T-19-02-03)
   });
 
-  it('fresh install: all 4 Phase 12 fields are present with correct defaults', () => {
+  it('fresh install: 3 Phase 12 fields present with correct defaults (noNapBedtimeOffsetMinutes removed D-10)', () => {
     const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
     assert.deepStrictEqual(result.settings.intenseDays, []);
     assert.strictEqual(result.settings.eveningHour, 18);
-    assert.strictEqual(result.settings.noNapBedtimeOffsetMinutes, 30);
     assert.strictEqual(result.settings.intenseDayOffsetMinutes, 30);
+    assert.ok(!('noNapBedtimeOffsetMinutes' in result.settings),
+      'noNapBedtimeOffsetMinutes must not appear in fresh install (removed D-10)');
   });
 });
 

@@ -33,19 +33,20 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 23 field names (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
+  it('has entries for all 22 field names (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields; noNapBedtimeOffsetMinutes removed D-10)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
       'stages', 'activeStageId', 'confirmBeforeLogging',
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
-      'intenseDays', 'eveningHour', 'noNapBedtimeOffsetMinutes', 'intenseDayOffsetMinutes',
+      'intenseDays', 'eveningHour', 'intenseDayOffsetMinutes',
       'tifRollingDays', 'firstDayOfWeek', 'targetSleepMinutes',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 23);
+    assert.equal(Object.keys(RULES).length, 22);
+    assert.ok(!('noNapBedtimeOffsetMinutes' in RULES), 'noNapBedtimeOffsetMinutes must not be in RULES (D-10)');
   });
 });
 
@@ -61,13 +62,14 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 23 keys (16 prior + 4 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields)', () => {
+  it('normalized contains all 22 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18; noNapBedtimeOffsetMinutes removed D-10)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 23);
+    assert.equal(keys.length, 22);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
+    assert.ok(!('noNapBedtimeOffsetMinutes' in result.normalized), 'noNapBedtimeOffsetMinutes must not appear in normalized (D-10)');
   });
 
   it('trims whitespace from subjectName', () => {

@@ -804,12 +804,47 @@ export function forecast(dayRecords, settings, context = {}) {
     return forecastEvent(d => extractTime(d.bedtime));
   })();
 
+  // PRED-21: Wake-anchored nap-start prediction.
+  // When todayWakeHHMM is known and there are ≥ minDays wake-to-nap gap samples,
+  // anchor nap-start to today's wake time + P10/P50/P90 of historical gaps (D-14).
+  // Otherwise fall back to time-of-day forecastEvent percentiles.
+  const napGaps = buildNapGapSeries(window);
+  let napStartPred;
+  if (todayWakeHHMM !== null && napGaps.length >= settings.minDays) {
+    const wakeMin = timeToMinutes(todayWakeHHMM);
+    napStartPred = {
+      central: minutesToTime(wakeMin + Math.round(percentileFromArray(napGaps, 50))),
+      min:     minutesToTime(wakeMin + Math.round(percentileFromArray(napGaps, 10))),
+      max:     minutesToTime(wakeMin + Math.round(percentileFromArray(napGaps, 90))),
+    };
+  } else {
+    napStartPred = forecastEvent(d => extractTime(d.napStart));
+  }
+
+  // PRED-22: Nap-end prediction anchored to today's actual or predicted nap-start (D-15).
+  // Anchor precedence: todayNapStartHHMM (logged) → napStartPred.central (predicted) → null.
+  // When anchor is available and ≥ minDays duration samples exist, shift by P10/P50/P90 of durs.
+  // Otherwise fall back to time-of-day forecastEvent percentiles.
+  const napDurs = buildNapDurationSeries(window);
+  const napStartAnchorHHMM = todayNapStartHHMM ?? napStartPred?.central ?? null;
+  let napEndPred;
+  if (napStartAnchorHHMM !== null && napDurs.length >= settings.minDays) {
+    const anchorMin = timeToMinutes(napStartAnchorHHMM);
+    napEndPred = {
+      central: minutesToTime(anchorMin + Math.round(percentileFromArray(napDurs, 50))),
+      min:     minutesToTime(anchorMin + Math.round(percentileFromArray(napDurs, 10))),
+      max:     minutesToTime(anchorMin + Math.round(percentileFromArray(napDurs, 90))),
+    };
+  } else {
+    napEndPred = forecastEvent(d => extractTime(d.napEnd));
+  }
+
   return {
     isColdStart: false,
     wake:     wakePred,
     bedtime:  bedtimePred,
-    napStart: forecastEvent(d => extractTime(d.napStart)),
-    napEnd:   forecastEvent(d => extractTime(d.napEnd)),
+    napStart: napStartPred,
+    napEnd:   napEndPred,
   };
 }
 
