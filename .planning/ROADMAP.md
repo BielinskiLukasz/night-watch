@@ -53,7 +53,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 
 ## v2.0 Prediction Engine & Autosave (Phases 19–25)
 
-- [ ] **Phase 19: Split Bedtime & Wake-Anchored Nap** — Extend `forecast-blend.js` with `buildBedtimeSeriesNapDay` / `buildBedtimeSeriesNoNapDay` (separate P10/P50/P90 distributions) and probability-weighted blending when today's nap status is undetermined; add `buildNapGapSeries(dayRecords)` and `buildNapDurationSeries(dayRecords)` to `js/lib/forecast.js` so the Classic algorithm anchors nap-start to today's actual wake time via gap percentiles and derives nap-end via duration percentiles; unit tests cover split-series selection and wake-anchor arithmetic (requirements: PRED-18, PRED-19, PRED-20, PRED-21, PRED-22)
+- [x] **Phase 19: Split Bedtime & Wake-Anchored Nap** — Extend `forecast-blend.js` with `buildBedtimeSeriesNapDay` / `buildBedtimeSeriesNoNapDay` (separate P10/P50/P90 distributions) and probability-weighted blending when today's nap status is undetermined; add `buildNapGapSeries(dayRecords)` and `buildNapDurationSeries(dayRecords)` to `js/lib/forecast.js` so the Classic algorithm anchors nap-start to today's actual wake time via gap percentiles and derives nap-end via duration percentiles; unit tests cover split-series selection and wake-anchor arithmetic (requirements: PRED-18, PRED-19, PRED-20, PRED-21, PRED-22) (completed 2026-09-14)
   **Plans:** 2 plans
   Plans:
   - [x] 19-01-PLAN.md — New helper exports: percentileFromArray, buildNapGapSeries, buildNapDurationSeries, buildBedtimeSeriesNapDay, buildBedtimeSeriesNoNapDay (TDD tracer + expansion)

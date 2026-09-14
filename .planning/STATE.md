@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
-current_phase: 19
-current_phase_name: Split Bedtime & Wake-Anchored Nap
-status: verifying
-stopped_at: Completed 19-02-PLAN.md (wake-anchored nap routing)
-last_updated: "2026-09-14T20:27:07.678Z"
+current_phase: 20
+current_phase_name: nap probability redesign
+status: planning
+stopped_at: Phase 19 complete, ready to plan Phase 20
+last_updated: "2026-09-14T20:51:53.047Z"
 last_activity: 2026-09-14
-last_activity_desc: Phase 19 execution started
-state_head: f291321ec754904b39a0a43e95670cedfdedcc1d
+last_activity_desc: Phase 19 complete, transitioned to Phase 20
+state_head: 586426bb513d25ce05225300f664fefa3516fc10
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
   completed_plans: 2
-  percent: 0
+  percent: 50
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: 19 (Split Bedtime & Wake-Anchored Nap) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-09-14 — Phase 19 execution started
+Phase: 20 — nap probability redesign
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-14 — Phase 19 complete, transitioned to Phase 20
 
 ## Phases
 
@@ -175,7 +175,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-09-14T20:27:07.624Z
-Stopped at: Completed 19-02-PLAN.md (wake-anchored nap routing)
+Stopped at: Phase 19 complete, ready to plan Phase 20
 Resume file: None
 
 ## Deferred Items
