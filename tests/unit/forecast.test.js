@@ -31,6 +31,8 @@ import {
   detectColdStart,
   selectNextEvent,
   napProbability,
+  // Phase 19 — Task 1 (Tracer, D-16):
+  percentileFromArray,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -2599,5 +2601,27 @@ describe('PRED-12 napProbability', () => {
     assert.ok(score !== null, 'score should not be null');
     assert.ok(score >= 0 && score <= 100, `score ${score} out of range`);
     assert.strictEqual(score, Math.round(score), 'score must be an integer');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 19 — percentileFromArray(values, pct)
+// ---------------------------------------------------------------------------
+
+describe('percentileFromArray(values, pct)', () => {
+  it('empty array returns null', () => {
+    assert.strictEqual(percentileFromArray([], 50), null);
+  });
+
+  it('single-element array returns that element for pct=50', () => {
+    assert.strictEqual(percentileFromArray([42], 50), 42);
+  });
+
+  it('[10, 20, 30] with pct=50 returns 20', () => {
+    assert.strictEqual(percentileFromArray([10, 20, 30], 50), 20);
+  });
+
+  it('[30, 10, 20] with pct=50 also returns 20 — sorts internally', () => {
+    assert.strictEqual(percentileFromArray([30, 10, 20], 50), 20);
   });
 });
