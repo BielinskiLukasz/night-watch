@@ -33,6 +33,9 @@ import {
   napProbability,
   // Phase 19 — Task 1 (Tracer, D-16):
   percentileFromArray,
+  // Phase 19 — Task 2 (PRED-20, PRED-22):
+  buildNapGapSeries,
+  buildNapDurationSeries,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -2623,5 +2626,95 @@ describe('percentileFromArray(values, pct)', () => {
 
   it('[30, 10, 20] with pct=50 also returns 20 — sorts internally', () => {
     assert.strictEqual(percentileFromArray([30, 10, 20], 50), 20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 19 — buildNapGapSeries(dayRecords) — PRED-20
+// ---------------------------------------------------------------------------
+
+describe('buildNapGapSeries(dayRecords)', () => {
+  it('empty array returns [] (not null)', () => {
+    assert.deepStrictEqual(buildNapGapSeries([]), []);
+  });
+
+  it('single record with napStart=11:00 and wake=07:00 returns [240]', () => {
+    const result = buildNapGapSeries([makeDay('07:00', null, '11:00', null)]);
+    assert.deepStrictEqual(result, [240]);
+  });
+
+  it('skips records where napStart is null', () => {
+    const records = [
+      makeDay('07:00', null, '11:00', null),
+      makeDay('08:00', null, null, null),   // no napStart — skip
+    ];
+    assert.deepStrictEqual(buildNapGapSeries(records), [240]);
+  });
+
+  it('skips records where wake is null', () => {
+    const records = [
+      makeDay('07:00', null, '11:00', null),
+      makeDay(null, null, '11:00', null),   // no wake — skip
+    ];
+    assert.deepStrictEqual(buildNapGapSeries(records), [240]);
+  });
+
+  it('applies midnight-crossover: napStart before wake wraps correctly', () => {
+    // napStart=01:00 (60 min), wake=23:00 (1380 min) → 60-1380=-1320 → +1440=120
+    const result = buildNapGapSeries([makeDay('23:00', null, '01:00', null)]);
+    assert.deepStrictEqual(result, [120]);
+  });
+
+  it('accumulates multiple valid records', () => {
+    const records = [
+      makeDay('07:00', null, '11:00', null), // gap=240
+      makeDay('07:30', null, '11:30', null), // gap=240
+    ];
+    assert.deepStrictEqual(buildNapGapSeries(records), [240, 240]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 19 — buildNapDurationSeries(dayRecords) — PRED-22
+// ---------------------------------------------------------------------------
+
+describe('buildNapDurationSeries(dayRecords)', () => {
+  it('empty array returns [] (not null)', () => {
+    assert.deepStrictEqual(buildNapDurationSeries([]), []);
+  });
+
+  it('single record with napEnd=12:30 and napStart=11:00 returns [90]', () => {
+    const result = buildNapDurationSeries([makeDay(null, null, '11:00', '12:30')]);
+    assert.deepStrictEqual(result, [90]);
+  });
+
+  it('skips records where napEnd is null', () => {
+    const records = [
+      makeDay(null, null, '11:00', '12:30'),
+      makeDay(null, null, '11:00', null),   // no napEnd — skip
+    ];
+    assert.deepStrictEqual(buildNapDurationSeries(records), [90]);
+  });
+
+  it('skips records where napStart is null', () => {
+    const records = [
+      makeDay(null, null, '11:00', '12:30'),
+      makeDay(null, null, null, '12:30'),   // no napStart — skip
+    ];
+    assert.deepStrictEqual(buildNapDurationSeries(records), [90]);
+  });
+
+  it('applies midnight-crossover normalization when duration is negative', () => {
+    // napEnd=01:00 (60 min), napStart=23:00 (1380 min) → 60-1380=-1320 → +1440=120
+    const result = buildNapDurationSeries([makeDay(null, null, '23:00', '01:00')]);
+    assert.deepStrictEqual(result, [120]);
+  });
+
+  it('accumulates multiple valid records', () => {
+    const records = [
+      makeDay(null, null, '11:00', '12:30'), // duration=90
+      makeDay(null, null, '10:00', '11:30'), // duration=90
+    ];
+    assert.deepStrictEqual(buildNapDurationSeries(records), [90, 90]);
   });
 });
