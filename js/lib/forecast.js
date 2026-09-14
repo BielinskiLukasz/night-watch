@@ -454,6 +454,64 @@ function subWindowBedtime(window, filterFn, fallbackOffsetMinutes, settings) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 19: buildNapGapSeries — PRED-20
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an array of wake-to-nap-start gap values in minutes.
+ *
+ * For each day record that has both napStart and wake, computes:
+ *   gap = timeToMinutes(napStart) - timeToMinutes(wake)
+ * Applies midnight-crossover normalization: if gap < 0, adds 1440.
+ *
+ * Follows computeDurationBand() pattern (lines 354–366).
+ *
+ * @param {object[]} dayRecords  array of day records (real or synthetic HH:MM)
+ * @returns {number[]} plain number array of gap minutes; empty array when no valid days
+ */
+export function buildNapGapSeries(dayRecords) {
+  const gaps = [];
+  for (const day of dayRecords) {
+    const napStartStr = extractTime(day.napStart);
+    const wakeStr = extractTime(day.wake);
+    if (!napStartStr || !wakeStr) continue;
+    let gap = timeToMinutes(napStartStr) - timeToMinutes(wakeStr);
+    if (gap < 0) gap += 24 * 60;
+    gaps.push(gap);
+  }
+  return gaps;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 19: buildNapDurationSeries — PRED-22
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an array of nap duration values in minutes.
+ *
+ * For each day record that has both napEnd and napStart, computes:
+ *   duration = timeToMinutes(napEnd) - timeToMinutes(napStart)
+ * Applies midnight-crossover normalization: if duration < 0, adds 1440.
+ *
+ * Follows computeDurationBand() pattern (lines 354–366).
+ *
+ * @param {object[]} dayRecords  array of day records (real or synthetic HH:MM)
+ * @returns {number[]} plain number array of duration minutes; empty array when no valid days
+ */
+export function buildNapDurationSeries(dayRecords) {
+  const durations = [];
+  for (const day of dayRecords) {
+    const napEndStr = extractTime(day.napEnd);
+    const napStartStr = extractTime(day.napStart);
+    if (!napEndStr || !napStartStr) continue;
+    let dur = timeToMinutes(napEndStr) - timeToMinutes(napStartStr);
+    if (dur < 0) dur += 24 * 60;
+    durations.push(dur);
+  }
+  return durations;
+}
+
+// ---------------------------------------------------------------------------
 // Main forecast function
 // ---------------------------------------------------------------------------
 
