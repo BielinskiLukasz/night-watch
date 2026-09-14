@@ -512,6 +512,53 @@ export function buildNapDurationSeries(dayRecords) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 19: buildBedtimeSeriesNapDay + buildBedtimeSeriesNoNapDay — PRED-18
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a bedtime percentile band for nap-day records only.
+ *
+ * Filters dayRecords to days where napStart is not null (nap-day sub-window),
+ * guards against cold-start (< minDays records), and delegates to
+ * calculatePercentiles to return { min, central, max } as integer minutes.
+ *
+ * Pattern mirrors subWindowBedtime() but returns null on thin history
+ * (no offset-shift fallback — caller falls back to overall calculatePercentiles).
+ *
+ * D-02: returns integer minutes; D-04: nap-day = napStart != null; D-08: minDays guard.
+ *
+ * @param {object[]} dayRecords  array of day records
+ * @param {object}   settings   settings snapshot (needs .minDays)
+ * @returns {{ min: number, central: number, max: number }|null}
+ */
+export function buildBedtimeSeriesNapDay(dayRecords, settings) {
+  const { minDays } = settings;
+  const subWin = dayRecords.filter(d => extractTime(d.napStart) != null);
+  if (subWin.length < minDays) return null;
+  return calculatePercentiles(subWin, d => extractTime(d.bedtime));
+}
+
+/**
+ * Compute a bedtime percentile band for no-nap-day records only.
+ *
+ * Filters dayRecords to days where napStart is null (no-nap-day sub-window),
+ * guards against cold-start (< minDays records), and delegates to
+ * calculatePercentiles to return { min, central, max } as integer minutes.
+ *
+ * D-02: returns integer minutes; D-04: no-nap-day = napStart == null; D-08: minDays guard.
+ *
+ * @param {object[]} dayRecords  array of day records
+ * @param {object}   settings   settings snapshot (needs .minDays)
+ * @returns {{ min: number, central: number, max: number }|null}
+ */
+export function buildBedtimeSeriesNoNapDay(dayRecords, settings) {
+  const { minDays } = settings;
+  const subWin = dayRecords.filter(d => extractTime(d.napStart) == null);
+  if (subWin.length < minDays) return null;
+  return calculatePercentiles(subWin, d => extractTime(d.bedtime));
+}
+
+// ---------------------------------------------------------------------------
 // Main forecast function
 // ---------------------------------------------------------------------------
 
