@@ -54,6 +54,10 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 ## v2.0 Prediction Engine & Autosave (Phases 19–25)
 
 - [ ] **Phase 19: Split Bedtime & Wake-Anchored Nap** — Extend `forecast-blend.js` with `buildBedtimeSeriesNapDay` / `buildBedtimeSeriesNoNapDay` (separate P10/P50/P90 distributions) and probability-weighted blending when today's nap status is undetermined; add `buildNapGapSeries(dayRecords)` and `buildNapDurationSeries(dayRecords)` to `js/lib/forecast.js` so the Classic algorithm anchors nap-start to today's actual wake time via gap percentiles and derives nap-end via duration percentiles; unit tests cover split-series selection and wake-anchor arithmetic (requirements: PRED-18, PRED-19, PRED-20, PRED-21, PRED-22)
+  **Plans:** 2 plans
+  Plans:
+  - [ ] 19-01-PLAN.md — New helper exports: percentileFromArray, buildNapGapSeries, buildNapDurationSeries, buildBedtimeSeriesNapDay, buildBedtimeSeriesNoNapDay (TDD tracer + expansion)
+  - [ ] 19-02-PLAN.md — forecast() split bedtime routing + wake-anchored nap + schema cleanup (D-09/D-10 checkpoint)
 
 - [ ] **Phase 20: Nap Probability Redesign** — Refactor `napProbabilityScore` in `js/lib/forecast.js`: drop clock-based `elapsedWakeTime` (30%) and `windowPassed` (10%) inputs, add `dayOfWeekNapRate` (30%) from `dayOfWeekAverages()` in `metrics.js` and `sleepDebtSignal` (20%) from `sleepDebtProxy()` in `metrics.js`, keep `napFrequency` (35%) and `noNapStreakPenalty` (15%); weights sum to 100%; unit tests cover all five signals and weight totals; no circular imports (`forecast.js` may import from `metrics.js` — verify direction) (requirements: NAP-01, NAP-02, NAP-03, NAP-04)
 
