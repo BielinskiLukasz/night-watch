@@ -2868,3 +2868,133 @@ describe('forecast() split bedtime routing (PRED-18/19)', () => {
       'thin sub-series should fall back to overall without offset (21:30), not PRED-11 shifted (21:00)');
   });
 });
+
+// ---------------------------------------------------------------------------
+// forecast() wake-anchored nap (PRED-20/21/22)
+// ---------------------------------------------------------------------------
+// Test data: 3 days with varying wake times but tightly clustered napStart/napEnd
+// (band width ≤ maxDelta=60 so forecastEvent returns {central} not {probabilityBand}).
+//
+//   Record A: wake=06:00 (360), napStart=09:00 (540), napEnd=10:00 (600)
+//             → gap=180 min, dur=60 min
+//   Record B: wake=07:00 (420), napStart=09:20 (560), napEnd=10:30 (630)
+//             → gap=140 min, dur=70 min
+//   Record C: wake=08:00 (480), napStart=09:40 (580), napEnd=11:00 (660)
+//             → gap=100 min, dur=80 min
+//
+// gaps sorted: [100,140,180] → P10=100, P50=140, P90=180
+// durs sorted: [60,70,80]   → P10=60,  P50=70,  P90=80
+// napStart band width = 580−540=40 ≤ maxDelta=60 → no probabilityBand → {central:"09:20"}
+// napEnd   band width = 660−600=60 ≤ maxDelta=60 → no probabilityBand → {central:"10:30"}
+//
+// With todayWakeHHMM='06:00' (360 min):
+//   napStart: 360+100=460→"07:40", 360+140=500→"08:20", 360+180=540→"09:00"
+// Time-of-day napStart P50([540,560,580])=560→"09:20"  (differs from wake-anchor "08:20")
+// Time-of-day napEnd   P50([600,630,660])=630→"10:30"
+
+describe('forecast() wake-anchored nap (PRED-20/21/22)', () => {
+  const napAnchorSettings = {
+    minDays: 3, windowDays: 10, maxDelta: 60,
+    intenseDayOffsetMinutes: 30, eveningHour: 18,
+  };
+  const gapRecords = [
+    makeDay('06:00', '21:00', '09:00', '10:00'),  // gap=180, dur=60
+    makeDay('07:00', '21:00', '09:20', '10:30'),  // gap=140, dur=70
+    makeDay('08:00', '21:00', '09:40', '11:00'),  // gap=100, dur=80
+  ];
+
+  it('todayWakeHHMM + ≥minDays gaps → wake-anchored napStart P10/P50/P90 (PRED-21)', () => {
+    // Old code: forecastEvent time-of-day → P50([540,560,580])=560 → "09:20"
+    // New code: 360+P50([100,140,180])=500 → "08:20"  (FAILS before GREEN)
+    const result = forecast(gapRecords, napAnchorSettings, {
+      napStartLogged: false, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: '06:00', todayNapStartHHMM: null,
+    });
+    assert.ok(!result.isColdStart);
+    assert.strictEqual(result.napStart.central, '08:20',
+      'wake-anchor: 360+P50(140)=500 min → 08:20 (not time-of-day 09:20)');
+    assert.strictEqual(result.napStart.min, '07:40',
+      'wake-anchor min: 360+P10(100)=460 min → 07:40');
+    assert.strictEqual(result.napStart.max, '09:00',
+      'wake-anchor max: 360+P90(180)=540 min → 09:00');
+  });
+
+  it('todayWakeHHMM=null → napStart falls back to time-of-day forecastEvent (D-14)', () => {
+    // Both old and new code use forecastEvent here (fallback path unchanged)
+    const result = forecast(gapRecords, napAnchorSettings, {
+      napStartLogged: false, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: null, todayNapStartHHMM: null,
+    });
+    assert.ok(!result.isColdStart);
+    // Time-of-day: P50 of [540,560,580] = 560 → "09:20"; band width=40≤60 → {central}
+    assert.strictEqual(result.napStart.central, '09:20',
+      'null todayWakeHHMM → time-of-day P50 of napStart times → "09:20"');
+  });
+
+  it('todayWakeHHMM present but napGaps.length < minDays → napStart fallback (D-14)', () => {
+    // 2 records have wake+napStart, 1 has no napStart → gaps.length=2 < minDays=3 → fallback
+    const twoGapRecords = [
+      makeDay('06:00', '21:00', '09:00', '10:00'),  // gap=180
+      makeDay('07:00', '21:00', '09:20', '10:30'),  // gap=140
+      makeDay('08:00', '21:00', null, null),          // no napStart → no gap
+    ];
+    const result = forecast(twoGapRecords, napAnchorSettings, {
+      napStartLogged: false, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: '06:00', todayNapStartHHMM: null,
+    });
+    assert.ok(!result.isColdStart, '3 non-rejected records ≥ minDays=3: not cold start');
+    // Time-of-day: P50 of [540,560] = 550 → "09:10"; band width=20≤60 → {central}
+    assert.strictEqual(result.napStart.central, '09:10',
+      'only 2 gaps < minDays=3 → fallback to time-of-day even with todayWakeHHMM present');
+  });
+
+  it('todayNapStartHHMM + ≥minDays durs → todayNapStart-anchored napEnd (PRED-22)', () => {
+    // todayNapStartHHMM='09:00' (540 min); P50 of durs [60,70,80]=70; 540+70=610 → "10:10"
+    // Old code: forecastEvent napEnd → P50([600,630,660])=630 → "10:30"  (FAILS before GREEN)
+    const result = forecast(gapRecords, napAnchorSettings, {
+      napStartLogged: true, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: null, todayNapStartHHMM: '09:00',
+    });
+    assert.ok(!result.isColdStart);
+    assert.strictEqual(result.napEnd.central, '10:10',
+      'todayNapStartHHMM 09:00 (540 min) + P50(durs=70) = 610 min → 10:10 (not time-of-day 10:30)');
+  });
+
+  it('todayNapStartHHMM=null → napEnd uses napStartPred.central from wake-anchor (D-15)', () => {
+    // todayWakeHHMM='06:00' → napStartPred.central='08:20' (500 min)
+    // todayNapStartHHMM=null → anchor = napStartPred.central = 500 min
+    // 500 + P50(durs=70) = 570 min → "09:30"
+    // Old code: forecastEvent napEnd → "10:30"  (FAILS before GREEN)
+    const result = forecast(gapRecords, napAnchorSettings, {
+      napStartLogged: false, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: '06:00', todayNapStartHHMM: null,
+    });
+    assert.ok(!result.isColdStart);
+    assert.strictEqual(result.napEnd.central, '09:30',
+      'no todayNapStartHHMM → anchor to napStartPred.central 500 min + P50(70) = 570 → 09:30');
+  });
+
+  it('no nap data + todayNapStartHHMM=null → napEnd falls back to forecastEvent (D-15)', () => {
+    // Records with no napStart/napEnd → forecastEvent returns {central:null,min:null,max:null}
+    // napStartPred.central=null; todayNapStartHHMM=null → anchor=null → fallback
+    const noNapData = [
+      makeDay('07:00', '21:00', null, null),
+      makeDay('07:00', '21:00', null, null),
+      makeDay('07:00', '21:00', null, null),
+    ];
+    const result = forecast(noNapData, napAnchorSettings, {
+      napStartLogged: false, napProbabilityScore: null,
+      isIntenseToday: false, currentHour: 9,
+      todayWakeHHMM: null, todayNapStartHHMM: null,
+    });
+    assert.ok(!result.isColdStart);
+    // forecastEvent for napEnd returns {central:null,min:null,max:null} when no data
+    assert.strictEqual(result.napEnd.central, null,
+      'no anchor + no napEnd history → napEnd.central=null (forecastEvent fallback)');
+  });
+});
