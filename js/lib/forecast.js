@@ -34,6 +34,7 @@
 // === Exported Functions ===
 //
 // percentile(sorted, p) → number | null
+// percentileFromArray(values, pct) → number | null
 // calculatePercentiles(dayRecords, getTimeFn, rejectWeight?) → { min, central, max } | null
 // selectCentralTime(times) → number | null
 // downweightRejectedDays(dayRecords, weight) → dayRecordWithWeight[]
@@ -41,6 +42,14 @@
 //   each with { central, min, max } as 'HH:MM' strings (or null if no history)
 // selectNextEvent(predictions, dayRecords) → { type, isMissed, ...prediction } | null
 //   Cycle-aware priority selection of the most relevant upcoming event (D3-10).
+// buildNapGapSeries(dayRecords) → number[]
+//   Plain array of (napStart − wake) minutes for each day with both fields. PRED-20.
+// buildNapDurationSeries(dayRecords) → number[]
+//   Plain array of (napEnd − napStart) minutes for each day with both fields. PRED-22.
+// buildBedtimeSeriesNapDay(dayRecords, settings) → { min, central, max } | null
+//   P10/P50/P90 bedtime band for nap-day sub-population. PRED-18, D-02, D-04, D-08.
+// buildBedtimeSeriesNoNapDay(dayRecords, settings) → { min, central, max } | null
+//   P10/P50/P90 bedtime band for no-nap-day sub-population. PRED-18, D-02, D-04, D-08.
 //
 // === DST Safety ===
 // All time arithmetic stays in 'HH:MM' strings → minutes-since-midnight integers.
@@ -129,6 +138,27 @@ export function percentile(sorted, p) {
 
   // Linear interpolation
   return sorted[k] + frac * (sorted[k + 1] - sorted[k]);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 19: percentileFromArray — convenience wrapper for unsorted raw arrays
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculate a percentile from an unsorted numeric array.
+ *
+ * Sorts the input internally (does NOT mutate the caller's array) and delegates
+ * to the existing percentile() function. The pct argument is 0–100 (integer),
+ * unlike percentile() which expects 0–1.
+ *
+ * @param {number[]} values  raw (unsorted) numeric array
+ * @param {number}   pct     percentile 0..100 (e.g. 50 for median)
+ * @returns {number|null} interpolated percentile value; null if values is empty
+ */
+export function percentileFromArray(values, pct) {
+  if (!values || values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return percentile(sorted, pct / 100);
 }
 
 // ---------------------------------------------------------------------------
