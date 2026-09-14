@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
+current_phase: 19
+current_phase_name: Split Bedtime & Wake-Anchored Nap
 status: Planning
 stopped_at: Phase 19 context gathered
-last_updated: "2026-09-14T18:38:01.249Z"
+last_updated: "2026-09-14T19:01:42.558Z"
 last_activity: 2026-09-08
 last_activity_desc: Milestone v2.0 initialized
-state_head: ec7c8f31fc7be4f441d54db1021dd526f0761199
+state_head: 32885e4cf246ac6f7d264ba7ecf1e765e3b33fd9
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
-current_phase: 18
-current_phase_name: Sleep Debt Proxy (last completed v1.4 phase)
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: Milestone v2.0 initialized
+Phase: 19 (Split Bedtime & Wake-Anchored Nap) — READY TO EXECUTE
 Plan: —
 Status: Planning (requirements + roadmap pending)
 Last activity: 2026-09-08 — Milestone v2.0 initialized
