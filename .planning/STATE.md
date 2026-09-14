@@ -4,17 +4,17 @@ milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 19
 current_phase_name: Split Bedtime & Wake-Anchored Nap
-status: Planning
-stopped_at: Phase 19 context gathered
-last_updated: "2026-09-14T19:01:42.558Z"
-last_activity: 2026-09-08
-last_activity_desc: Milestone v2.0 initialized
-state_head: 32885e4cf246ac6f7d264ba7ecf1e765e3b33fd9
+status: executing
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-09-14T19:18:53.065Z"
+last_activity: 2026-09-14
+last_activity_desc: Phase 19 execution started
+state_head: af4b8addcb77a8e0139a4a82fc3ecf31e704d1bc
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Milestone v2.0 — Prediction Engine & Autosave
+**Current focus:** Phase 19 — Split Bedtime & Wake-Anchored Nap
 
 ## Current Position
 
-Phase: 19 (Split Bedtime & Wake-Anchored Nap) — READY TO EXECUTE
-Plan: —
-Status: Planning (requirements + roadmap pending)
-Last activity: 2026-09-08 — Milestone v2.0 initialized
+Phase: 19 (Split Bedtime & Wake-Anchored Nap) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-09-14 — Phase 19 execution started
 
 ## Phases
 
@@ -92,6 +92,7 @@ Last activity: 2026-09-08 — Milestone v2.0 initialized
 | Phase 18 P18-01 | 3 | 1 tasks | 2 files |
 | Phase 18 P18-03 | 10 | 2 tasks | 2 files |
 | Phase 18 P04 | 12 | 2 tasks | 2 files |
+| Phase 19 P01 | 8 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Last activity: 2026-09-08 — Milestone v2.0 initialized
 - [Phase 18]: Phase 18 Plan 18-03: snap.targetSleepMinutes used directly (snap IS the settings object) — plan draft typo snap.settings.targetSleepMinutes corrected
 - [Phase 18]: Phase 18 Plan 18-04: sliceOffset = Math.max(0, nonRejectedDays.length - nDays) applied before rolling sleepDebt loop so proxy receives full history
 - [Phase 18]: Phase 18 Plan 18-04: COLUMNS[9].label changed from 'S.Debt' to 'S.Debt(7d)' to communicate rolling window scope to users
+- [Phase 19]: Phase 19 Plan 01: percentileFromArray wraps percentile() with internal sort, pct 0-100 (D-16)
+- [Phase 19]: Phase 19 Plan 01: buildNapGapSeries/buildNapDurationSeries return number[] not {min,central,max}; percentileFromArray is consumer in Plan 19-02
+- [Phase 19]: Phase 19 Plan 01: buildBedtimeSeriesNapDay/NoNapDay return pure null on thin sub-windows; routing fallback delegated to Plan 19-02 (D-08)
 
 ### Quick Tasks Completed
 
@@ -166,9 +170,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-14T18:38:01.200Z
-Stopped at: Phase 19 context gathered
-Resume file: .planning/phases/19-split-bedtime-wake-anchored-nap/19-CONTEXT.md
+Last session: 2026-09-14T19:18:53.041Z
+Stopped at: Completed 19-01-PLAN.md
+Resume file: None
 
 ## Deferred Items
 
