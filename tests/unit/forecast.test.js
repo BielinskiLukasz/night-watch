@@ -36,6 +36,9 @@ import {
   // Phase 19 — Task 2 (PRED-20, PRED-22):
   buildNapGapSeries,
   buildNapDurationSeries,
+  // Phase 19 — Task 3 (PRED-18, D-02, D-04, D-08):
+  buildBedtimeSeriesNapDay,
+  buildBedtimeSeriesNoNapDay,
 } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -2716,5 +2719,104 @@ describe('buildNapDurationSeries(dayRecords)', () => {
       makeDay(null, null, '10:00', '11:30'), // duration=90
     ];
     assert.deepStrictEqual(buildNapDurationSeries(records), [90, 90]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 19 — buildBedtimeSeriesNapDay(dayRecords, settings) — PRED-18
+// ---------------------------------------------------------------------------
+
+// Minimal settings for bedtime series tests (no noNapBedtimeOffsetMinutes — D-10)
+const bedtimeSeriesSettings = {
+  minDays: 3,
+  windowDays: 7,
+  maxDelta: 60,
+  intenseDayOffsetMinutes: 30,
+  eveningHour: 18,
+};
+
+describe('buildBedtimeSeriesNapDay(dayRecords, settings)', () => {
+  it('returns null when fewer than minDays nap-day records (cold-start guard, D-08)', () => {
+    // Only 2 nap-day records; minDays=3 → null
+    const records = [
+      makeDay('07:00', '21:00', '11:00', '12:00'), // nap day (napStart not null)
+      makeDay('07:00', '21:00', '11:00', '12:00'), // nap day
+      makeDay('07:00', '21:30', null, null),         // no-nap day — excluded from nap-day sub-window
+    ];
+    assert.strictEqual(buildBedtimeSeriesNapDay(records, bedtimeSeriesSettings), null);
+  });
+
+  it('returns { min, central, max } as integers when >= minDays nap-day records', () => {
+    const records = [
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+    ];
+    const result = buildBedtimeSeriesNapDay(records, bedtimeSeriesSettings);
+    assert.ok(result !== null, 'should return a band, not null');
+    assert.ok(typeof result.min === 'number', 'min must be a number');
+    assert.ok(typeof result.central === 'number', 'central must be a number');
+    assert.ok(typeof result.max === 'number', 'max must be a number');
+    // All three same bedtime → 21:00 = 1260 minutes
+    assert.strictEqual(result.central, 1260);
+  });
+
+  it('excludes days where napStart is null from the nap-day sub-window', () => {
+    // Mix: 3 nap days with bedtime 21:00, 1 no-nap day with bedtime 22:00
+    // Result should only reflect nap-day bedtimes (21:00)
+    const records = [
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+      makeDay('07:00', '21:00', '11:00', '12:00'),
+      makeDay('07:00', '22:00', null, null),          // excluded
+    ];
+    const result = buildBedtimeSeriesNapDay(records, bedtimeSeriesSettings);
+    assert.ok(result !== null);
+    assert.strictEqual(result.central, 1260); // 21:00
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 19 — buildBedtimeSeriesNoNapDay(dayRecords, settings) — PRED-18
+// ---------------------------------------------------------------------------
+
+describe('buildBedtimeSeriesNoNapDay(dayRecords, settings)', () => {
+  it('returns null when fewer than minDays no-nap-day records (cold-start guard, D-08)', () => {
+    // Only 2 no-nap-day records; minDays=3 → null
+    const records = [
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '21:00', '11:00', '12:00'), // nap day — excluded
+    ];
+    assert.strictEqual(buildBedtimeSeriesNoNapDay(records, bedtimeSeriesSettings), null);
+  });
+
+  it('returns { min, central, max } as integers when >= minDays no-nap-day records', () => {
+    const records = [
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+    ];
+    const result = buildBedtimeSeriesNoNapDay(records, bedtimeSeriesSettings);
+    assert.ok(result !== null, 'should return a band, not null');
+    assert.ok(typeof result.min === 'number', 'min must be a number');
+    assert.ok(typeof result.central === 'number', 'central must be a number');
+    assert.ok(typeof result.max === 'number', 'max must be a number');
+    // All three same bedtime → 22:00 = 1320 minutes
+    assert.strictEqual(result.central, 1320);
+  });
+
+  it('excludes days where napStart is non-null from the no-nap-day sub-window', () => {
+    // Mix: 3 no-nap days with bedtime 22:00, 1 nap day with bedtime 21:00
+    // Result should only reflect no-nap-day bedtimes (22:00)
+    const records = [
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '21:00', '11:00', '12:00'), // excluded
+    ];
+    const result = buildBedtimeSeriesNoNapDay(records, bedtimeSeriesSettings);
+    assert.ok(result !== null);
+    assert.strictEqual(result.central, 1320); // 22:00
   });
 });
