@@ -5,17 +5,17 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: nap probability redesign
 status: planning
-stopped_at: Phase 19 complete, ready to plan Phase 20
-last_updated: "2026-09-14T20:51:53.047Z"
+stopped_at: Phase 20 context gathered
+last_updated: "2026-09-16T14:35:51.151Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 19 complete, transitioned to Phase 20
-state_head: 586426bb513d25ce05225300f664fefa3516fc10
+state_head: a94fb1fc67d874da4052663177fc631fa9872373
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
-  percent: 50
+  percent: 33
 ---
 
 # Project State
@@ -174,9 +174,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-14
-Stopped at: Phase 19 complete, ready to plan Phase 20
-Resume file: None
+Last session: 2026-09-16T14:35:48.916Z
+Stopped at: Phase 20 context gathered
+Resume file: .planning/phases/20-nap-probability-redesign/20-CONTEXT.md
 
 ## Deferred Items
 
