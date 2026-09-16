@@ -165,9 +165,9 @@ function renderNextEventCard(prediction, timeFormat) {
     }
     // PRED-12 / D-15: nap probability score on napStart hero card
     if (prediction.type === 'napStart' && prediction.napProbabilityScore != null && !prediction.isMissed) {
-      const napScoreText = prediction.napProbabilityScore === 0
+      const napScoreText = prediction.napProbabilityScore.score === 0
         ? '0% — nap window closed'
-        : `${prediction.napProbabilityScore}% chance of nap today`;
+        : `${prediction.napProbabilityScore.score}% chance of nap today`;
       card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
@@ -283,9 +283,9 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
     }
     // PRED-12 / D-14: nap probability score on napStart prediction card (not shown when missed)
     if (eventType === 'napStart' && prediction.napProbabilityScore != null && !isMissed) {
-      const napScoreText = prediction.napProbabilityScore === 0
+      const napScoreText = prediction.napProbabilityScore.score === 0
         ? '0% — nap window closed'
-        : `${prediction.napProbabilityScore}% chance of nap today`;
+        : `${prediction.napProbabilityScore.score}% chance of nap today`;
       card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
@@ -920,12 +920,13 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
     }
     const currentHour   = new Date().getHours();   // gsd:allow-ui-clock
     const currentMinute = new Date().getMinutes(); // gsd:allow-ui-clock
+    const todayWeekday  = new Date().getDay();     // gsd:allow-ui-clock — 0=Sun..6=Sat (D-07)
     // PRED-12: nap probability score computed before forecast() so it can be threaded in (D-13).
     const napProbabilityScore = napProbability(forecastDays, snap, {
       currentHour,
       currentMinute,
       napStreak,
-      todayWakeHHMM,
+      todayWeekday,
     });
 
     const forecastContext = {
