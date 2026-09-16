@@ -89,31 +89,39 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 > direct restructuring of the checklist bullets, not new scope.
 
 ### Phase 19: Split Bedtime & Wake-Anchored Nap
+
 **Goal**: Predictions use separate bedtime distributions for nap-days vs. no-nap-days, blended probabilistically when today's nap status is undetermined, and nap-start/nap-end predictions anchor to today's actual wake time via gap/duration percentiles
 **Depends on**: Phase 18
 **Requirements**: PRED-18, PRED-19, PRED-20, PRED-21, PRED-22
 **Success Criteria** (what must be TRUE):
+
   1. `buildBedtimeSeriesNapDay` / `buildBedtimeSeriesNoNapDay` in `forecast-blend.js` produce separate P10/P50/P90 distributions for nap-day vs. no-nap-day bedtimes, with probability-weighted blending when today's nap status is undetermined
   2. `buildNapGapSeries(dayRecords)` and `buildNapDurationSeries(dayRecords)` in `js/lib/forecast.js` anchor nap-start to today's actual wake time via gap percentiles and derive nap-end via duration percentiles
   3. Unit tests cover split-series selection and wake-anchor arithmetic
+
 **Completed**: 2026-09-14
 
 ### Phase 20: Nap Probability Redesign
+
 **Goal**: Nap probability score reflects stable, day-of-week- and sleep-debt-aware signals instead of clock-based inputs that drift throughout the day
 **Depends on**: Phase 19
 **Requirements**: NAP-01, NAP-02, NAP-03, NAP-04
 **Success Criteria** (what must be TRUE):
+
   1. `napProbabilityScore` in `js/lib/forecast.js` drops the clock-based `elapsedWakeTime` (30%) and `windowPassed` (10%) signals
   2. `dayOfWeekNapRate` (30%, from `dayOfWeekAverages()` in `metrics.js`) and `sleepDebtSignal` (20%, from `sleepDebtProxy()` in `metrics.js`) are added
   3. `napFrequency` (35%) and `noNapStreakPenalty` (15%) are retained; all five weights sum to 100%
   4. Unit tests cover all five signals and weight totals; no circular imports between `forecast.js` and `metrics.js`
+
 **Completed**: 2026-09-16
 
 ### Phase 21: Prediction Normalization
+
 **Goal**: The Today screen shows only the next realistically-reachable sleep event prominently instead of always rendering all four event-type cards, with nap cards fully hidden (not collapsed) once the nap window has closed
 **Depends on**: Phase 20 (this phase adds `napWindowClosed` to `napProbability()`'s return shape)
 **Requirements**: PRED-23, PRED-24, UI-13
 **Success Criteria** (what must be TRUE):
+
   1. `nextReachableEvent(lastEvent, currentHour, settings)` — a new pure helper in a dedicated `js/lib/forecast-utils.js` — returns the reachable next event type(s) as an array (length 2 only for the ambiguous wake→{napStart, bedtimeAfterWake} branch) given the last logged event and the current hour
   2. `selectNextEvent` becomes a thin wrapper around `nextReachableEvent`: reads the real clock once, delegates, then walks `predictions` to skip event types with no historical data
   3. The Today screen renders the reachable event(s) as prominent hero card(s) — one normally, two side-by-side when nap status is undetermined
@@ -121,64 +129,85 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   5. Non-hero events move into a new collapsible "Later today" section (collapsed by default) that wraps the existing per-event card renderers unchanged
   6. `forecast-utils.js` is added to `sw.js`'s `PRECACHE_LIST` and to `tests/unit/sw-precache.test.js`
   7. E2E tests cover event-card visibility for each reachable-event state
+
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 21-02-PLAN.md — predictions.bedtimeAfterWake + dual-hero rendering + "Later today" section
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 21-03-PLAN.md — Full E2E coverage matrix for all 5 nextReachableEvent paths
 
 ### Phase 22: Accuracy Scoring
+
 **Goal**: Prediction accuracy is scored per-event with a linear-decay formula instead of a single daily hit/miss, giving a more granular accuracy signal
 **Depends on**: Phase 21
 **Requirements**: ACC-01, ACC-02, ACC-03, ACC-04
 **Success Criteria** (what must be TRUE):
+
   1. `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` added to `js/lib/accuracy.js` using the linear-decay formula (D≤W → 100−(50/W)×D; W<D≤2W → 50−(50/W)×(D−W); D>2W → 0)
   2. Daily score changes to the arithmetic mean of per-event scores
   3. `accuracy-screen.js` renders per-event scores and the new daily average
   4. Backtesting engine calls in `accuracy.js` (and `accuracy-tif.js` if it references hit/miss) call `eventAccuracyScore`; `accuracy-tif.js` still does not import `metrics.js` (circular-import guard)
   5. Unit tests cover formula boundary values (D=0, D=W, D=2W, D>2W)
+
 **Plans**: TBD
 
 Plans:
 
 ### Phase 23: Metrics→Accuracy Column Migration
+
 **Goal**: TIF prediction-window columns live on the Accuracy screen (how well predictions performed) instead of the Metrics screen (what happened)
 **Depends on**: Phase 22
 **Requirements**: UI-11
 **Success Criteria** (what must be TRUE):
+
   1. Per-event TIF window columns (lower bound, upper bound, confidence score, window width) move from `metrics-screen.js` to `accuracy-screen.js`
   2. The columns and their data-prep calls are removed from the Metrics pipeline
   3. Unit tests and E2E specs assert the columns appear on the Accuracy screen and are absent from the Metrics screen
+
 **Plans**: TBD
 
 Plans:
 
 ### Phase 24: Autosave
+
 **Goal**: Users' data saves automatically to a chosen local directory instead of relying solely on manual export, with a graceful fallback where the File System Access API is unavailable
 **Depends on**: Phase 23
 **Requirements**: PLAT-01, PLAT-02, PLAT-03, PLAT-04
 **Success Criteria** (what must be TRUE):
+
   1. `js/lib/autosave.js` exports `pickSaveDirectory()`, `saveToDisk(handle, jsonString)` (debounced 500ms, fires after every event-store mutation), and `restoreHandle()` (prompts re-permission when `queryPermission` returns `'prompt'`)
   2. `app.js` wires autosave into the event-store subscription
   3. Settings UI has an autosave-directory row with graceful fallback copy and a manual Export button when the File System Access API is unavailable (Firefox, Safari, `file://`)
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
+
 **Plans**: TBD
 
 Plans:
 
 ### Phase 25: Algorithm C & Settings Modal
+
 **Goal**: Users can opt into a third prediction algorithm (Algorithm C) that blends multiple models per event, selectable alongside Classic and TIF from the Settings modal
 **Depends on**: Phase 24
 **Requirements**: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12
 **Success Criteria** (what must be TRUE):
+
   1. `js/lib/forecast-blend.js` exports `blendForecast(dayRecords, snap)` with a dual-model wake blend (A1 historic band + A2 sleep-length projection) and a three-band bedtime blend (historic + day-length + AA)
   2. An interval stability check (intersection/shrinkage when intervals overlap; combined union range when they don't) applies to all 4 events
   3. Algorithm C covers all 4 events: wake, bedtime, nap-start, nap-end
   4. Settings modal exposes a three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide
   5. `forecast-blend.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   6. Unit tests (RED→GREEN) cover all blend and stability logic; E2E test covers selector visibility
+
 **Plans**: TBD
 
 Plans:
