@@ -636,11 +636,16 @@ function extractTime(slot) {
  *   nap probability result object from napProbability() (PRED-19, D-05); `.score` is 0–100 or null (Phase 20 D-03/D-04)
  * @param {string|null} [context.todayNapStartHHMM=null] today's logged nap-start 'HH:MM', or null (PRED-22)
  *
- * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd? }}
+ * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd?, bedtimeAfterWake? }}
  *   When isColdStart=true: no prediction fields present.
- *   When isColdStart=false: each event has either
+ *   When isColdStart=false: wake/bedtime/napStart/napEnd each have either
  *     { central: string|null, min: string|null, max: string|null } (low uncertainty)
- *     or { probabilityBand: [{time, prob}, ...] } (high uncertainty, D3-04)
+ *     or { probabilityBand: [{time, prob}, ...] } (high uncertainty, D3-04).
+ *   bedtimeAfterWake (Phase 21 D-09) is the raw, unblended
+ *   buildBedtimeSeriesNoNapDay(window, settings) result in the same
+ *   { central, min, max } | { probabilityBand } shape, or `null` when the
+ *   no-nap-day sub-window is thin (< minDays) — independent of `bedtime`,
+ *   which keeps its existing blended/split-routed meaning.
  */
 export function forecast(dayRecords, settings, context = {}) {
   const { windowDays, minDays, maxDelta } = settings;
@@ -743,26 +748,31 @@ export function forecast(dayRecords, settings, context = {}) {
     };
   })();
 
+  // Shared: full-window bedtime times for probability-band check (D3-04).
+  // Lifted to this scope (Phase 21 D-09) so bedtimeAfterWake can reuse it below
+  // via the also-lifted selectBedtime helper.
+  const bedtimeTimes = window
+    .filter(d => extractTime(d.bedtime) != null)
+    .map(d => timeToMinutes(extractTime(d.bedtime)))
+    .sort((a, b) => a - b);
+
+  // Helper: apply band check and convert integer-minute result to HH:MM shape.
+  // Lifted out of the bedtimePred IIFE (Phase 21 D-09) — it only closes over
+  // bedtimeTimes/maxDelta, both derivable from window/settings at this scope —
+  // so it can be reused by both bedtimePred and the independent bedtimeAfterWake field.
+  function selectBedtime(result) {
+    const band = generateProbabilityBand(bedtimeTimes, result.min, result.max, maxDelta);
+    if (band) return { probabilityBand: band };
+    return {
+      central: minutesToTime(result.central),
+      min:     minutesToTime(result.min),
+      max:     minutesToTime(result.max),
+    };
+  }
+
   // PRED-18/19/10: compute contextual bedtime prediction.
   // D-12 routing order: (1) split-series selection, (2) PRED-10 intense-day shift stacks on top.
   const bedtimePred = (() => {
-    // Shared: full-window bedtime times for probability-band check (D3-04)
-    const bedtimeTimes = window
-      .filter(d => extractTime(d.bedtime) != null)
-      .map(d => timeToMinutes(extractTime(d.bedtime)))
-      .sort((a, b) => a - b);
-
-    // Helper: apply band check and convert integer-minute result to HH:MM shape
-    function selectBedtime(result) {
-      const band = generateProbabilityBand(bedtimeTimes, result.min, result.max, maxDelta);
-      if (band) return { probabilityBand: band };
-      return {
-        central: minutesToTime(result.central),
-        min:     minutesToTime(result.min),
-        max:     minutesToTime(result.max),
-      };
-    }
-
     // Step 1 — split-series selection (PRED-18/19, D-12)
     if (napStartLogged) {
       // Nap was logged today → use nap-day sub-window (PRED-18)
@@ -805,6 +815,17 @@ export function forecast(dayRecords, settings, context = {}) {
     return forecastEvent(d => extractTime(d.bedtime));
   })();
 
+  // D-09: predictions.bedtimeAfterWake — the raw, unblended no-nap-day bedtime
+  // prediction, independent of bedtimePred's (possibly blended/routed) value.
+  // Powers the dual-hero-card display while today's nap status is undetermined
+  // (Plan 21-02). Genuinely null (not a partial/empty object) when the
+  // no-nap-day sub-window is thin (< minDays) — matching
+  // buildBedtimeSeriesNoNapDay's own null-on-thin-history contract.
+  const bedtimeAfterWakeSeries = buildBedtimeSeriesNoNapDay(window, settings);
+  const bedtimeAfterWakePred = bedtimeAfterWakeSeries !== null
+    ? selectBedtime(bedtimeAfterWakeSeries)
+    : null;
+
   // PRED-21: Wake-anchored nap-start prediction.
   // When todayWakeHHMM is known and there are ≥ minDays wake-to-nap gap samples,
   // anchor nap-start to today's wake time + P10/P50/P90 of historical gaps (D-14).
@@ -846,6 +867,7 @@ export function forecast(dayRecords, settings, context = {}) {
     bedtime:  bedtimePred,
     napStart: napStartPred,
     napEnd:   napEndPred,
+    bedtimeAfterWake: bedtimeAfterWakePred,
   };
 }
 
