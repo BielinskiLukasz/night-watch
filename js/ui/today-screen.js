@@ -921,8 +921,18 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
     const currentHour   = new Date().getHours();   // gsd:allow-ui-clock
     const currentMinute = new Date().getMinutes(); // gsd:allow-ui-clock
     const todayWeekday  = new Date().getDay();     // gsd:allow-ui-clock — 0=Sun..6=Sat (D-07)
+    // CR-01 fix (20-REVIEW.md / 20-03-PLAN.md): forecast()/tifForecast()/napProbability()
+    // all internally assume oldest-first day records (their rolling-window slice
+    // `dayRecords.slice(-N)` and "today" extraction `dayRecords[dayRecords.length-1]`
+    // both require the LAST element to be the most recent day). But
+    // eventLog.daysBySubjectiveNight() (and therefore forecastDays here) is always
+    // newest-first (js/lib/day-bucket.js bucketBy()). Reverse once here for those three
+    // calls; forecastDays itself MUST stay newest-first because the napStreak loop
+    // above, and renderForecastSection()/selectNextEvent() below, correctly rely on
+    // forecastDays[0] being today.
+    const forecastDaysOldestFirst = [...forecastDays].reverse();
     // PRED-12: nap probability score computed before forecast() so it can be threaded in (D-13).
-    const napProbabilityScore = napProbability(forecastDays, snap, {
+    const napProbabilityScore = napProbability(forecastDaysOldestFirst, snap, {
       currentHour,
       currentMinute,
       napStreak,
@@ -941,8 +951,8 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
     const activityLog = eventLog.getActivityLog();
     const isNoNapDay = (currentHour >= snap.eveningHour) && (todayDayRecord?.napStart == null);
     const predictions = snap.forecastAlgorithm === 'tif'
-      ? tifForecast(forecastDays, snap, activityLog, isNoNapDay)
-      : forecast(forecastDays, snap, forecastContext);
+      ? tifForecast(forecastDaysOldestFirst, snap, activityLog, isNoNapDay)
+      : forecast(forecastDaysOldestFirst, snap, forecastContext);
 
     // Attach napProbabilityScore to napStart prediction for UI rendering (PRED-12).
     if (predictions.napStart && !predictions.isColdStart) {

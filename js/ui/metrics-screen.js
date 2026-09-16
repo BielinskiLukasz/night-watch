@@ -722,12 +722,16 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // from the Today screen's historic band. See commit 50d491c (original fix) and
     // NW-15 plan 02 FIX-03 (which incorrectly removed it, reintroducing the bug).
     //
-    // IMPORTANT: pass `days` (newest-first, as daysBySubjectiveNight returns it), NOT
-    // reversedDays. tifForecast uses slice(-N) internally, so it must receive the same
-    // order the Today screen passes — otherwise the rolling window covers different days
-    // and the historic band values diverge from what Today shows.
+    // CR-01 fix (20-REVIEW.md / 20-03-PLAN.md): today-screen.js now ALSO reverses its
+    // day-records array (forecastDaysOldestFirst) before calling tifForecast(), because
+    // tifForecast() internally assumes oldest-first input (its `slice(-N)` rolling window
+    // and `dayRecords[dayRecords.length-1]` "today" extraction both require the LAST
+    // element to be the most recent day). This override must pass the SAME oldest-first
+    // ordering (`reversedDays`, already built above for aggregateMetrics) to keep matching
+    // what the Today screen shows — passing the newest-first `days` here would reintroduce
+    // exactly the divergence this override was originally written to prevent.
     if (isTif && tifTrimmedStats) {
-      const currentForecast = tifForecast(days, snap, activityLog);
+      const currentForecast = tifForecast(reversedDays, snap, activityLog);
       const HISTORIC_LABELS = {
         wake:     'Historic wake-up band',
         napStart: 'Historic nap-start band',
