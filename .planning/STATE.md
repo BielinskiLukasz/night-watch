@@ -5,17 +5,17 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: executing
-stopped_at: Phase 23 context gathered
-last_updated: "2026-09-16T15:58:46.728Z"
+stopped_at: Phase 22 context gathered
+last_updated: "2026-09-16T16:02:09.470Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 20 execution started
-state_head: ce842c969c33b141801b5e67abbc232fe72ec8d5
+state_head: 20f7d57d7bbf6037974572ba118a47b323a2b21c
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 1
   total_plans: 4
   completed_plans: 3
-  percent: 17
+  percent: 14
 ---
 
 # Project State
@@ -177,9 +177,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T15:58:44.347Z
-Stopped at: Phase 23 context gathered
-Resume file: .planning/phases/23-metrics-accuracy-column-migration/23-CONTEXT.md
+Last session: 2026-09-16T16:02:08.247Z
+Stopped at: Phase 22 context gathered
+Resume file: .planning/phases/22-accuracy-scoring/22-CONTEXT.md
 
 ## Deferred Items
 
