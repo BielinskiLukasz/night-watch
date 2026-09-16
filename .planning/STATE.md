@@ -4,17 +4,17 @@ milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
-status: executing
-stopped_at: Phase 24 context gathered
-last_updated: "2026-09-16T16:03:04.445Z"
+status: verifying
+stopped_at: Completed 20-02-PLAN.md
+last_updated: "2026-09-16T16:12:36.195Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 20 execution started
-state_head: 39722842cae8a4bd4b67ab2faf537f10826f1385
+state_head: fcfdb2ac5c00bbe3567811065ad9bd598c8725c2
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 14
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 Phase: 20 (Nap Probability Redesign) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-16 — Phase 20 execution started
 
 ## Phases
@@ -95,6 +95,7 @@ Last activity: 2026-09-16 — Phase 20 execution started
 | Phase 19 P01 | 8 | 3 tasks | 2 files |
 | Phase 19 P02 | multi-session | 3 tasks | 7 files |
 | Phase 20 P01 | 25 min | 2 tasks | 4 files |
+| Phase 20 P02 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,7 @@ Last activity: 2026-09-16 — Phase 20 execution started
 - [Phase 19]: D-13: todayWakeHHMM/napProbabilityScore/todayNapStartHHMM pre-computed before forecast() in today-screen.js
 - [Phase 20]: [Phase 20 Plan 01]: napProbability() rewritten to {score,signalsUsed,confidence}; weight redistribution (D-01/D-02) covers 4 availability combinations
 - [Phase 20]: [Phase 20 Plan 01]: dayOfWeekAverages() extended with napDays/totalDays counters (additive, non-breaking)
+- [Phase 20]: Phase 20: Kept score===0 nap-window-closed UI ternary as-is (repointed to .score) — D-11/D-12 decoupled napWindowClosed flag not implemented in Plan 20-01, out of Plan 20-02 scope
 
 ### Quick Tasks Completed
 
@@ -177,9 +179,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T16:03:03.499Z
-Stopped at: Phase 24 context gathered
-Resume file: .planning/phases/24-autosave/24-CONTEXT.md
+Last session: 2026-09-16T16:12:35.173Z
+Stopped at: Completed 20-02-PLAN.md
+Resume file: None
 
 ## Deferred Items
 
