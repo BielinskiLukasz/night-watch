@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 21
 current_phase_name: Prediction Normalization
 status: executing
-stopped_at: Phase 20 complete, ready to plan Phase 21
-last_updated: "2026-09-16T18:22:17.659Z"
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-09-16T19:08:17.043Z"
 last_activity: 2026-09-16
-last_activity_desc: Phase 20 complete, transitioned to Phase 21
-state_head: b42a059f0b9b1bb49aa7aec64b06706ba2511d70
+last_activity_desc: Phase 21 execution started
+state_head: 0e510070b1d38d1873b6a276109f6c3b6b7c2dfa
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 29
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 20 — Nap Probability Redesign
+**Current focus:** Phase 21 — Prediction Normalization
 
 ## Current Position
 
-Phase: 21 (Prediction Normalization) — READY TO EXECUTE
-Plan: Not started
+Phase: 21 (Prediction Normalization) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-09-16 — Phase 20 complete, transitioned to Phase 21
+Last activity: 2026-09-16 — Phase 21 execution started
 
 ## Phases
 
@@ -97,6 +97,7 @@ Last activity: 2026-09-16 — Phase 20 complete, transitioned to Phase 21
 | Phase 20 P01 | 25 min | 2 tasks | 4 files |
 | Phase 20 P02 | 8 | 2 tasks | 3 files |
 | Phase 20 P03 | 25 | 2 tasks | 4 files |
+| Phase 21 P01 | 45min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,8 @@ Last activity: 2026-09-16 — Phase 20 complete, transitioned to Phase 21
 - [Phase 20]: Phase 20: Kept score===0 nap-window-closed UI ternary as-is (repointed to .score) — D-11/D-12 decoupled napWindowClosed flag not implemented in Plan 20-01, out of Plan 20-02 scope
 - [Phase 20]: Phase 20 Plan 03: forecastDaysOldestFirst reversal in today-screen.js feeds napProbability()/tifForecast()/forecast() (CR-01); metrics-screen.js tifForecast override passes reversedDays
 - [Phase 20]: Phase 20 Plan 03: today-screen.js todayDateStr uses formatLocalISO(new Date()) instead of toISOString() (CR-02)
+- [Phase 21]: napProbability() decouples napWindowClosed from score; strict > against napStart P90 (D-03) — Finishes Phase 20 D-11/D-12; score never collapses to 0 solely from window closing
+- [Phase 21]: bedtimeAfterWake keeps its own RESULT_TYPE literal in selectNextEvent; bedtimeAfterNap normalizes to 'bedtime' (D-07) — Preserves distinguishability for Plan 21-02's dual-hero rendering while keeping the single logged bedtime event type intact
 
 ### Quick Tasks Completed
 
@@ -182,8 +185,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T17:12:39.791Z
-Stopped at: Phase 20 complete, ready to plan Phase 21
+Last session: 2026-09-16T19:08:15.049Z
+Stopped at: Completed 21-01-PLAN.md
 Resume file: None
 
 ## Deferred Items

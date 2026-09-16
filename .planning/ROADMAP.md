@@ -69,7 +69,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 - [ ] **Phase 21: Prediction Normalization** — Add `nextReachableEvent(lastEvent, currentHour, settings)` helper (pure function, new export in `js/lib/forecast.js` or a dedicated `js/lib/forecast-utils.js`); update `today-screen.js` to render only the next reachable event card prominently and to fully hide (not collapse) nap cards when the nap window is closed via a dedicated UI flag; if `forecast-utils.js` is new it must be added to `PRECACHE_LIST` and `sw-precache.test.js`; E2E tests cover event-card visibility for each reachable-event state (requirements: PRED-23, PRED-24, UI-13)
   **Plans:** 3 plans
   Plans:
-  - [ ] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
+  - [x] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
   - [ ] 21-02-PLAN.md — predictions.bedtimeAfterWake + dual-hero rendering + "Later today" section
   - [ ] 21-03-PLAN.md — Full E2E coverage matrix for all 5 nextReachableEvent paths
 
@@ -130,7 +130,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   6. `forecast-utils.js` is added to `sw.js`'s `PRECACHE_LIST` and to `tests/unit/sw-precache.test.js`
   7. E2E tests cover event-card visibility for each reachable-event state
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 **Wave 1**

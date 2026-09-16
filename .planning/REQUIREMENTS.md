@@ -30,7 +30,7 @@
 
 ### Prediction Normalization
 
-- [ ] **PRED-23**: `nextReachableEvent(lastEvent, currentHour, settings)` helper — returns the single next upcoming event type given the last logged event type and the current hour; used by Today screen to show only the immediately relevant prediction
+- [x] **PRED-23**: `nextReachableEvent(lastEvent, currentHour, settings)` helper — returns the single next upcoming event type given the last logged event type and the current hour; used by Today screen to show only the immediately relevant prediction
 - [ ] **PRED-24**: Today screen suppresses nap prediction cards when the nap window is closed (not just collapsed); "window closed" is a dedicated UI flag derived from nap probability logic, independent of the probability score value
 
 ### Accuracy Scoring
@@ -82,7 +82,7 @@
 | NAP-02 | B-047 | Phase 20 | Complete |
 | NAP-03 | B-047 | Phase 20 | Complete |
 | NAP-04 | B-047 | Phase 20 | Complete |
-| PRED-23 | B-038 | Phase 21 | Pending |
+| PRED-23 | B-038 | Phase 21 | Complete |
 | PRED-24 | B-038 | Phase 21 | Pending |
 | ACC-01 | B-049 | Phase 22 | Pending |
 | ACC-02 | B-049 | Phase 22 | Pending |
