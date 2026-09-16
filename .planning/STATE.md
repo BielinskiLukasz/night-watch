@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: verifying
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-09-16T16:12:36.195Z"
+stopped_at: Completed 20-03-PLAN.md (gap closure)
+last_updated: "2026-09-16T17:12:40.522Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 20 execution started
-state_head: fcfdb2ac5c00bbe3567811065ad9bd598c8725c2
+state_head: 63dd90794a1aa72212a42ad6a72623788ade5999
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 14
 ---
 
@@ -96,6 +96,7 @@ Last activity: 2026-09-16 — Phase 20 execution started
 | Phase 19 P02 | multi-session | 3 tasks | 7 files |
 | Phase 20 P01 | 25 min | 2 tasks | 4 files |
 | Phase 20 P02 | 8 | 2 tasks | 3 files |
+| Phase 20 P03 | 25 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,8 @@ Last activity: 2026-09-16 — Phase 20 execution started
 - [Phase 20]: [Phase 20 Plan 01]: napProbability() rewritten to {score,signalsUsed,confidence}; weight redistribution (D-01/D-02) covers 4 availability combinations
 - [Phase 20]: [Phase 20 Plan 01]: dayOfWeekAverages() extended with napDays/totalDays counters (additive, non-breaking)
 - [Phase 20]: Phase 20: Kept score===0 nap-window-closed UI ternary as-is (repointed to .score) — D-11/D-12 decoupled napWindowClosed flag not implemented in Plan 20-01, out of Plan 20-02 scope
+- [Phase 20]: Phase 20 Plan 03: forecastDaysOldestFirst reversal in today-screen.js feeds napProbability()/tifForecast()/forecast() (CR-01); metrics-screen.js tifForecast override passes reversedDays
+- [Phase 20]: Phase 20 Plan 03: today-screen.js todayDateStr uses formatLocalISO(new Date()) instead of toISOString() (CR-02)
 
 ### Quick Tasks Completed
 
@@ -179,8 +182,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T16:12:35.173Z
-Stopped at: Completed 20-02-PLAN.md
+Last session: 2026-09-16T17:12:39.791Z
+Stopped at: Completed 20-03-PLAN.md (gap closure)
 Resume file: None
 
 ## Deferred Items
