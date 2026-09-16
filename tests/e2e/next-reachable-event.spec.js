@@ -9,9 +9,8 @@
 //   2. napStart -> napEnd (single hero, Later Today: wake/napStart/bedtime)
 //   3. napEnd -> bedtime (single hero, Later Today: wake/napStart/napEnd)
 //   4. wake (window closed) -> bedtimeAfterWake only, napStart fully absent
-//
-// (Task 2 of this plan adds Tests 5-6: the dual-hero ambiguous path and the
-// TIF auto-expand-in-Later-Today interaction, in the same file.)
+//   5. wake (window open) -> dual hero [napStart, bedtimeAfterWake]
+//   6. TIF auto-expand inside Later Today (D-13) — no click on the card itself
 //
 // Every one of Tests 1-4 additionally asserts .later-today-section starts
 // collapsed (no `open` attribute) immediately after seedAndReload, before any
@@ -180,6 +179,65 @@ function makeWindowClosedDb(settingsOverrides = {}) {
   return makeDb([...fullDayEvents, ...todayOnlyWake], settingsOverrides);
 }
 
+/**
+ * Path 5: wake (nap window open) -> dual hero [napStart, bedtimeAfterWake].
+ *
+ * Lays out 8 "nap days" (wake/napStart/napEnd/bedtime) followed by 8
+ * "no-nap days" (wake/bedtime only) followed by a final "today" day with
+ * only a wake event logged. With windowDays:14, forecast()'s rolling window
+ * is the last 14 days — 5 nap days + 8 no-nap days + today — which gives
+ * predictions.napStart real data (5 nap-day samples) AND
+ * predictions.bedtimeAfterWake real data (9 no-nap-day samples, satisfying
+ * buildBedtimeSeriesNoNapDay's >= minDays(7) threshold), independent of the
+ * blended predictions.bedtime.
+ *
+ * Clock is pinned before both napStart's P90 (~13:00, all-nap-day flat
+ * value) and the default eveningHour(18), so nextReachableEvent keeps napStart
+ * in the reachable path (dual hero, not the window-closed single-hero path).
+ */
+function makeDualHeroDb(settingsOverrides = {}) {
+  const BASE = '2026-05-01';
+  const NAP_DAYS = 8;
+  const NO_NAP_DAYS = 8;
+  const napBase = BASE;
+  const noNapBase = addDays(BASE, NAP_DAYS);
+  const todayDate = addDays(BASE, NAP_DAYS + NO_NAP_DAYS);
+
+  const napDayEvents = [
+    ...makeEvents(NAP_DAYS, 'wake', '06:30', napBase, 'nd-w'),
+    ...makeEvents(NAP_DAYS, 'napStart', '13:00', napBase, 'nd-ns'),
+    ...makeEvents(NAP_DAYS, 'napEnd', '14:00', napBase, 'nd-ne'),
+    ...makeEvents(NAP_DAYS, 'bedtime', '21:00', napBase, 'nd-b'),
+  ];
+  const noNapDayEvents = [
+    ...makeEvents(NO_NAP_DAYS, 'wake', '06:30', noNapBase, 'nn-w'),
+    ...makeEvents(NO_NAP_DAYS, 'bedtime', '20:00', noNapBase, 'nn-b'),
+  ];
+  const todayEvents = [
+    { id: 'today-wake', type: 'wake', at: `${todayDate}T06:30` },
+  ];
+
+  return makeDb([...napDayEvents, ...noNapDayEvents, ...todayEvents], {
+    windowDays: 14,
+    minDays: 7,
+    ...settingsOverrides,
+  });
+}
+
+/**
+ * Wake-only 32-day TIF fixture — identical to tests/e2e/tif.spec.js's
+ * makeWakeOnlyDb. The single event type guarantees the wake TIF prediction
+ * has exactly one source window (self-intersecting), producing a normal
+ * (non-low-confidence) TIF card with a precision badge; napStart/napEnd/
+ * bedtime fall back to null-data TIF placeholders.
+ */
+function makeWakeOnlyDb(settingsOverrides = {}) {
+  const BASE = '2026-05-01';
+  const N = 32;
+  const events = makeEvents(N, 'wake', '06:30', BASE, 'w');
+  return makeDb(events, settingsOverrides);
+}
+
 // ── Suite setup ───────────────────────────────────────────────────────────────
 
 test.beforeEach(async ({ page }) => {
@@ -301,4 +359,75 @@ test('wake (window closed) -> bedtimeAfterWake only, napStart fully absent from 
   expect(await page.locator('[data-event-type="wake"]').count()).toBeGreaterThanOrEqual(1);
   expect(await page.locator('[data-event-type="napEnd"]').count()).toBeGreaterThanOrEqual(1);
   expect(await page.locator('[data-event-type="bedtime"]').count()).toBeGreaterThanOrEqual(1);
+});
+
+// ── Test 5: wake (window open) -> dual hero [napStart, bedtimeAfterWake] ─────
+
+test('wake (window open) -> dual hero [napStart, bedtimeAfterWake]', async ({ page }) => {
+  // Day 17 ('2026-05-17') is "today" in makeDualHeroDb's layout — pin before
+  // both napStart's P90 (~13:00) and the default eveningHour (18).
+  await page.clock.setFixedTime(new Date('2026-05-17T10:00:00'));
+
+  const db = makeDualHeroDb();
+  await seedAndReload(page, db);
+
+  await expect(page.locator('#forecast-cards')).toBeVisible();
+
+  const heroRow = page.locator('#next-event-card .hero-row');
+  await expect(heroRow).toBeVisible();
+  await expect(heroRow.locator('.next-event-hero')).toHaveCount(2);
+
+  const napStartHero = heroRow.locator('[data-event-type="napStart"]');
+  const bedtimeHero = heroRow.locator('[data-event-type="bedtime"]');
+  await expect(napStartHero).toBeVisible();
+  await expect(bedtimeHero).toBeVisible();
+
+  const napStartTime = await napStartHero.locator('.time-central').textContent();
+  const bedtimeTime = await bedtimeHero.locator('.time-central').textContent();
+  expect(napStartTime).not.toBe(bedtimeTime);
+
+  // Later Today contains only wake + napEnd (both hero types, and the
+  // hero-implied 'bedtime', are excluded).
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
+  await laterToday.locator('summary').click();
+
+  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(2);
+  await expect(laterToday.locator('[data-event-type="wake"]')).toHaveCount(1);
+  await expect(laterToday.locator('[data-event-type="napEnd"]')).toHaveCount(1);
+  await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(0);
+  await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(0);
+});
+
+// ── Test 6: TIF auto-expand inside Later Today (D-13) ────────────────────────
+
+test('TIF auto-expand inside Later Today (D-13) — no click on the card itself', async ({ page }) => {
+  // Phase 21 D-07/D-08 (see tests/e2e/tif.spec.js Test 2): wake-only fixture,
+  // lastEvent.type === 'wake' with no napStart history at all -> dual hero
+  // [napStart, bedtimeAfterWake] (both null-data TIF placeholders). The one
+  // TIF prediction with real data (wake, self-intersecting single source
+  // window) is NOT a hero candidate here and lands inside the collapsed-by-
+  // default "Later today" section instead.
+  await page.clock.setFixedTime(new Date('2026-06-02T09:00:00'));
+
+  const db = makeWakeOnlyDb({ forecastAlgorithm: 'tif' });
+  await seedAndReload(page, db);
+
+  await expect(page.locator('#forecast-cards')).toBeVisible();
+
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
+
+  const wakeCard = laterToday.locator('.tif-card[data-event-type="wake"]');
+  await expect(wakeCard).toHaveCount(1);
+  await expect(wakeCard).toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.card-full')).not.toBeVisible();
+
+  // Open Later Today — deliberately no click on wakeCard itself.
+  await laterToday.locator('summary').click();
+
+  await expect(wakeCard).not.toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.card-full')).toBeVisible();
+  await expect(wakeCard.locator('.tif-score-badge')).toBeVisible();
+  await expect(wakeCard.locator('.tif-source-list')).toBeVisible();
 });
