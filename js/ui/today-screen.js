@@ -43,7 +43,9 @@ import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
 import { forecast, napProbability } from '../lib/forecast.js';
 // Phase 21 D-06/D-07/D-14: selectNextEvent moved out of forecast.js into forecast-utils.js.
-import { selectNextEvent } from '../lib/forecast-utils.js';
+// Plan 21-02 D-08: renderForecastSection calls nextReachableEvent directly (dual-hero support);
+// selectNextEvent's singular-result contract stays available in forecast-utils.js for other callers.
+import { nextReachableEvent } from '../lib/forecast-utils.js';
 import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -79,6 +81,9 @@ const DEBOUNCE_MS = 300;
 const EVENT_TYPE_LABEL = Object.freeze({
   wake: 'Wake',
   bedtime: 'Bedtime',
+  // Phase 21 D-07: bedtimeAfterWake is a calculation branch for the same
+  // logged 'bedtime' event type — shares the display label with 'bedtime'.
+  bedtimeAfterWake: 'Bedtime',
   napStart: 'Nap start',
   napEnd: 'Nap end',
 });
@@ -107,23 +112,38 @@ function formatHHMM(hhmm, timeFormat) {
 }
 
 /**
- * Render the next-event hero card (D3-07 / D3-10 / D3-11).
- *
- * Returns an HTMLElement (.next-event-hero) ready to be injected into #next-event-card.
- * Returns null when prediction is null (cold start or no predictions available).
+ * Map a hero prediction's `type` to the underlying loggable event type for the
+ * `data-event-type` DOM attribute. bedtimeAfterWake is a prediction-calculation
+ * branch, not a new loggable event type (D-07) — it maps to 'bedtime' here so
+ * E2E selectors keyed on the four real event types keep working uniformly
+ * across hero and Later-Today cards.
+ */
+const LOGGABLE_EVENT_TYPE = Object.freeze({
+  wake: 'wake',
+  bedtime: 'bedtime',
+  napStart: 'napStart',
+  napEnd: 'napEnd',
+  bedtimeAfterWake: 'bedtime',
+});
+
+/**
+ * Render a single hero-card element (.next-event-hero) for one prediction.
+ * Extracted from renderNextEventCard (Phase 21 D-08) so the dual-hero case can
+ * build two of these into a .hero-row wrapper without duplicating the body.
  *
  * @param {{ type: string, isMissed: boolean, central?: string, min?: string, max?: string,
- *            probabilityBand?: Array<{time:string,prob:number}> }|null} prediction
+ *            probabilityBand?: Array<{time:string,prob:number}> }} prediction
  * @param {'24h'|'12h'} timeFormat
- * @returns {HTMLElement|null}
+ * @returns {HTMLElement}
  */
-function renderNextEventCard(prediction, timeFormat) {
-  if (!prediction) return null;
-
+function renderOneHeroCard(prediction, timeFormat) {
   const heroClass = prediction.isMissed ? 'next-event-hero missed' : 'next-event-hero';
   // T-21-01: data-event-type is always one of the fixed literal event-type strings
   // (never derived from imported/user-controlled JSON) — added for E2E targetability.
-  const card = el('div', { className: heroClass, 'data-event-type': prediction.type });
+  const card = el('div', {
+    className: heroClass,
+    'data-event-type': LOGGABLE_EVENT_TYPE[prediction.type] ?? prediction.type,
+  });
 
   // UI-10 / D9-17: "Next Predicted Event" label above event type for visual hierarchy.
   card.appendChild(el('p', {
@@ -195,6 +215,42 @@ function renderNextEventCard(prediction, timeFormat) {
   }
 
   return card;
+}
+
+/**
+ * Render the next-event hero card (D3-07 / D3-10 / D3-11 / Phase 21 D-08).
+ *
+ * Accepts EITHER a single prediction object (existing behavior, unchanged
+ * output — a bare .next-event-hero element) OR an array of 1-2 predictions.
+ * A 2-element array (Phase 21 D-08: both napStart and bedtimeAfterWake
+ * reachable while nap status is undetermined) renders as a .hero-row wrapper
+ * containing two independently-rendered .next-event-hero cards side by side.
+ * A 1-element array is treated the same as a bare single prediction (no
+ * .hero-row wrapper) so callers can pass either shape interchangeably.
+ *
+ * Returns null when given null/undefined or an empty array (cold start or no
+ * predictions available).
+ *
+ * @param {object|object[]|null} predictionOrArray
+ * @param {'24h'|'12h'} timeFormat
+ * @returns {HTMLElement|null}
+ */
+export function renderNextEventCard(predictionOrArray, timeFormat) {
+  if (!predictionOrArray) return null;
+
+  if (Array.isArray(predictionOrArray)) {
+    const valid = predictionOrArray.filter(Boolean);
+    if (valid.length === 0) return null;
+    if (valid.length === 1) return renderOneHeroCard(valid[0], timeFormat);
+
+    const row = el('div', { className: 'hero-row' });
+    for (const pred of valid) {
+      row.appendChild(renderOneHeroCard(pred, timeFormat));
+    }
+    return row;
+  }
+
+  return renderOneHeroCard(predictionOrArray, timeFormat);
 }
 
 /**
@@ -487,9 +543,10 @@ function renderColdStartMessage(minDaysRemaining) {
 
 /**
  * Find the most-recently-logged event across all day records (mirrors
- * js/lib/forecast-utils.js's selectNextEvent Step 1 exactly). Used locally by
- * renderForecastSection to decide the napStart-drop condition (Phase 21 D-01/
- * D-04/D-05) without threading state through selectNextEvent's return value.
+ * js/lib/forecast-utils.js's selectNextEvent Step 1 exactly). Used by
+ * renderForecastSection both to feed nextReachableEvent() directly (Plan
+ * 21-02 D-08) and to decide the napStart-drop condition (Phase 21 D-01/
+ * D-04/D-05).
  *
  * @param {object[]} dayRecords  array of day records with allEvents lists
  * @returns {{type: string, at: string}|null}
@@ -508,16 +565,51 @@ function findLastEvent(dayRecords) {
 }
 
 /**
- * Re-render the forecast section (next-event hero + cold-start OR four cards).
+ * Map a nextReachableEvent() path entry to the predictions object's field key.
+ * Mirrors forecast-utils.js's internal PREDICTION_FIELD table (not exported —
+ * duplicated here per Plan 21-02 Task 2, since renderForecastSection now calls
+ * nextReachableEvent directly instead of going through selectNextEvent).
+ * bedtimeAfterNap normalizes to the single 'bedtime' prediction field (D-07) —
+ * bedtimeAfterWake keeps its own field so dual-hero rendering can distinguish
+ * it from the blended predictions.bedtime.
+ */
+const HERO_PREDICTION_FIELD = Object.freeze({
+  wake: 'wake',
+  bedtime: 'bedtime',
+  napStart: 'napStart',
+  napEnd: 'napEnd',
+  bedtimeAfterWake: 'bedtimeAfterWake',
+  bedtimeAfterNap: 'bedtime',
+});
+
+/**
+ * Map a nextReachableEvent() path entry to the RESULT `type` field reported
+ * to renderNextEventCard. Mirrors forecast-utils.js's internal RESULT_TYPE
+ * table (not exported — duplicated here per Plan 21-02 Task 2).
+ */
+const HERO_RESULT_TYPE = Object.freeze({
+  wake: 'wake',
+  bedtime: 'bedtime',
+  napStart: 'napStart',
+  napEnd: 'napEnd',
+  bedtimeAfterWake: 'bedtimeAfterWake',
+  bedtimeAfterNap: 'bedtime',
+});
+
+/**
+ * Re-render the forecast section (dual-hero row + cold-start OR Later-Today section).
  *
  * Called on every render() invocation. Clears and repopulates:
  *   - nextEventCard container (#next-event-card)
  *   - coldStartMsg container (#cold-start-message)
- *   - forecastCards container (#forecast-cards.forecast-grid)
+ *   - forecastCards container (#forecast-cards)
  *
- * When isColdStart: shows cold-start message, hides the grid.
- * Otherwise: shows the four prediction cards, hides the cold-start message.
- * Next-event hero always rendered when a prediction is available (D3-10).
+ * When isColdStart: shows cold-start message, hides everything else.
+ * Otherwise: renders 1-2 hero cards for the event type(s) nextReachableEvent()
+ * determines are reachable (Phase 21 D-06/D-07/D-08), and tucks every other
+ * non-dropped prediction inside a single collapsed-by-default "Later today"
+ * <details> section (D-10/D-11/D-12), reusing the existing per-card renderers
+ * unchanged.
  *
  * @param {object}   predictions  forecast() result
  * @param {object}   settingsSnap  settings.get() snapshot
@@ -526,7 +618,7 @@ function findLastEvent(dayRecords) {
  * @param {HTMLElement} coldStartMsg   container div
  * @param {HTMLElement} forecastCards  container section
  */
-function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventCard, coldStartMsg, forecastCards) {
+export function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventCard, coldStartMsg, forecastCards) {
   const timeFormat = settingsSnap.timeFormat;
 
   // Clear all three forecast containers
@@ -547,13 +639,50 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
     return;
   }
 
-  // Show the four prediction cards
+  // Show the forecast containers
   forecastCards.style.display = '';
   coldStartMsg.style.display = 'none';
 
-  // Next-event hero (D3-10)
-  const nextEvt = selectNextEvent(predictions, dayRecords, settingsSnap);
-  const heroEl = renderNextEventCard(nextEvt, timeFormat);
+  // Single scan for the most-recently-logged event, shared by both the
+  // hero-selection call below and the napStart-drop condition (D-01/D-04/D-05).
+  // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic.
+  const currentHour = new Date().getHours(); // gsd:allow-ui-clock
+  const lastEvent = findLastEvent(dayRecords);
+  const napWindowClosed = predictions.napStart?.napProbabilityScore?.napWindowClosed === true;
+
+  // Phase 21 D-06/D-07/D-08: call nextReachableEvent directly (not
+  // selectNextEvent) so the array-based dual-hero case (both napStart and
+  // bedtimeAfterWake reachable) is available in full.
+  const reachable = nextReachableEvent(lastEvent, currentHour, {
+    eveningHour: settingsSnap.eveningHour,
+    napWindowClosed,
+  });
+
+  // Map the reachable path to hero prediction objects using the same
+  // field/fallback rules selectNextEvent uses internally.
+  const heroEntries = [];
+  for (const entry of reachable) {
+    const fieldKey = HERO_PREDICTION_FIELD[entry];
+    const predEntry = predictions[fieldKey]
+      ?? (entry === 'bedtimeAfterWake' ? predictions.bedtime : undefined);
+    if (!predEntry) continue;
+
+    // D3-11: Detect "missed" predictions — only when central is set.
+    let isMissed = false;
+    if (predEntry.central) {
+      // gsd:allow-ui-clock — display-only UI metadata (D3-11), not domain logic.
+      const nowDate = new Date(); // gsd:allow-ui-clock
+      const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+      const parts = predEntry.central.split(':');
+      const centralMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      isMissed = centralMinutes < nowMinutes;
+    }
+
+    heroEntries.push({ type: HERO_RESULT_TYPE[entry], isMissed, ...predEntry });
+  }
+
+  // Hero row: 1 or 2 cards (D-08), rendered into #next-event-card.
+  const heroEl = renderNextEventCard(heroEntries, timeFormat);
   if (heroEl) {
     nextEventCard.appendChild(heroEl);
     nextEventCard.style.display = '';
@@ -561,39 +690,68 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
     nextEventCard.style.display = 'none';
   }
 
-  // Phase 21 D-01/D-04/D-05: napStart is fully hidden from the grid (not just
-  // relabeled) once no nap will start today. This only applies while today's
-  // nap status is still undetermined (last event is null or 'wake') — once
-  // napStart is already logged for today, D-04's carve-out means napEnd
+  // Phase 21 D-01/D-04/D-05: napStart is fully hidden from Later Today (not
+  // just relabeled) once no nap will start today. This only applies while
+  // today's nap status is still undetermined (last event is null or 'wake') —
+  // once napStart is already logged for today, D-04's carve-out means napEnd
   // renders normally regardless of napWindowClosed.
-  // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic.
-  const currentHourForNapDrop = new Date().getHours(); // gsd:allow-ui-clock
-  const lastEventForNapDrop = findLastEvent(dayRecords);
-  const lastEventIsWakeOrNone = lastEventForNapDrop === null || lastEventForNapDrop.type === 'wake';
-  const napStartHiddenToday = predictions.napStart?.napProbabilityScore != null
-    && lastEventIsWakeOrNone
-    && (predictions.napStart.napProbabilityScore.napWindowClosed === true
-        || currentHourForNapDrop >= (settingsSnap.eveningHour ?? 18));
+  const lastEventIsWakeOrNone = lastEvent === null || lastEvent.type === 'wake';
+  const napStartHiddenToday = lastEventIsWakeOrNone
+    && (napWindowClosed || currentHour >= (settingsSnap.eveningHour ?? 18));
 
-  // Four prediction cards in fixed order (D3-08, UI-07 / D-16: bedtime last)
+  // Hero types already rendered above — the Later-Today loop must not
+  // duplicate them. 'bedtimeAfterWake' represents the same logged event type
+  // as 'bedtime' (D-07's parenthetical), so covering it also skips 'bedtime'.
+  const heroTypes = new Set(heroEntries.map((e) => e.type));
+  if (heroTypes.has('bedtimeAfterWake')) heroTypes.add('bedtime');
+
+  // "Later today" collapsible section (D-10/D-11/D-12): no `open` attribute —
+  // matches Phase 17's DoW-section convention (native <details> collapse
+  // resets on every replaceChildren rebuild, which is fine since this section
+  // is rebuilt fresh on every render() call).
+  const laterToday = el('details', { className: 'later-today-section' });
+  laterToday.appendChild(el('summary', { textContent: 'Later today' }));
+
+  // Fixed event-type order (D3-08, UI-07 / D-16: bedtime last)
   const EVENT_TYPES = ['wake', 'napStart', 'napEnd', 'bedtime'];
   for (const type of EVENT_TYPES) {
+    if (heroTypes.has(type)) continue;
     if (type === 'napStart' && napStartHiddenToday) continue;
     const pred = predictions[type];
     if (!pred) continue;
 
     if (pred.precisionScore != null || pred.isLowConfidence != null) {
-      // TIF rendering path
+      // TIF rendering path (unchanged — D-12)
       if (pred.isLowConfidence) {
-        forecastCards.appendChild(renderTifLowConfidenceCard(pred, type, timeFormat));
+        laterToday.appendChild(renderTifLowConfidenceCard(pred, type, timeFormat));
       } else {
-        forecastCards.appendChild(renderTifNormalCard(pred, type, timeFormat, settingsSnap.precisionTarget ?? 60));
+        laterToday.appendChild(renderTifNormalCard(pred, type, timeFormat, settingsSnap.precisionTarget ?? 60));
       }
     } else {
-      // Classic rendering path (unchanged)
-      forecastCards.appendChild(renderPredictionCard(pred, type, timeFormat));
+      // Classic rendering path (unchanged — D-12)
+      laterToday.appendChild(renderPredictionCard(pred, type, timeFormat));
     }
   }
+
+  // D-13: auto-expand any already-collapsed card nested inside Later Today
+  // once the outer section is opened — avoids a two-tap dig for detail the
+  // user already asked to see by opening the section. Guarded to only touch
+  // cards that currently have .collapsed (a harmless no-op on already-expanded
+  // cards; never forces an already-expanded card closed).
+  laterToday.addEventListener('toggle', () => {
+    if (!laterToday.open) return;
+    const collapsedCards = [
+      ...laterToday.querySelectorAll('.tif-card.collapsed'),
+      ...laterToday.querySelectorAll('.probability-band.collapsed'),
+    ];
+    for (const card of collapsedCards) {
+      card.classList.remove('collapsed');
+      const chevron = card.querySelector('.card-chevron');
+      if (chevron) chevron.textContent = '↑';
+    }
+  });
+
+  forecastCards.appendChild(laterToday);
 }
 
 // ---------------------------------------------------------------------------

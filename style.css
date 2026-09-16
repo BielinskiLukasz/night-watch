@@ -909,6 +909,42 @@ button[data-log]:hover {
   margin-bottom: 0.5rem;
 }
 
+/* ── Dual-hero row (Phase 21 D-08) ───────────────────────────────────────── */
+
+.hero-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.hero-row .next-event-hero {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .hero-row {
+    flex-direction: column;
+  }
+}
+
+/* ── "Later today" collapsible section (Phase 21 D-10/D-11) ─────────────── */
+
+.later-today-section {
+  margin-top: 0.5rem;
+}
+
+.later-today-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  padding: 0.5rem 0;
+}
+
+.later-today-section > *:not(summary) {
+  margin-top: 0.75rem;
+}
+
 /* ── Cold-start message (D3-09) ──────────────────────────────────────────── */
 
 .cold-start-message {
