@@ -127,6 +127,34 @@ const LOGGABLE_EVENT_TYPE = Object.freeze({
 });
 
 /**
+ * Compute whether a prediction's central time has already passed today, and
+ * by how many minutes (D3-11). Single source of truth (WR-02 fix) for the
+ * "now-minutes-since-midnight vs. central-minutes-since-midnight" comparison
+ * previously re-implemented independently at four call sites in this file
+ * (renderOneHeroCard's missed-label calc, renderPredictionCard's isMissed
+ * calc AND its missed-label calc, and renderForecastSection's heroEntries
+ * loop).
+ *
+ * @param {string|null|undefined} centralHHMM  prediction.central, 'HH:MM', or absent
+ * @param {Date} [nowDate]  wall-clock reference; when omitted, reads a fresh
+ *   Date instance from the clock. Callers that need multiple computations
+ *   to agree on the same instant within one render pass may pass an
+ *   explicit Date instead.
+ * @returns {{ isMissed: boolean, deltaMinutes: number }}
+ *   deltaMinutes is `now - central` in minutes; 0 when centralHHMM is absent.
+ */
+function computeMissedInfo(centralHHMM, nowDate) {
+  if (!centralHHMM) return { isMissed: false, deltaMinutes: 0 };
+  // gsd:allow-ui-clock — display-only UI metadata (D3-11), not domain logic.
+  const now = nowDate ?? new Date(); // gsd:allow-ui-clock
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const parts = centralHHMM.split(':');
+  const centralMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  const deltaMinutes = nowMinutes - centralMinutes;
+  return { isMissed: deltaMinutes > 0, deltaMinutes };
+}
+
+/**
  * Render a single hero-card element (.next-event-hero) for one prediction.
  * Extracted from renderNextEventCard (Phase 21 D-08) so the dual-hero case can
  * build two of these into a .hero-row wrapper without duplicating the body.
@@ -200,16 +228,11 @@ function renderOneHeroCard(prediction, timeFormat) {
 
   // Missed label (D3-11)
   if (prediction.isMissed && prediction.central) {
-    // gsd:allow-ui-clock — display-only UI metadata (D3-11), not domain logic.
-    const nowDate = new Date(); // gsd:allow-ui-clock
-    const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-    const centralParts = prediction.central.split(':');
-    const centralMinutes = parseInt(centralParts[0], 10) * 60 + parseInt(centralParts[1], 10);
-    const delta = nowMinutes - centralMinutes;
-    if (delta > 0) {
+    const { deltaMinutes } = computeMissedInfo(prediction.central);
+    if (deltaMinutes > 0) {
       card.appendChild(el('span', {
         className: 'missed-label',
-        textContent: `Missed by ${delta}min`,
+        textContent: `Missed by ${deltaMinutes}min`,
       }));
     }
   }
@@ -266,15 +289,7 @@ export function renderNextEventCard(predictionOrArray, timeFormat) {
  */
 export function renderPredictionCard(prediction, eventType, timeFormat) {
   // Determine if the prediction's central time is in the past (D3-11)
-  let isMissed = false;
-  if (prediction.central) {
-    // gsd:allow-ui-clock — display-only UI metadata (D3-11), not domain logic.
-    const nowDate = new Date(); // gsd:allow-ui-clock
-    const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-    const parts = prediction.central.split(':');
-    const centralMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    isMissed = centralMinutes < nowMinutes;
-  }
+  const { isMissed } = computeMissedInfo(prediction.central);
 
   const hasProbBand = Array.isArray(prediction.probabilityBand) && prediction.probabilityBand.length > 0;
   const cardClass = [
@@ -356,16 +371,11 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
 
   // Missed label (D3-11)
   if (isMissed && prediction.central) {
-    // gsd:allow-ui-clock — display-only UI metadata (D3-11).
-    const nowDate = new Date(); // gsd:allow-ui-clock
-    const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-    const parts = prediction.central.split(':');
-    const centralMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    const delta = nowMinutes - centralMinutes;
-    if (delta > 0) {
+    const { deltaMinutes } = computeMissedInfo(prediction.central);
+    if (deltaMinutes > 0) {
       card.appendChild(el('span', {
         className: 'missed-label',
-        textContent: `Missed by ${delta}min`,
+        textContent: `Missed by ${deltaMinutes}min`,
       }));
     }
   }
@@ -636,15 +646,7 @@ export function renderForecastSection(predictions, settingsSnap, dayRecords, nex
     if (!predEntry) continue;
 
     // D3-11: Detect "missed" predictions — only when central is set.
-    let isMissed = false;
-    if (predEntry.central) {
-      // gsd:allow-ui-clock — display-only UI metadata (D3-11), not domain logic.
-      const nowDate = new Date(); // gsd:allow-ui-clock
-      const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-      const parts = predEntry.central.split(':');
-      const centralMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-      isMissed = centralMinutes < nowMinutes;
-    }
+    const { isMissed } = computeMissedInfo(predEntry.central);
 
     heroEntries.push({ type: RESULT_TYPE[entry], isMissed, ...predEntry });
   }
