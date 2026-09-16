@@ -69,6 +69,29 @@ describe('formatLocalISO', () => {
   test('pads zeros on month / day / hour / minute', () => {
     assert.equal(formatLocalISO(new Date(2026, 0, 1, 0, 5)), '2026-01-01T00:05');
   });
+
+  // CR-02 regression (20-REVIEW.md BLOCKER / 20-03-PLAN.md Task 2): a local-date
+  // computation (formatLocalISO) must diverge correctly from a UTC computation
+  // (toISOString) at negative UTC offsets — this is exactly the class of bug
+  // that made today-screen.js's old `new Date().toISOString().slice(0, 10)`
+  // "today" lookup silently mismatch day.date (always local-wall-clock) during
+  // evening hours in negative-UTC-offset zones (e.g. US Eastern).
+  test('formatLocalISO reports the local calendar date; toISOString reports the next day at 20:00 EST', () => {
+    const originalTZ = process.env.TZ;
+    try {
+      process.env.TZ = 'America/New_York';
+      // Local-component constructor: interpreted using the active TZ at construction time.
+      const d = new Date(2026, 0, 15, 20, 0); // 2026-01-15 20:00 local (EST, UTC-5)
+      assert.equal(formatLocalISO(d).slice(0, 10), '2026-01-15',
+        'formatLocalISO must report the LOCAL calendar date');
+      assert.equal(d.toISOString().slice(0, 10), '2026-01-16',
+        '20:00 EST on Jan 15 is 01:00 UTC on Jan 16 — toISOString reports the NEXT day');
+      assert.notEqual(formatLocalISO(d).slice(0, 10), d.toISOString().slice(0, 10),
+        'local-date and UTC-date computations must diverge at this timestamp');
+    } finally {
+      process.env.TZ = originalTZ;
+    }
+  });
 });
 
 describe('parseLocalISO round-trip (D-04 canonical format)', () => {

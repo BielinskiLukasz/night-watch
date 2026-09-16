@@ -894,8 +894,14 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
     // todayDayRecord: the day record whose date matches today's calendar date.
     // todayNapStart: whether any napStart event was logged for today's sleep day.
     const todayAllDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // CR-02 fix (20-REVIEW.md BLOCKER / 20-03-PLAN.md Task 2): day.date values are
+    // always local-wall-clock date strings (js/lib/day-bucket.js's calendarKey /
+    // subjectiveNightKey), never UTC. formatLocalISO is required here — toISOString()
+    // converts to UTC first, which silently mismatches todayDayRecord for part of the
+    // day at any non-zero UTC offset (worst case: evening hours in negative-UTC-offset
+    // zones, where local evening is already past midnight UTC).
     // gsd:allow-ui-clock — display-only context: we need today's local date to find today's record.
-    const todayDateStr = new Date().toISOString().slice(0, 10); // gsd:allow-ui-clock
+    const todayDateStr = formatLocalISO(new Date()).slice(0, 10); // gsd:allow-ui-clock
     const todayDayRecord = todayAllDays.find(d => d.date === todayDateStr);
     const todayNapStart = todayDayRecord
       ? (todayDayRecord.allEvents || []).find(e => e.type === 'napStart')
