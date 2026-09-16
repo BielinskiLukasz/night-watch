@@ -17,7 +17,9 @@ This phase also changes `napProbability()`'s return contract from a bare `null |
 
 **Requirements this phase satisfies:** NAP-01, NAP-02, NAP-03, NAP-04
 
-**Out of scope:** Any UI redesign of how the score is displayed (Phase 21 owns "next reachable event" / card visibility per PRED-23/24). This phase only changes the score's inputs and return shape; the displayed string format (`"N% chance of nap today"` / `"0% — nap window closed"`) is unchanged.
+**Out of scope:** Any UI redesign of how the score is displayed or hidden — Phase 21 owns "next reachable event" / card visibility per PRED-23/24, including fully hiding the `napStart` card when `napWindowClosed` is true. This phase's job stops at exposing `napWindowClosed` correctly in the return shape (see D-11/D-12, added 2026-09-16 during Phase 21's discussion — see `.planning/phases/21-prediction-normalization/21-CONTEXT.md` D-01..D-05) and updating the display text to stop treating `score === 0` as a special "window closed" case.
+
+**Amendment (2026-09-16):** Discussing Phase 21 surfaced that the original backlog item behind this phase (B-047, `.planning/BACKLOG.md` ~line 1192) explicitly called for `napWindowClosed` as a *decoupled* flag — score should keep reporting the real computed probability even after the nap window closes, with window-closed state reported separately. This phase's initial draft (D-03/D-04 below) had missed that and kept the old hard-collapse-to-0 behavior. D-11 and D-12 correct this. The displayed string format DOES change as a result — see updated D-04 call-site list.
 
 </domain>
 
@@ -32,7 +34,7 @@ This phase also changes `napProbability()`'s return contract from a bare `null |
 
 ### Return Shape
 
-- **D-03:** `napProbability()` always returns `{ score: number|null, signalsUsed: string[], confidence: 'full'|'partial'|'none' }` — never a bare `null`/`0`/number anymore. `score` carries today's three existing cases (`null` = cold-start, `0` = nap window closed, `1-100` = real score); `signalsUsed` lists which of the four signal keys contributed; `confidence` is `'full'` when all four signals were available, `'partial'` when redistribution occurred, `'none'` when the top-level cold-start gate fails. — **Reversibility:** costly — every current reader of the bare value must switch to reading `.score` (see D-04 for exact call sites)
+- **D-03:** `napProbability()` always returns `{ score: number|null, signalsUsed: string[], confidence: 'full'|'partial'|'none', napWindowClosed: boolean }` — never a bare `null`/`0`/number anymore. `score` carries **two** cases only (`null` = cold-start / top-level gate fails, `1-100` = real computed score) — `0` is no longer a special "window closed" sentinel (superseded by D-11 below: score keeps reporting the real signal-weighted probability even after the window closes). `signalsUsed` lists which of the four signal keys contributed; `confidence` is `'full'` when all four signals were available, `'partial'` when redistribution occurred, `'none'` when the top-level cold-start gate fails. — **Reversibility:** costly — every current reader of the bare value must switch to reading `.score` (see D-04 for exact call sites)
 
 - **D-04:** The object propagates all the way into `forecast.js`'s `context.napProbabilityScore` — it is NOT unwrapped early in `today-screen.js`. `forecast.js`'s PRED-19 blend logic and null-checks must be updated to read `.score`. Exact call sites requiring updates:
   - `js/lib/forecast.js:697` — destructuring default `napProbabilityScore = null` (context field now holds the object or is absent; default handling must not crash when the field is entirely omitted, e.g. by tests that call `forecast()` directly without providing it)
@@ -41,8 +43,16 @@ This phase also changes `napProbability()`'s return contract from a bare `null |
   - `js/lib/forecast.js:788` — comment referencing D-07's "napProbabilityScore === null" semantics needs updating to describe the new `.score === null` check
   - `js/ui/today-screen.js:924` — `const napProbabilityScore = napProbability(forecastDays, snap, {...})` — now receives the object (no code change needed here, just a type change)
   - `js/ui/today-screen.js:948` — `predictions.napStart.napProbabilityScore = napProbabilityScore` — attaches the whole object to the prediction
-  - `js/ui/today-screen.js:167-171` and `js/ui/today-screen.js:285-289` — UI string rendering currently does `` `${prediction.napProbabilityScore}% chance of nap today` `` on a bare number; **must change to `.score`** or it will render `[object Object]%` instead of a percentage. The displayed text itself does not change — only the property access.
+  - `js/ui/today-screen.js:167-171` and `js/ui/today-screen.js:285-289` — UI string rendering currently does `prediction.napProbabilityScore === 0 ? 'nap window closed' : `${prediction.napProbabilityScore}% chance of nap today`` on a bare number. **This ternary is removed, not just repointed to `.score`** (see D-11/D-12 amendment below): since `score` no longer collapses to 0 when the window closes, always render `` `${prediction.napProbabilityScore.score}% chance of nap today` `` — the "window closed" text case goes away entirely in this phase (Phase 21 hides the card outright in that state instead of showing different text).
   — **Reversibility:** costly — touches already-shipped Phase 19 code (`forecast.js`'s split-bedtime blend) and Phase 12/19 UI code (`today-screen.js`'s two nap-probability render sites); reverting means restoring the bare-number contract everywhere listed above
+
+### Amendment: Decoupled Window-Closed Flag (added 2026-09-16, from Phase 21 discussion)
+
+- **D-11:** Add `napWindowClosed: boolean` to the return object (see updated D-03). It is computed via the exact same comparison the existing hard-collapse branch already uses — current time vs. P90 of historical `napStart` times (`js/lib/forecast.js:1055-1060`) — just exposed as its own field instead of forcing `score` to 0. — **Reversibility:** reversible
+
+- **D-12:** The existing hard-collapse-to-0 branch in `napProbability()` (`js/lib/forecast.js:1055-1060`, `if (past P90) return 0`) is removed. In its place: compute `napWindowClosed` from that same P90 comparison (D-11), and let the normal four-signal weighted score computation proceed and populate `score` regardless of window-closed state. — **Reversibility:** costly — this is a behavior change beyond a pure return-shape wrap; the `0 = window closed` sentinel is gone system-wide once this ships, not just re-typed.
+
+- **Cross-reference:** `napWindowClosed` is consumed by Phase 21 to fully hide (not just re-label) the `napStart` card — see `.planning/phases/21-prediction-normalization/21-CONTEXT.md` D-01 through D-05. This phase (20) is only responsible for computing and exposing the flag correctly; card-hiding UI logic is out of scope here.
 
 ### Weekday Nap-Rate Signal (NAP-02)
 
@@ -95,6 +105,9 @@ This phase also changes `napProbability()`'s return contract from a bare `null |
 
 ### Prior Phase Context (precedent patterns)
 - `.planning/phases/19-split-bedtime-wake-anchored-nap/19-CONTEXT.md` — D-13 established the "pre-compute in today-screen.js, thread via context" pattern this phase's D-07 (`todayWeekday`) follows; D-05/D-07/D-08 established the existing `napProbabilityScore` null/blend semantics that D-03/D-04 change
+
+### Downstream Consumer (added 2026-09-16)
+- `.planning/phases/21-prediction-normalization/21-CONTEXT.md` D-01 through D-05 — Phase 21 consumes `napWindowClosed` (D-11/D-12 above) to fully hide the `napStart` card; also documents the `eveningHour` OR-condition that coexists with this flag
 
 </canonical_refs>
 
