@@ -2901,7 +2901,9 @@ describe('forecast() split bedtime routing (PRED-18/19)', () => {
       noNapDayRecord(), noNapDayRecord(), noNapDayRecord(),
     ];
     const result = forecast(records, splitSettings, {
-      napStartLogged: false, napProbabilityScore: 70, isIntenseToday: false, currentHour: 10,
+      napStartLogged: false,
+      napProbabilityScore: { score: 70, signalsUsed: [], confidence: 'partial' },
+      isIntenseToday: false, currentHour: 10,
     });
     assert.ok(!result.isColdStart);
     assert.ok(!result.bedtime.probabilityBand, 'should be normal prediction shape');
@@ -2936,7 +2938,9 @@ describe('forecast() split bedtime routing (PRED-18/19)', () => {
       noNapDayRecord(), noNapDayRecord(),
     ];
     const result = forecast(records, splitSettings, {
-      napStartLogged: false, napProbabilityScore: 70, isIntenseToday: false, currentHour: 22,
+      napStartLogged: false,
+      napProbabilityScore: { score: 70, signalsUsed: [], confidence: 'partial' },
+      isIntenseToday: false, currentHour: 22,
     });
     assert.ok(!result.isColdStart, 'should not be cold start: 4 non-rejected records >= minDays=3');
     assert.ok(!result.bedtime.probabilityBand);

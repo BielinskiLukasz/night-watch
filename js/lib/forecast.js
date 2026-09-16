@@ -634,7 +634,8 @@ function extractTime(slot) {
  * @param {boolean} [context.napStartLogged=false]      true when a nap-start was logged today (PRED-18)
  * @param {number}  [context.currentHour=0]             current local hour 0–23
  * @param {string|null} [context.todayWakeHHMM=null]    today's wake time 'HH:MM', or null (PRED-21)
- * @param {number|null} [context.napProbabilityScore=null] 0–100 nap probability score (PRED-19, D-05)
+ * @param {{score: number|null, signalsUsed: string[], confidence: string}|null} [context.napProbabilityScore=null]
+ *   nap probability result object from napProbability() (PRED-19, D-05); `.score` is 0–100 or null (Phase 20 D-03/D-04)
  * @param {string|null} [context.todayNapStartHHMM=null] today's logged nap-start 'HH:MM', or null (PRED-22)
  *
  * @returns {{ isColdStart: boolean, validDayCount?: number, minDaysRemaining?: number, wake?, bedtime?, napStart?, napEnd? }}
@@ -772,12 +773,12 @@ export function forecast(dayRecords, settings, context = {}) {
         return selectBedtime(napDaySeries);
       }
       // null (thin sub-window) → fall through to PRED-10 / overall
-    } else if (napProbabilityScore !== null) {
+    } else if (napProbabilityScore !== null && napProbabilityScore.score !== null) {
       // Nap status undetermined → blend proportionally by score (PRED-19, D-05)
       const napDaySeries = buildBedtimeSeriesNapDay(window, settings);
       const noNapDaySeries = buildBedtimeSeriesNoNapDay(window, settings);
       if (napDaySeries !== null && noNapDaySeries !== null) {
-        const ratio = napProbabilityScore / 100;
+        const ratio = napProbabilityScore.score / 100;
         const blended = {
           central: Math.round(ratio * napDaySeries.central + (1 - ratio) * noNapDaySeries.central),
           min:     Math.min(napDaySeries.min, noNapDaySeries.min),
@@ -787,7 +788,7 @@ export function forecast(dayRecords, settings, context = {}) {
       }
       // One or both sub-series null (D-08) → fall through to PRED-10 / overall
     }
-    // napProbabilityScore === null (D-07) → fall through to PRED-10 / overall
+    // napProbabilityScore absent/null, or napProbabilityScore.score === null (D-07/Phase 20 D-04) → fall through to PRED-10 / overall
 
     // Step 2 — PRED-10: intense-day shift stacks orthogonally on top of split model (D-11)
     if (isIntenseToday) {
