@@ -118,6 +118,10 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.ok(precacheList.includes('./js/lib/forecast-tif.js'), 'forecast-tif.js missing from PRECACHE_LIST');
   });
 
+  test('contains forecast-utils.js (event-reachability utilities module)', () => {
+    assert.ok(precacheList.includes('./js/lib/forecast-utils.js'), 'forecast-utils.js missing from PRECACHE_LIST');
+  });
+
   test('contains metrics.js (TIF metrics helpers module)', () => {
     assert.ok(precacheList.includes('./js/lib/metrics.js'), 'metrics.js missing from PRECACHE_LIST');
   });
