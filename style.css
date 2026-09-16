@@ -932,6 +932,13 @@ button[data-log]:hover {
 
 .later-today-section {
   margin-top: 0.5rem;
+  /* CR-01 (Phase 21 review): .forecast-grid is a 2-column grid, but
+     renderForecastSection() now appends exactly one child (this <details>
+     wrapper) to #forecast-cards. Without spanning both tracks, the grid's
+     auto-placement confines this wrapper (and everything nested inside it)
+     to column 1, halving its width on any viewport above the 480px
+     breakpoint. */
+  grid-column: 1 / -1;
 }
 
 .later-today-section summary {
