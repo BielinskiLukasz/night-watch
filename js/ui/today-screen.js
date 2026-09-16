@@ -41,7 +41,9 @@
 import { el, clear } from './dom.js';
 import { openManualEntry } from './manual-entry.js';
 import { formatTime, to12h, formatLocalISO } from '../lib/time.js';
-import { forecast, selectNextEvent, napProbability } from '../lib/forecast.js';
+import { forecast, napProbability } from '../lib/forecast.js';
+// Phase 21 D-06/D-07/D-14: selectNextEvent moved out of forecast.js into forecast-utils.js.
+import { selectNextEvent } from '../lib/forecast-utils.js';
 import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -119,7 +121,9 @@ function renderNextEventCard(prediction, timeFormat) {
   if (!prediction) return null;
 
   const heroClass = prediction.isMissed ? 'next-event-hero missed' : 'next-event-hero';
-  const card = el('div', { className: heroClass });
+  // T-21-01: data-event-type is always one of the fixed literal event-type strings
+  // (never derived from imported/user-controlled JSON) — added for E2E targetability.
+  const card = el('div', { className: heroClass, 'data-event-type': prediction.type });
 
   // UI-10 / D9-17: "Next Predicted Event" label above event type for visual hierarchy.
   card.appendChild(el('p', {
@@ -164,10 +168,12 @@ function renderNextEventCard(prediction, timeFormat) {
       }));
     }
     // PRED-12 / D-15: nap probability score on napStart hero card
+    // Phase 21 D-02: score never collapses to 0 solely because the nap window
+    // closed — napWindowClosed (consumed by nextReachableEvent/selectNextEvent
+    // to hide this card entirely, see renderForecastSection) is now the sole
+    // signal for that; the score text always reflects the real weighted value.
     if (prediction.type === 'napStart' && prediction.napProbabilityScore != null && !prediction.isMissed) {
-      const napScoreText = prediction.napProbabilityScore.score === 0
-        ? '0% — nap window closed'
-        : `${prediction.napProbabilityScore.score}% chance of nap today`;
+      const napScoreText = `${prediction.napProbabilityScore.score}% chance of nap today`;
       card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
@@ -221,7 +227,9 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
     isMissed ? 'missed' : '',
   ].filter(Boolean).join(' ');
 
-  const card = el('div', { className: cardClass });
+  // T-21-01: data-event-type is always the fixed eventType parameter (never
+  // derived from imported/user-controlled JSON) — added for E2E targetability.
+  const card = el('div', { className: cardClass, 'data-event-type': eventType });
 
   if (hasProbBand) {
     // UI-09 / D9-05: probability-band cards render collapsed by default.
@@ -282,10 +290,10 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
       }));
     }
     // PRED-12 / D-14: nap probability score on napStart prediction card (not shown when missed)
+    // Phase 21 D-02: score never collapses to 0 solely because the nap window closed —
+    // this card is hidden entirely when napWindowClosed (see renderForecastSection).
     if (eventType === 'napStart' && prediction.napProbabilityScore != null && !isMissed) {
-      const napScoreText = prediction.napProbabilityScore.score === 0
-        ? '0% — nap window closed'
-        : `${prediction.napProbabilityScore.score}% chance of nap today`;
+      const napScoreText = `${prediction.napProbabilityScore.score}% chance of nap today`;
       card.appendChild(el('p', { className: 'nap-probability', textContent: napScoreText }));
     }
   }
@@ -321,7 +329,9 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
  * @returns {HTMLElement}
  */
 function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget) {
-  const card = el('div', { className: 'prediction-card tif-card collapsed' });
+  // T-21-01: data-event-type is always the fixed eventType parameter (never
+  // derived from imported/user-controlled JSON) — added for E2E targetability.
+  const card = el('div', { className: 'prediction-card tif-card collapsed', 'data-event-type': eventType });
 
   const label = EVENT_TYPE_LABEL[eventType] ?? eventType;
   const centralText = prediction.central ? formatHHMM(prediction.central, timeFormat) : '—';
@@ -404,8 +414,11 @@ function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget)
  * @returns {HTMLElement}
  */
 function renderTifLowConfidenceCard(prediction, eventType, timeFormat) {
+  // T-21-01: data-event-type is always the fixed eventType parameter (never
+  // derived from imported/user-controlled JSON) — added for E2E targetability.
   const card = el('div', {
     className: 'prediction-card probability-band tif-low-confidence collapsed',
+    'data-event-type': eventType,
   });
 
   const rangeText = (prediction.min && prediction.max)
@@ -473,6 +486,28 @@ function renderColdStartMessage(minDaysRemaining) {
 }
 
 /**
+ * Find the most-recently-logged event across all day records (mirrors
+ * js/lib/forecast-utils.js's selectNextEvent Step 1 exactly). Used locally by
+ * renderForecastSection to decide the napStart-drop condition (Phase 21 D-01/
+ * D-04/D-05) without threading state through selectNextEvent's return value.
+ *
+ * @param {object[]} dayRecords  array of day records with allEvents lists
+ * @returns {{type: string, at: string}|null}
+ */
+function findLastEvent(dayRecords) {
+  let lastEvent = null;
+  for (const day of dayRecords) {
+    if (!day.allEvents || day.allEvents.length === 0) continue;
+    for (const evt of day.allEvents) {
+      if (lastEvent === null || evt.at > lastEvent.at) {
+        lastEvent = evt;
+      }
+    }
+  }
+  return lastEvent;
+}
+
+/**
  * Re-render the forecast section (next-event hero + cold-start OR four cards).
  *
  * Called on every render() invocation. Clears and repopulates:
@@ -526,9 +561,24 @@ function renderForecastSection(predictions, settingsSnap, dayRecords, nextEventC
     nextEventCard.style.display = 'none';
   }
 
+  // Phase 21 D-01/D-04/D-05: napStart is fully hidden from the grid (not just
+  // relabeled) once no nap will start today. This only applies while today's
+  // nap status is still undetermined (last event is null or 'wake') — once
+  // napStart is already logged for today, D-04's carve-out means napEnd
+  // renders normally regardless of napWindowClosed.
+  // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic.
+  const currentHourForNapDrop = new Date().getHours(); // gsd:allow-ui-clock
+  const lastEventForNapDrop = findLastEvent(dayRecords);
+  const lastEventIsWakeOrNone = lastEventForNapDrop === null || lastEventForNapDrop.type === 'wake';
+  const napStartHiddenToday = predictions.napStart?.napProbabilityScore != null
+    && lastEventIsWakeOrNone
+    && (predictions.napStart.napProbabilityScore.napWindowClosed === true
+        || currentHourForNapDrop >= (settingsSnap.eveningHour ?? 18));
+
   // Four prediction cards in fixed order (D3-08, UI-07 / D-16: bedtime last)
   const EVENT_TYPES = ['wake', 'napStart', 'napEnd', 'bedtime'];
   for (const type of EVENT_TYPES) {
+    if (type === 'napStart' && napStartHiddenToday) continue;
     const pred = predictions[type];
     if (!pred) continue;
 
