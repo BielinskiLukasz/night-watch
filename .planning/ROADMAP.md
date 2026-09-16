@@ -66,7 +66,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 20-02-PLAN.md — forecast.js + today-screen.js consumption wiring (D-04/D-07)
   - [x] 20-03-PLAN.md — Gap closure: CR-01 day-record ordering fix (forecast/tifForecast/napProbability + metrics-screen parity) + CR-02 local-date lookup fix (20-REVIEW.md blockers)
 
-- [ ] **Phase 21: Prediction Normalization** — Add `nextReachableEvent(lastEvent, currentHour, settings)` helper (pure function, new export in `js/lib/forecast.js` or a dedicated `js/lib/forecast-utils.js`); update `today-screen.js` to render only the next reachable event card prominently and to fully hide (not collapse) nap cards when the nap window is closed via a dedicated UI flag; if `forecast-utils.js` is new it must be added to `PRECACHE_LIST` and `sw-precache.test.js`; E2E tests cover event-card visibility for each reachable-event state (requirements: PRED-23, PRED-24, UI-13)
+- [x] **Phase 21: Prediction Normalization** — Add `nextReachableEvent(lastEvent, currentHour, settings)` helper (pure function, new export in `js/lib/forecast.js` or a dedicated `js/lib/forecast-utils.js`); update `today-screen.js` to render only the next reachable event card prominently and to fully hide (not collapse) nap cards when the nap window is closed via a dedicated UI flag; if `forecast-utils.js` is new it must be added to `PRECACHE_LIST` and `sw-precache.test.js`; E2E tests cover event-card visibility for each reachable-event state (requirements: PRED-23, PRED-24, UI-13) (completed 2026-09-16)
   **Plans:** 3 plans
   Plans:
   - [x] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
@@ -130,7 +130,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   6. `forecast-utils.js` is added to `sw.js`'s `PRECACHE_LIST` and to `tests/unit/sw-precache.test.js`
   7. E2E tests cover event-card visibility for each reachable-event state
 
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -143,7 +143,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 21-03-PLAN.md — Full E2E coverage matrix for all 5 nextReachableEvent paths
+- [x] 21-03-PLAN.md — Full E2E coverage matrix for all 5 nextReachableEvent paths
 
 ### Phase 22: Accuracy Scoring
 
