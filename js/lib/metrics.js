@@ -412,7 +412,7 @@ const DAY_LABELS = Object.freeze(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat
  * D-05: computes all Metrics columns, not just the 4 required by MET-11.
  *
  * @param {object[]} dayRecords  pre-filtered (stage + rejected) day records
- * @returns {Array<{weekday: number, label: string, activityBeforeNap: number|null, activityAfterNap: number|null, napDuration: number|null, sleepDuration: number|null, dayLength: number|null, totalActivity: number|null, combinedSleepNap: number|null, dayToSleepFactor: number|null, napFraction: number|null, amPmSplit: number|null, maSleepRatio: number|null, maNapRatio: number|null}>}
+ * @returns {Array<{weekday: number, label: string, activityBeforeNap: number|null, activityAfterNap: number|null, napDuration: number|null, sleepDuration: number|null, dayLength: number|null, totalActivity: number|null, combinedSleepNap: number|null, dayToSleepFactor: number|null, napFraction: number|null, amPmSplit: number|null, maSleepRatio: number|null, maNapRatio: number|null, napDays: number, totalDays: number}>}
  */
 export function dayOfWeekAverages(dayRecords) {
   // Per-weekday accumulators: { sum, count } for each metric field.
@@ -432,6 +432,9 @@ export function dayOfWeekAverages(dayRecords) {
     amPmSplit:         { sum: 0, count: 0 },
     maSleepRatio:      { sum: 0, count: 0 },
     maNapRatio:        { sum: 0, count: 0 },
+    // nap-rate counters (NAP-02, D-05/D-06): plain integers, not sum/count pairs
+    napDays:           0,
+    totalDays:         0,
   }));
 
   // Inline sleep helper: bedtime-prev → wake, same overnight-pairing as aggregateMetrics.
@@ -459,6 +462,7 @@ export function dayOfWeekAverages(dayRecords) {
 
     const weekday = new Date(dateStr + 'T00:00').getDay();  // 0=Sun..6=Sat; local time, never UTC
     const b = buckets[weekday];
+    b.totalDays += 1;  // NAP-02: counts every attributed record regardless of nap status
 
     const isNapDay = day.napStart != null;  // D-02: no-nap = napStart absent
 
@@ -475,6 +479,7 @@ export function dayOfWeekAverages(dayRecords) {
 
     // Nap-related metrics: only accumulate on nap days (D-01, D-02, D-03).
     if (isNapDay) {
+      b.napDays += 1;  // NAP-02: nap-rate numerator
       acc(b.activityBeforeNap, activityBeforeNap(day));
       acc(b.activityAfterNap,  activityAfterNap(day));
       acc(b.napDuration,       napDuration(day));
@@ -516,6 +521,8 @@ export function dayOfWeekAverages(dayRecords) {
       amPmSplit:         avg(b.amPmSplit,           false),
       maSleepRatio:      avg(b.maSleepRatio,        false),
       maNapRatio:        avg(b.maNapRatio,          false),
+      napDays:           b.napDays,
+      totalDays:         b.totalDays,
     };
   });
 }

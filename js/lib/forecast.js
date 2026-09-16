@@ -55,6 +55,8 @@
 // All time arithmetic stays in 'HH:MM' strings → minutes-since-midnight integers.
 // Never constructs a Date from event timestamps (Phase 1 D-16, RESEARCH Pitfall #6).
 
+import { dayOfWeekAverages, sleepDebtProxy } from './metrics.js';
+
 /** Frozen forecast config: percentile thresholds and downweight factor. Object.freeze per CLAUDE.md. */
 const FORECAST_CONFIG = Object.freeze({
   P_LOW: 0.1,      // 10th percentile → min confidence band
@@ -987,50 +989,72 @@ export function selectNextEvent(predictions, dayRecords, settings = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// PRED-12: Nap probability score (D-13)
+// PRED-12: Nap probability score (Phase 20 redesign: NAP-01..04, D-01..D-10)
 // ---------------------------------------------------------------------------
 
 /**
  * Relative weights for the four nap-probability signals.
- * Must sum to 1.0. Object.freeze prevents accidental mutation.
+ * Must sum to 1.0 (within floating-point epsilon — 0.35+0.30+0.20+0.15
+ * evaluates to 0.9999999999999999 in JS double precision, not exactly 1).
+ * Object.freeze prevents accidental mutation.
  *
- * Signal 1 — napFrequency   (40%): fraction of recent days that had a nap
- * Signal 2 — elapsedWakeTime(30%): elapsed fraction of the napStart P10–P90 window
- * Signal 3 — noNapStreak   (20%): consecutive days without a nap (penalty)
- * Signal 4 — windowPassed  (10%): 1 if current time is still inside the nap window
+ * Signal 1 — napFrequency     (35%, NAP-01): fraction of history days with a nap
+ * Signal 2 — dayOfWeekNapRate (30%, NAP-02): fraction of same-weekday history days with a nap
+ * Signal 3 — sleepDebtSignal  (20%, NAP-03): normalized 7-day sleep-debt proxy
+ * Signal 4 — noNapStreak      (15%, NAP-04): consecutive days without a nap (penalty)
  *
- * @type {Readonly<{napFrequency:number, elapsedWakeTime:number, noNapStreak:number, windowPassed:number}>}
+ * All four signals are clock-invariant — computable once at wake time and
+ * stable for the rest of the day. The nap-window-closed hard collapse to
+ * score:0 is the one sanctioned clock-based behavior in napProbability(),
+ * and it is NOT one of these four weighted signals.
+ *
+ * @type {Readonly<{napFrequency:number, dayOfWeekNapRate:number, sleepDebtSignal:number, noNapStreak:number}>}
  */
 export const NAP_SCORE_WEIGHTS = Object.freeze({
-  napFrequency:    0.40,
-  elapsedWakeTime: 0.30,
-  noNapStreak:     0.20,
-  windowPassed:    0.10,
+  napFrequency:     0.35,
+  dayOfWeekNapRate: 0.30,
+  sleepDebtSignal:  0.20,
+  noNapStreak:      0.15,
 });
 
 /**
  * Compute a nap-probability score for today.
  *
- * Returns:
- *   null  — cold-start or insufficient data (cannot produce a meaningful estimate)
- *   0     — the nap window has already passed (distinct from null)
- *   1–100 — integer probability percentage
+ * Always returns an object — never a bare `null`/`0`/number (D-03):
+ *   { score: null, signalsUsed: [], confidence: 'none' }        — cold-start / insufficient history
+ *   { score: 0,    signalsUsed: [...], confidence: '...' }      — nap window already passed
+ *   { score: 1-100, signalsUsed: [...], confidence: 'full'|'partial' } — real score
  *
- * @param {Array<{napStart: string|null, rejected?: boolean}>} dayRecords
- *   Stage-filtered day records. Each record may have a `napStart` field ('HH:MM' or null).
- * @param {{minDays: number, windowDays: number, maxDelta: number}} settings
- * @param {{currentHour: number, currentMinute?: number, napStreak?: number, todayWakeHHMM?: string|null}} context
- * @returns {number|null}
+ * `signalsUsed` lists which of the four `NAP_SCORE_WEIGHTS` keys contributed,
+ * in fixed weight-table order. `confidence` is `'full'` when all four signals
+ * were available, `'partial'` when weight redistribution occurred (D-01/D-02),
+ * `'none'` only at the cold-start gate.
+ *
+ * `dayOfWeekNapRate` and `sleepDebtSignal` can independently be unavailable
+ * (insufficient same-weekday history, or too few qualifying overnight pairs);
+ * `napFrequency` and `noNapStreak` are always computable once the cold-start
+ * gate passes. When either new signal is unavailable, its weight is
+ * redistributed proportionally across the remaining available signals
+ * (D-01/D-02) — the score is never null solely because a signal is missing.
+ *
+ * @param {Array<object>} dayRecords
+ *   Stage-filtered day records. Each record may have a `napStart` field
+ *   ('HH:MM' string, an event object `{at: 'YYYY-MM-DDTHH:MM'}`, or null).
+ * @param {{minDays: number, windowDays: number, maxDelta: number, targetSleepMinutes: number}} settings
+ * @param {{currentHour?: number, currentMinute?: number, napStreak?: number, todayWeekday?: number|null}} context
+ * @returns {{score: number|null, signalsUsed: string[], confidence: 'full'|'partial'|'none'}}
  */
 export function napProbability(dayRecords, settings, context) {
   // Cold-start gate: insufficient history
-  if (!dayRecords || dayRecords.length < (settings.minDays || 1)) return null;
+  if (!dayRecords || dayRecords.length < (settings.minDays || 1)) {
+    return { score: null, signalsUsed: [], confidence: 'none' };
+  }
 
   const {
-    currentHour    = 0,
-    currentMinute  = 0,
-    napStreak      = 0,
-    todayWakeHHMM  = null,
+    currentHour   = 0,
+    currentMinute = 0,
+    napStreak     = 0,
+    todayWeekday  = null,
   } = context || {};
 
   const nowMins = currentHour * 60 + currentMinute;
@@ -1039,11 +1063,11 @@ export function napProbability(dayRecords, settings, context) {
   // dayRecord fields in this module can be bare 'HH:MM' strings (test helpers) or null.
   const getSlotTime = slot => (slot == null ? null : (typeof slot === 'object' ? slot.at?.slice(11) : slot));
 
-  // --- Signal 1: napFrequency (40%) ---
-  const napDays = dayRecords.filter(d => getSlotTime(d.napStart) !== null).length;
-  const sig1 = napDays / dayRecords.length;
+  // --- Signal: napFrequency (35%) — unchanged computation, new weight ---
+  const napDaysCount = dayRecords.filter(d => getSlotTime(d.napStart) !== null).length;
+  const napFrequencyValue = napDaysCount / dayRecords.length;
 
-  // --- napStart percentiles for signals 2 and 4 ---
+  // --- napStart percentiles — still needed for the window-closed check below ---
   // calculatePercentiles expects getTimeFn to return 'HH:MM' (not minutes); it calls
   // timeToMinutes internally. Its return shape is { min, central, max } in minutes.
   const napStartResult = calculatePercentiles(
@@ -1051,47 +1075,57 @@ export function napProbability(dayRecords, settings, context) {
     d => getSlotTime(d.napStart),  // returns 'HH:MM' string or null
   );
 
-  // --- Signal 4: windowPassed (10%) ---
-  // If P90 of napStart is known and current time is past it → return 0 (window closed).
-  let sig4 = 1;
-  if (napStartResult !== null) {
-    const p90_ns = napStartResult.max; // calculatePercentiles returns { min, central, max }
-    if (p90_ns !== null && nowMins > p90_ns) {
-      return 0; // window closed — hard collapse
-    }
-  }
-  // sig4 remains 1 (window open or unknown)
-
-  // --- Signal 2: elapsedWakeTime (30%) ---
-  let sig2 = 0;
-  if (
-    todayWakeHHMM !== null &&
-    napStartResult !== null &&
-    napStartResult.min !== null &&
-    napStartResult.max !== null &&
-    napStartResult.max > napStartResult.min
-  ) {
-    const wakeMins   = timeToMinutes(todayWakeHHMM);
-    const windowEnd  = napStartResult.max;
-    const denominator = windowEnd - wakeMins;
-    if (denominator > 0) {
-      const elapsed = Math.max(0, Math.min(nowMins - wakeMins, denominator));
-      sig2 = Math.max(0, Math.min(1, elapsed / denominator));
+  // --- Signal: dayOfWeekNapRate (30%, NAP-02, D-05/D-06) ---
+  let dayOfWeekNapRateAvailable = false;
+  let dayOfWeekNapRateValue = 0;
+  if (todayWeekday !== null) {
+    const dowAverages = dayOfWeekAverages(dayRecords);
+    const entry = dowAverages[todayWeekday];
+    if (entry && entry.totalDays >= (settings.minDays || 1)) {
+      dayOfWeekNapRateAvailable = true;
+      dayOfWeekNapRateValue = entry.napDays / entry.totalDays;
     }
   }
 
-  // --- Signal 3: noNapStreak (20%) ---
+  // --- Signal: sleepDebtSignal (20%, NAP-03, D-08/D-09) ---
+  let sleepDebtSignalAvailable = false;
+  let sleepDebtSignalValue = 0;
+  const debtMinutes = sleepDebtProxy(dayRecords, 7, settings.targetSleepMinutes);
+  if (debtMinutes !== null) {
+    sleepDebtSignalAvailable = true;
+    const clampedDebt = Math.max(-180, Math.min(180, debtMinutes));
+    sleepDebtSignalValue = 0.5 + clampedDebt / 360;
+  }
+
+  // --- Signal: noNapStreak (15%) — unchanged computation, new weight ---
   const streak = typeof napStreak === 'number' ? napStreak : 0;
-  const sig3 = Math.max(0, 1 - streak / 5);
+  const noNapStreakValue = Math.max(0, 1 - streak / 5);
 
-  // --- Weighted sum → integer score ---
-  const raw =
-    NAP_SCORE_WEIGHTS.napFrequency    * sig1 +
-    NAP_SCORE_WEIGHTS.elapsedWakeTime * sig2 +
-    NAP_SCORE_WEIGHTS.noNapStreak     * sig3 +
-    NAP_SCORE_WEIGHTS.windowPassed    * sig4;
+  // --- Weight redistribution (D-01/D-02): build entries in NAP_SCORE_WEIGHTS order ---
+  const signals = [
+    { key: 'napFrequency',     weight: NAP_SCORE_WEIGHTS.napFrequency,     value: napFrequencyValue,     available: true },
+    { key: 'dayOfWeekNapRate', weight: NAP_SCORE_WEIGHTS.dayOfWeekNapRate, value: dayOfWeekNapRateValue, available: dayOfWeekNapRateAvailable },
+    { key: 'sleepDebtSignal',  weight: NAP_SCORE_WEIGHTS.sleepDebtSignal,  value: sleepDebtSignalValue,  available: sleepDebtSignalAvailable },
+    { key: 'noNapStreak',      weight: NAP_SCORE_WEIGHTS.noNapStreak,      value: noNapStreakValue,      available: true },
+  ];
 
-  return Math.round(raw * 100);
+  const availableSignals = signals.filter(s => s.available);
+  const sumAvailableWeight = availableSignals.reduce((sum, s) => sum + s.weight, 0);
+  const raw = availableSignals.reduce(
+    (sum, s) => sum + (s.weight / sumAvailableWeight) * s.value,
+    0,
+  );
+  const score = Math.round(raw * 100);
+  const signalsUsed = availableSignals.map(s => s.key);
+  const confidence = availableSignals.length === signals.length ? 'full' : 'partial';
+
+  // --- Window-closed hard collapse (sanctioned clock-based exception) ---
+  // Computed AFTER signalsUsed/confidence so the override still reports accurate availability.
+  if (napStartResult !== null && napStartResult.max !== null && nowMins > napStartResult.max) {
+    return { score: 0, signalsUsed, confidence };
+  }
+
+  return { score, signalsUsed, confidence };
 }
 
 // ---------------------------------------------------------------------------
