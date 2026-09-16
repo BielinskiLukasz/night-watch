@@ -5,11 +5,11 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: executing
-stopped_at: Phase 21 context gathered
-last_updated: "2026-09-16T15:58:06.913Z"
+stopped_at: Phase 23 context gathered
+last_updated: "2026-09-16T15:58:46.728Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 20 execution started
-state_head: b90a6939ccfca8c8e9dbee1805d5a33b1b518366
+state_head: ce842c969c33b141801b5e67abbc232fe72ec8d5
 progress:
   total_phases: 6
   completed_phases: 1
@@ -94,6 +94,7 @@ Last activity: 2026-09-16 — Phase 20 execution started
 | Phase 18 P04 | 12 | 2 tasks | 2 files |
 | Phase 19 P01 | 8 | 3 tasks | 2 files |
 | Phase 19 P02 | multi-session | 3 tasks | 7 files |
+| Phase 20 P01 | 25 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Last activity: 2026-09-16 — Phase 20 execution started
 - [Phase 19]: D-09: PRED-11 noNapFired block permanently removed from forecast(); split bedtime model supersedes it
 - [Phase 19]: D-10: noNapBedtimeOffsetMinutes removed from DEFAULT_SETTINGS, migration, and validator
 - [Phase 19]: D-13: todayWakeHHMM/napProbabilityScore/todayNapStartHHMM pre-computed before forecast() in today-screen.js
+- [Phase 20]: [Phase 20 Plan 01]: napProbability() rewritten to {score,signalsUsed,confidence}; weight redistribution (D-01/D-02) covers 4 availability combinations
+- [Phase 20]: [Phase 20 Plan 01]: dayOfWeekAverages() extended with napDays/totalDays counters (additive, non-breaking)
 
 ### Quick Tasks Completed
 
@@ -174,9 +177,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T15:58:06.119Z
-Stopped at: Phase 21 context gathered
-Resume file: .planning/phases/21-prediction-normalization/21-CONTEXT.md
+Last session: 2026-09-16T15:58:44.347Z
+Stopped at: Phase 23 context gathered
+Resume file: .planning/phases/23-metrics-accuracy-column-migration/23-CONTEXT.md
 
 ## Deferred Items
 
