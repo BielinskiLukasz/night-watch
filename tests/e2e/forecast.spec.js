@@ -109,16 +109,33 @@ test('land on Today, see cold-start message when < minDays (D3-06 / D3-09)', asy
 // ── Test 2: Prediction cards appear after minDays valid days ──────────────────
 
 test('after 32 valid-day events (all 4 types), prediction cards appear (D3-08)', async ({ page }) => {
+  // Phase 21 D-07: last logged event across the fixture is day 32's bedtime →
+  // nextReachableEvent(bedtime) → ['wake'] (single hero, no ambiguity). Pin the
+  // clock for determinism even though this branch doesn't depend on currentHour.
+  await page.clock.setFixedTime(new Date('2026-06-02T09:00:00'));
+
   const db = makeBaselineDb();
   await seedAndReload(page, db);
 
   await expect(page.locator('#cold-start-message')).not.toBeVisible();
   await expect(page.locator('#forecast-cards')).toBeVisible();
-  const cardCount = await page.locator('#forecast-cards .prediction-card').count();
-  expect(cardCount).toBe(4);
 
-  const wakeCard = page.locator('#forecast-cards .prediction-card').first();
-  await expect(wakeCard).toBeVisible();
+  // Hero: wake (Phase 21 D-07/D-08 — single hero here, no dual-hero ambiguity).
+  const heroCard = page.locator('#next-event-card .next-event-hero');
+  await expect(heroCard).toBeVisible();
+  await expect(heroCard).toHaveAttribute('data-event-type', 'wake');
+
+  // Every other event type (napStart, napEnd, bedtime) lives inside the
+  // collapsed-by-default "Later today" section (Phase 21 D-10/D-11/D-12).
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
+  await laterToday.locator('summary').click();
+
+  const cardCount = await page.locator('#forecast-cards .prediction-card').count();
+  expect(cardCount).toBe(3);
+
+  const firstCard = page.locator('#forecast-cards .prediction-card').first();
+  await expect(firstCard).toBeVisible();
 });
 
 // ── Test 3: Quick-log button triggers reactive forecast re-render (no reload) ─
@@ -143,7 +160,13 @@ test('quick-log button triggers reactive forecast update without reload (D3-12)'
 
 // ── Test 4: Probability-band card is collapsed by default (UI-09 / D9-05/D9-06) ─
 
-test('probability-band forecast card renders collapsed by default (UI-09)', async ({ page }) => {
+test('probability-band forecast card starts collapsed, then auto-expands when Later Today opens (UI-09 / D-13)', async ({ page }) => {
+  // Phase 21 D-08: pin the clock before eveningHour(18) so lastEvent='wake' resolves
+  // to the dual-hero branch (napStart + bedtimeAfterWake) — this high-variance-wake
+  // fixture's own wake prediction is therefore NOT a hero candidate and lands in
+  // Later Today, preserving this test's original grid-level collapse/expand intent.
+  await page.clock.setFixedTime(new Date('2026-05-27T09:00:00'));
+
   const highVarianceWake = [
     { id: 'hv-1', type: 'wake', at: '2026-05-20T06:00' },
     { id: 'hv-2', type: 'wake', at: '2026-05-21T06:20' },
@@ -158,20 +181,27 @@ test('probability-band forecast card renders collapsed by default (UI-09)', asyn
 
   await expect(page.locator('#forecast-cards')).toBeVisible();
 
-  const probBandCard = page.locator('#forecast-cards .prediction-card.probability-band').first();
-  await expect(probBandCard).toBeVisible();
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
+
+  const probBandCard = laterToday.locator('.prediction-card.probability-band').first();
+  // Starts collapsed while Later Today itself is still closed (D-11).
   await expect(probBandCard).toHaveClass(/collapsed/);
-  await expect(probBandCard.locator('.card-summary')).toBeVisible();
 
-  const cardFull = probBandCard.locator('.card-full');
-  await expect(cardFull).toBeHidden();
-
-  await expect(probBandCard.locator('.card-chevron')).toContainText('↓');
+  // Opening Later Today auto-expands nested collapsible cards (D-13).
+  await laterToday.locator('summary').click();
+  await expect(probBandCard).toBeVisible();
+  await expect(probBandCard).not.toHaveClass(/collapsed/);
+  await expect(probBandCard.locator('.card-full')).toBeVisible();
+  await expect(probBandCard.locator('.card-chevron')).toContainText('↑');
 });
 
-// ── Test 5: Click collapsed card to expand (UI-09 interact) ──────────────────
+// ── Test 5: Manual collapse/expand toggle still works after Later Today's auto-expand (UI-09) ─
 
-test('clicking a collapsed probability-band card expands it (UI-09)', async ({ page }) => {
+test('clicking an auto-expanded probability-band card collapses it, clicking again re-expands it (UI-09)', async ({ page }) => {
+  // Same dual-hero pin as Test 4 — keeps the high-variance wake card out of the hero slot.
+  await page.clock.setFixedTime(new Date('2026-05-27T09:00:00'));
+
   const highVarianceWake = [
     { id: 'hv-1', type: 'wake', at: '2026-05-20T06:00' },
     { id: 'hv-2', type: 'wake', at: '2026-05-21T06:20' },
@@ -184,19 +214,24 @@ test('clicking a collapsed probability-band card expands it (UI-09)', async ({ p
   const db = makeDb(highVarianceWake, { maxDelta: 30, minDays: 7 });
   await seedAndReload(page, db);
 
-  const probBandCard = page.locator('#forecast-cards .prediction-card.probability-band').first();
-  await expect(probBandCard).toBeVisible();
-  await expect(probBandCard).toHaveClass(/collapsed/);
+  const laterToday = page.locator('.later-today-section');
+  await laterToday.locator('summary').click();
 
-  await probBandCard.click();
+  const probBandCard = laterToday.locator('.prediction-card.probability-band').first();
+  // Auto-expanded by D-13 as soon as Later Today opened.
   await expect(probBandCard).not.toHaveClass(/collapsed/);
   await expect(probBandCard.locator('.card-full')).toBeVisible();
   await expect(probBandCard.locator('.card-full .prob-list')).toBeVisible();
-  await expect(probBandCard.locator('.card-chevron')).toContainText('↑');
 
+  // Manual click still collapses it (UI-09's original per-card toggle mechanism).
   await probBandCard.click();
   await expect(probBandCard).toHaveClass(/collapsed/);
   await expect(probBandCard.locator('.card-chevron')).toContainText('↓');
+
+  // And a second click re-expands it.
+  await probBandCard.click();
+  await expect(probBandCard).not.toHaveClass(/collapsed/);
+  await expect(probBandCard.locator('.card-chevron')).toContainText('↑');
 });
 
 // ── Test 6: Hero card shows "Next Predicted Event" label (UI-10 / D9-17) ──────
@@ -228,7 +263,9 @@ test('missed predictions have "missed" class and "Missed by" label (D3-11)', asy
 
   await expect(page.locator('#forecast-cards')).toBeVisible();
 
-  const missedCard = page.locator('#forecast-cards .prediction-card.missed').first();
+  // Phase 21 D-07/D-08: lastEvent=bedtime → nextReachableEvent → ['wake'] (single
+  // hero) — the missed prediction (wake, central 06:30, now 14:00) IS the hero here.
+  const missedCard = page.locator('#next-event-card .next-event-hero.missed');
   await expect(missedCard).toBeVisible();
 
   const missedLabel = missedCard.locator('.missed-label');

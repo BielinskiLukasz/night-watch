@@ -121,6 +121,14 @@ test('TIF options panel is hidden when Classic is selected, visible when TIF is 
 // ── Test 2: TIF prediction cards render when TIF is selected ──────────────────
 
 test('TIF prediction cards (.tif-card, .tif-score-badge) render after switching to TIF algorithm', async ({ page }) => {
+  // Phase 21 D-07/D-08: this fixture's only logged event type is 'wake', so
+  // lastEvent.type === 'wake' → nextReachableEvent → ['napStart', 'bedtimeAfterWake']
+  // (dual hero, both null-data TIF placeholders) — 'wake' itself (the one TIF
+  // prediction with real data) is NOT a hero candidate here and lands inside the
+  // collapsed-by-default "Later today" section instead. Pin the clock before
+  // eveningHour(18) so napStart isn't additionally dropped from the dual hero.
+  await page.clock.setFixedTime(new Date('2026-06-02T09:00:00'));
+
   // Seed with 32 days of wake-only data and TIF algorithm selected.
   // Wake-only ensures the historic wake band self-intersects → normal TIF card.
   const db = makeWakeOnlyDb({ forecastAlgorithm: 'tif' });
@@ -130,33 +138,48 @@ test('TIF prediction cards (.tif-card, .tif-score-badge) render after switching 
   await expect(page.locator('#forecast-cards')).toBeVisible();
   await expect(page.locator('#cold-start-message')).not.toBeVisible();
 
-  // At least one .tif-card should be visible (the wake card at minimum)
-  const tifCards = page.locator('#forecast-cards .tif-card');
-  await expect(tifCards.first()).toBeVisible();
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
 
-  // Normal TIF cards start collapsed (expandable to show evidence windows)
+  // At least one .tif-card should be present (the wake card at minimum)
+  const tifCards = laterToday.locator('.tif-card');
   const wakeCard = tifCards.first();
+  // Normal TIF cards start collapsed while Later Today itself is still closed.
   await expect(wakeCard).toHaveClass(/collapsed/);
-  await expect(wakeCard.locator('.card-summary')).toBeVisible();
-  await expect(wakeCard.locator('.card-full')).not.toBeVisible();
 
-  // Expanding the card reveals the .tif-score-badge and source windows
-  await wakeCard.click();
+  // Opening Later Today auto-expands nested collapsible cards (D-13).
+  await laterToday.locator('summary').click();
+  await expect(wakeCard).toBeVisible();
   await expect(wakeCard).not.toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.card-full')).toBeVisible();
   await expect(wakeCard.locator('.tif-score-badge')).toBeVisible();
   await expect(wakeCard.locator('.tif-score-badge')).toContainText('Precision:');
   await expect(wakeCard.locator('.tif-source-list')).toBeVisible();
+
+  // Manual click still collapses it (the per-card toggle mechanism, D10-09).
+  await wakeCard.click();
+  await expect(wakeCard).toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.card-full')).not.toBeVisible();
+
+  // And a second click re-expands it.
+  await wakeCard.click();
+  await expect(wakeCard).not.toHaveClass(/collapsed/);
+  await expect(wakeCard.locator('.tif-score-badge')).toBeVisible();
 });
 
 // ── Test 3: Switching to Classic removes TIF cards ────────────────────────────
 
 test('switching from TIF to Classic removes .tif-card elements from the DOM', async ({ page }) => {
+  // Phase 21 D-07/D-08: see Test 2 above — the wake-only fixture's TIF cards
+  // live inside the collapsed "Later today" section, not the hero slot.
+  await page.clock.setFixedTime(new Date('2026-06-02T09:00:00'));
+
   // Start with TIF active and wake-only data seeded
   const db = makeWakeOnlyDb({ forecastAlgorithm: 'tif' });
   await seedAndReload(page, db);
 
-  // Confirm TIF cards are present
-  await expect(page.locator('#forecast-cards .tif-card').first()).toBeVisible();
+  // Confirm TIF cards are present (count doesn't require the section to be open)
+  expect(await page.locator('#forecast-cards .tif-card').count()).toBeGreaterThan(0);
 
   // Open Settings, switch to Classic, save
   await page.locator('button.settingsTrigger').click();
