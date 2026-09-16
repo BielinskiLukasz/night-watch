@@ -2410,14 +2410,21 @@ describe('PRED-11 no-nap bedtime shift', () => {
 // PRED-12: napProbability(dayRecords, settings, context)
 // ---------------------------------------------------------------------------
 //
-// 4-signal additive score (D-13):
-//   Signal 1 — napFrequency   (40%): napDays / totalDays
-//   Signal 2 — elapsedWakeTime(30%): elapsed fraction of napStart P10-P90 window
-//   Signal 3 — noNapStreak   (20%): max(0, 1 - streak/5)
-//   Signal 4 — windowPassed  (10%): 1 if current time <= P90, 0 if past P90
+// 4-signal weighted-redistribution score (Phase 20: NAP-01..04, D-01..D-10):
+//   Signal 1 — napFrequency     (35%): napDays / totalDays
+//   Signal 2 — dayOfWeekNapRate (30%): napDays / totalDays on today's weekday (all history)
+//   Signal 3 — sleepDebtSignal  (20%): clamp(sleepDebtProxy(7d), ±180) mapped to 0-1
+//   Signal 4 — noNapStreak      (15%): max(0, 1 - streak/5)
 //
-// Window-passed collapse: if current time > napStart P90 → return 0 (not null)
-// Cold-start / no data: return null
+// dayOfWeekNapRate/sleepDebtSignal can independently be unavailable; their
+// weight is redistributed proportionally across the remaining available
+// signals (D-01/D-02) — confidence becomes 'partial' rather than nulling
+// the whole score. All four signals are clock-invariant; only the
+// window-closed hard collapse to score:0 is clock-based.
+//
+// Return shape is always an object (D-03): { score, signalsUsed, confidence }.
+// Window-closed collapse: if current time > napStart P90 → score:0 (not null)
+// Cold-start / no data: { score: null, signalsUsed: [], confidence: 'none' }
 
 describe('PRED-12 napProbability', () => {
   // Helper: synthetic day record with just a napStart (and rejected=false)
@@ -2442,17 +2449,52 @@ describe('PRED-12 napProbability', () => {
     maxDelta: 60,
   };
 
-  it('empty dayRecords → returns null (cold start)', () => {
-    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+  // 21 consecutive daily records, '2025-01-06' (Monday) .. '2025-01-26' inclusive —
+  // full-availability fixture reused across the redistribution/clock-invariance tests.
+  // Event-object shape required so dayOfWeekAverages()'s extractDate can attribute a
+  // weekday (unlike the bare-string makeNapOnlyDay fixture, whose wake:null is
+  // invisible to weekday attribution).
+  function buildFullFixture() {
+    const dates = [];
+    const start = new Date('2025-01-06T00:00');
+    for (let i = 0; i < 21; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates.map(date => ({
+      wake:     { at: `${date}T07:00` },
+      bedtime:  { at: `${date}T21:00` },
+      napStart: { at: `${date}T13:00` },
+      napEnd:   null,
+      rejected: false,
+    }));
+  }
+  const fullFixture = buildFullFixture();
+  const fullSettings = { minDays: 3, windowDays: 30, maxDelta: 60, targetSleepMinutes: 600 };
+
+  // 4-day fixture ('2025-01-06' Mon .. '2025-01-09' Thu), all-nap — used for the
+  // both-signals-unavailable and sleepDebtSignal-unavailable redistribution cases.
+  const shortFixture = ['2025-01-06', '2025-01-07', '2025-01-08', '2025-01-09'].map(date => ({
+    wake:     { at: `${date}T07:00` },
+    bedtime:  { at: `${date}T21:00` },
+    napStart: { at: `${date}T13:00` },
+    napEnd:   null,
+    rejected: false,
+  }));
+  const shortSettings = { minDays: 1, windowDays: 30, maxDelta: 60, targetSleepMinutes: 600 };
+
+  it('empty dayRecords → { score: null, signalsUsed: [], confidence: "none" } (cold start)', () => {
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability([], baseSettings, ctx);
-    assert.strictEqual(result.score, null);
+    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none' });
   });
 
-  it('dayRecords below minDays → returns null (cold start gate)', () => {
+  it('dayRecords below minDays → { score: null, signalsUsed: [], confidence: "none" } (cold start gate)', () => {
     const highMinSettings = { ...baseSettings, minDays: 10 };
-    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(allNapDays, highMinSettings, ctx);
-    assert.strictEqual(result.score, null);
+    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none' });
   });
 
   it('all days have nap, streak=0, window open, wakeHHMM set → score is integer > 50', () => {
@@ -2461,6 +2503,7 @@ describe('PRED-12 napProbability', () => {
       currentMinute: 30,
       napStreak: 0,
       todayWakeHHMM: '07:00',
+      todayWeekday: null,
     };
     const result = napProbability(allNapDays, baseSettings, ctx);
     assert.ok(typeof result.score === 'number', `score should be a number, got ${result.score}`);
@@ -2469,7 +2512,7 @@ describe('PRED-12 napProbability', () => {
   });
 
   it('returns integer between 0 and 100 inclusive', () => {
-    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(allNapDays, baseSettings, ctx);
     assert.ok(result.score !== null, 'score should not be null with valid data');
     assert.ok(result.score >= 0 && result.score <= 100, `score ${result.score} out of [0, 100] range`);
@@ -2485,7 +2528,7 @@ describe('PRED-12 napProbability', () => {
       makeNapOnlyDay(null),
       makeNapOnlyDay(null),
     ];
-    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(noDays, baseSettings, ctx);
     // napFrequency=0 → zeroed. dayOfWeekNapRate/sleepDebtSignal unavailable (bare-string
     // fixture, no wake/bedtime) → redistributed across napFrequency(0) + noNapStreak(1).
@@ -2500,13 +2543,14 @@ describe('PRED-12 napProbability', () => {
       currentMinute: 0,
       napStreak: 0,
       todayWakeHHMM: '07:00',
+      todayWeekday: null,
     };
     const result = napProbability(allNapDays, baseSettings, ctx);
     assert.strictEqual(result.score, 0, 'window-passed should return 0 (not null)');
   });
 
   it('window-closed returns 0 (integer), not null — distinguishable from cold-start', () => {
-    const ctx = { currentHour: 23, currentMinute: 59, napStreak: 0, todayWakeHHMM: '07:00' };
+    const ctx = { currentHour: 23, currentMinute: 59, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(allNapDays, baseSettings, ctx);
     assert.strictEqual(result.score, 0);
     // Verify it's not null (cold-start returns null, window-closed returns 0)
@@ -2514,8 +2558,8 @@ describe('PRED-12 napProbability', () => {
   });
 
   it('napStreak=5 → noNapStreak signal = 0 (weight zeroed, reduces score vs streak=0)', () => {
-    const ctx0 = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
-    const ctx5 = { currentHour: 11, currentMinute: 0, napStreak: 5, todayWakeHHMM: '07:00' };
+    const ctx0 = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
+    const ctx5 = { currentHour: 11, currentMinute: 0, napStreak: 5, todayWakeHHMM: '07:00', todayWeekday: null };
     const result0 = napProbability(allNapDays, baseSettings, ctx0);
     const result5 = napProbability(allNapDays, baseSettings, ctx5);
     assert.ok(result5.score !== null && result0.score !== null, 'both scores should be non-null');
@@ -2523,18 +2567,8 @@ describe('PRED-12 napProbability', () => {
       `streak=5 score (${result5.score}) should be lower than streak=0 (${result0.score})`);
   });
 
-  it('todayWakeHHMM=null → elapsedWakeTime signal = 0 (30% weight zeroed, reduces score vs wake set)', () => {
-    const ctxWithWake    = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00' };
-    const ctxWithoutWake = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: null };
-    const scoreWith    = napProbability(allNapDays, baseSettings, ctxWithWake);
-    const scoreWithout = napProbability(allNapDays, baseSettings, ctxWithoutWake);
-    assert.ok(scoreWith !== null && scoreWithout !== null, 'both scores should be non-null');
-    assert.ok(scoreWithout <= scoreWith,
-      `no-wake score (${scoreWithout}) should be <= wake-set score (${scoreWith})`);
-  });
-
   it('score is a single Math.round at the end — result is integer', () => {
-    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 2, todayWakeHHMM: '07:00' };
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 2, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(allNapDays, baseSettings, ctx);
     assert.ok(result.score !== null);
     assert.strictEqual(result.score, Math.round(result.score), 'score must be an integer (single round at end)');
@@ -2551,25 +2585,6 @@ describe('PRED-12 napProbability', () => {
   });
 
   it('full-availability path: 21-day fixture yields all four signalsUsed and confidence=full', () => {
-    // 21 consecutive daily records, '2025-01-06' (Monday) .. '2025-01-26' inclusive.
-    // Event-object shape required so dayOfWeekAverages()'s extractDate can attribute
-    // a weekday (unlike the bare-string makeNapOnlyDay fixture, whose wake:null is
-    // invisible to weekday attribution).
-    const dates = [];
-    const start = new Date('2025-01-06T00:00');
-    for (let i = 0; i < 21; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      dates.push(d.toISOString().slice(0, 10));
-    }
-    const fullFixture = dates.map(date => ({
-      wake:     { at: `${date}T07:00` },
-      bedtime:  { at: `${date}T21:00` },
-      napStart: { at: `${date}T13:00` },
-      napEnd:   null,
-      rejected: false,
-    }));
-    const fullSettings = { minDays: 3, windowDays: 30, maxDelta: 60, targetSleepMinutes: 600 };
     const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWeekday: 1 };
 
     const result = napProbability(fullFixture, fullSettings, ctx);
@@ -2580,6 +2595,49 @@ describe('PRED-12 napProbability', () => {
     assert.strictEqual(result.confidence, 'full');
     assert.ok(typeof result.score === 'number' && Number.isInteger(result.score));
     assert.ok(result.score >= 0 && result.score <= 100, `score ${result.score} out of range`);
+  });
+
+  it('dayOfWeekNapRate unavailable (no todayWeekday), sleepDebtSignal available → partial, 3 signals', () => {
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWeekday: null };
+    const result = napProbability(fullFixture, fullSettings, ctx);
+    assert.deepStrictEqual(result.signalsUsed, ['napFrequency', 'sleepDebtSignal', 'noNapStreak']);
+    assert.strictEqual(result.confidence, 'partial');
+  });
+
+  it('both dayOfWeekNapRate and sleepDebtSignal unavailable (thin 4-day fixture) → partial, 2 signals', () => {
+    // 4-day fixture, minDays=1, no todayWeekday → dayOfWeekNapRate unavailable (no lookup);
+    // only 3 overnight pairs (< 7) → sleepDebtSignal unavailable.
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWeekday: null };
+    const result = napProbability(shortFixture, shortSettings, ctx);
+    assert.deepStrictEqual(result.signalsUsed, ['napFrequency', 'noNapStreak']);
+    assert.strictEqual(result.confidence, 'partial');
+  });
+
+  it('sleepDebtSignal unavailable, dayOfWeekNapRate available (thin 4-day fixture, todayWeekday=1) → partial, 3 signals', () => {
+    // Monday (weekday 1) appears once in the 4-day range; totalDays=1 >= minDays=1 → available.
+    // Only 3 overnight pairs (< 7) → sleepDebtSignal unavailable.
+    const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWeekday: 1 };
+    const result = napProbability(shortFixture, shortSettings, ctx);
+    assert.deepStrictEqual(result.signalsUsed, ['napFrequency', 'dayOfWeekNapRate', 'noNapStreak']);
+    assert.strictEqual(result.confidence, 'partial');
+  });
+
+  it('window-closed exact shape: score:0, confidence:"partial", signalsUsed=[napFrequency, noNapStreak]', () => {
+    // allNapDays is a bare-string fixture (no wake/bedtime) → both new signals unavailable
+    // regardless of todayWeekday; currentHour:16 is past the ~13:00 napStart P90.
+    const ctx = { currentHour: 16, currentMinute: 0, napStreak: 0, todayWeekday: null };
+    const result = napProbability(allNapDays, baseSettings, ctx);
+    assert.strictEqual(result.score, 0);
+    assert.strictEqual(result.confidence, 'partial');
+    assert.deepStrictEqual(result.signalsUsed, ['napFrequency', 'noNapStreak']);
+  });
+
+  it('clock-invariance: identical dayRecords/settings/todayWeekday, different pre-window-close currentHour → deep-equal results', () => {
+    const ctxA = { currentHour: 9, currentMinute: 0, napStreak: 0, todayWeekday: 1 };
+    const ctxB = { currentHour: 12, currentMinute: 30, napStreak: 0, todayWeekday: 1 };
+    const resultA = napProbability(fullFixture, fullSettings, ctxA);
+    const resultB = napProbability(fullFixture, fullSettings, ctxB);
+    assert.deepStrictEqual(resultA, resultB);
   });
 });
 
