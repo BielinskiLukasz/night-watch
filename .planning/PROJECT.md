@@ -103,6 +103,13 @@ compared to reality.
 - ✓ Split bedtime model: separate nap-day vs no-nap-day P10/P50/P90 distributions with probability-weighted blend — Phase 19 (PRED-18, PRED-19)
 - ✓ Wake-anchored nap-start/end: Classic nap anchored to today's wake via activity-gap percentiles; nap-end via duration percentiles — Phase 19 (PRED-20, PRED-21, PRED-22)
 
+**v2.0 — Prediction Engine & Autosave (Phase 20, 2026-09-16)**
+- ✓ Nap probability redesign: `napProbability()` rewritten to return `{score, signalsUsed, confidence}` with weight redistribution across 4 signal-availability combinations, decoupled from time-of-day — Phase 20 (PRED-23 groundwork)
+
+**v2.0 — Prediction Engine & Autosave (Phase 21, 2026-09-16)**
+- ✓ Prediction normalization: `nextReachableEvent`/`selectNextEvent` 5-path event-reachability model extracted to `js/lib/forecast-utils.js`; napStart card fully hidden (not collapsed) once its window closes; `napWindowClosed` fully decoupled from the nap score — Phase 21 (PRED-23, PRED-24)
+- ✓ Dual hero cards + `predictions.bedtimeAfterWake` + collapsed-by-default "Later today" section replacing the flat 4-card grid — Phase 21 (PRED-24, UI-13)
+
 ### Out of Scope
 
 - **Multi-profile switching** — single subject in v1; multi-subject would change persistence shape. Defer to v2.
@@ -167,6 +174,10 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Phase 19 D-09: PRED-11 `noNapFired` block permanently removed from `forecast()` | Split bedtime model (nap-day vs no-nap-day series) supersedes the blunt evening-hour missed-nap bedtime shift; removing PRED-11 eliminates double-application of bedtime adjustments | ✓ Shipped Phase 19 |
 | Phase 19 D-10: `noNapBedtimeOffsetMinutes` removed from schema, migration, and validator | Superseded by the split-series model which derives the offset implicitly from historical data; the crude fixed-offset approximation is no longer needed | ✓ Shipped Phase 19 |
 | Phase 19 D-13: pre-forecast context assembly in `today-screen.js` | `todayWakeHHMM`, `napProbabilityScore`, and `todayNapStartHHMM` are pre-computed before `forecast()` is called, then passed as context; keeps `forecast()` a pure function that does not touch the DOM or call `napProbability()` itself | ✓ Shipped Phase 19 |
+| Phase 20: `napProbability()` returns `{score, signalsUsed, confidence}` instead of a bare number | Weight redistribution across 4 signal-availability combinations makes the score data-driven and time-of-day-independent | ✓ Shipped Phase 20 |
+| Phase 21 D-06/D-07: `nextReachableEvent`/`selectNextEvent` extracted to new `js/lib/forecast-utils.js` | Pure 5-path event-reachability model kept separate from `forecast.js` to avoid growing that module further; `selectNextEvent` stays a thin wrapper resolving the wall clock at the UI boundary | ✓ Shipped Phase 21 |
+| Phase 21 D-11/D-12: `napWindowClosed` fully decoupled from the nap probability score (finishes a Phase 20 amendment that shipped without this piece) | Score stays clock-invariant; window-closed state now controls DOM visibility (napStart card fully absent, not just visually deprioritized) instead of forcing score to 0 | ✓ Shipped Phase 21 |
+| Phase 21 D-08/D-09: dual hero cards + independent `predictions.bedtimeAfterWake` field | When nap status is genuinely undetermined, showing two equally-prominent hero cards is more honest than picking one; `bedtimeAfterWake` is the raw no-nap-day series, kept separate from the blended `predictions.bedtime` | ✓ Shipped Phase 21 |
 
 ## Current Milestone: v2.0 Prediction Engine & Autosave
 
@@ -176,17 +187,17 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - New multi-band Algorithm C (all 4 events) with dual-model median blend + interval stability check; settings modal selector UX (B-050 + B-032)
 - ~~Split bedtime model: separate nap-day vs no-nap-day distributions (B-052)~~ ✓ Phase 19
 - ~~Classic nap anchored to today's wake time via activity-gap percentiles (B-048)~~ ✓ Phase 19
-- Nap probability redesign: data-driven, time-independent (B-047)
-- Prediction normalization: show only next reachable event (B-038)
+- ~~Nap probability redesign: data-driven, time-independent (B-047)~~ ✓ Phase 20
+- ~~Prediction normalization: show only next reachable event (B-038)~~ ✓ Phase 21
 - Linear-decay per-event accuracy scoring with tolerance window (B-049)
 - Move TIF window columns from Metrics → Accuracy screen (B-041)
 - Autosave export to user-chosen directory via File System Access API (B-051)
 
-## Current State (v2.0-partial — Phase 19 complete 2026-09-14)
+## Current State (v2.0-partial — Phase 21 complete 2026-09-16)
 
-Phase 19 complete. 825 unit + integration tests, 0 failures. Split bedtime model (nap-day / no-nap-day distributions with probability-weighted blend) and wake-anchored nap-start/end predictions shipped to Classic algorithm. PRED-11 `noNapFired` block removed; `noNapBedtimeOffsetMinutes` setting purged from schema.
+Phases 19-21 complete. 859 unit + integration tests, 130 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21).
 
-**Next:** Phase 20 — nap-probability redesign.
+**Next:** Phase 22 — Accuracy Scoring.
 
 ## Previous State (v1.4 — shipped 2026-09-08)
 
@@ -258,4 +269,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-14 after Phase 19 (Split Bedtime & Wake-Anchored Nap)*
+*Last updated: 2026-09-16 after Phase 21 (Prediction Normalization)*

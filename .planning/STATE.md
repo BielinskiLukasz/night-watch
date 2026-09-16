@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 21 — Prediction Normalization
+**Current focus:** Phase 22 — Accuracy Scoring
 
 ## Current Position
 
@@ -209,5 +209,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- REQUIREMENTS.md and ROADMAP.md generation in progress (milestone v2.0 setup)
-- After roadmap: run /gsd-plan-phase 19 to start first execution phase
+- Phase 21 (Prediction Normalization) complete and verified. Next: `/gsd-discuss-phase 22` or `/gsd-plan-phase 22` for Phase 22 (Accuracy Scoring).
+- Consider adding a regression unit test for `subWindowBedtime`'s midnight-wrap edge case (fixed during Phase 21 code review, WR-03 — no dedicated test yet).
