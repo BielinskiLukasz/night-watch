@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
-current_phase_name: nap probability redesign
-status: planning
+current_phase_name: Nap Probability Redesign
+status: executing
 stopped_at: Phase 20 context gathered
-last_updated: "2026-09-16T14:35:51.151Z"
+last_updated: "2026-09-16T15:34:01.247Z"
 last_activity: 2026-09-14
 last_activity_desc: Phase 19 complete, transitioned to Phase 20
-state_head: a94fb1fc67d874da4052663177fc631fa9872373
+state_head: d49d5edc9bca1a58c0038090f1da18bff8f71440
 progress:
-  total_phases: 3
+  total_phases: 6
   completed_phases: 1
-  total_plans: 2
+  total_plans: 4
   completed_plans: 2
-  percent: 33
+  percent: 17
 ---
 
 # Project State
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 ## Current Position
 
-Phase: 20 — nap probability redesign
+Phase: 20 (Nap Probability Redesign) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-09-14 — Phase 19 complete, transitioned to Phase 20
 
 ## Phases
