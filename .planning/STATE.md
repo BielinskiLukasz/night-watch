@@ -4,17 +4,17 @@ milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 21
 current_phase_name: Prediction Normalization
-status: executing
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-09-16T19:39:34.984Z"
+status: verifying
+stopped_at: Completed 21-03-PLAN.md
+last_updated: "2026-09-16T20:05:16.485Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 21 execution started
-state_head: 5d64a03d87abe20e773679bb4330b914acc3c228
+state_head: 204686cedbb4819571788cae3117143de9d2be5e
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 29
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 Phase: 21 (Prediction Normalization) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-16 — Phase 21 execution started
 
 ## Phases
@@ -99,6 +99,7 @@ Last activity: 2026-09-16 — Phase 21 execution started
 | Phase 20 P03 | 25 | 2 tasks | 4 files |
 | Phase 21 P01 | 45min | 2 tasks | 9 files |
 | Phase 21 P02 | 28min | 3 tasks | 7 files |
+| Phase 21 P03 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,7 @@ Last activity: 2026-09-16 — Phase 21 execution started
 - [Phase 21]: Phase 21 Plan 2: bedtimeAfterWake is computed via a selectBedtime/bedtimeTimes helper lifted out of the bedtimePred IIFE to forecast() function scope, so it reuses the same probability-band-check logic as bedtime while staying independent of its blended value
 - [Phase 21]: Phase 21 Plan 2: hero card data-event-type maps bedtimeAfterWake -> 'bedtime' (LOGGABLE_EVENT_TYPE) distinct from the internal 'type' field, so E2E selectors keyed on the four real loggable event types keep working across hero and Later-Today cards
 - [Phase 21]: Phase 21 Plan 2: Later-Today auto-expand (D-13) targets both .tif-card.collapsed and .probability-band.collapsed, so opening the section also auto-expands classic probability-band cards, not just TIF cards
+- [Phase 21]: Phase 21 Plan 3: widened windowDays to 14 in the dual-hero E2E fixture so a nap-day sub-window and a >= minDays no-nap-day sub-window resolve simultaneously within one rolling window (predictions.napStart and predictions.bedtimeAfterWake both real data).
 
 ### Quick Tasks Completed
 
@@ -189,8 +191,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T19:39:33.463Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-09-16T20:05:14.954Z
+Stopped at: Completed 21-03-PLAN.md
 Resume file: None
 
 ## Deferred Items
