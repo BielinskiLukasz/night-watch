@@ -1,43 +1,8 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.4 — TIF Fixes & Metrics Depth (Phases 15–18) — ACTIVE</summary>",
+  "milestone": "v2.0 — Prediction Engine & Autosave (Phases 19–25)",
   "phases": [
-    {
-      "number": "1",
-      "name": "8. Foundation → Accuracy",
-      "status": "complete"
-    },
-    {
-      "number": "9",
-      "name": "UX Polish",
-      "status": "complete"
-    },
-    {
-      "number": "10",
-      "name": "TIF Algorithm & Settings",
-      "status": "complete"
-    },
-    {
-      "number": "11",
-      "name": "Metrics Screen",
-      "status": "complete"
-    },
-    {
-      "number": "12",
-      "name": "Prediction Logic Refinements",
-      "status": "complete"
-    },
-    {
-      "number": "13",
-      "name": "TIF Algorithm Extensions",
-      "status": "complete"
-    },
-    {
-      "number": "14",
-      "name": "TIF Metrics, Accuracy & Chart Fixes",
-      "status": "complete"
-    },
     {
       "number": "15",
       "name": "TIF Engine Bug Fixes",
@@ -56,13 +21,13 @@
     {
       "number": "18",
       "name": "Sleep Debt Proxy",
-      "status": "in_progress"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 20)",
+    "reason": "Phase 20 of 2 — needs a plan"
   },
-  "updated_at": "2026-09-08T16:58:09.198Z"
+  "updated_at": "2026-09-14T20:51:53.487Z"
 }
