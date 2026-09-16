@@ -2602,6 +2602,91 @@ describe('buildBedtimeSeriesNoNapDay(dayRecords, settings)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Phase 21 — forecast() predictions.bedtimeAfterWake (D-09) — Plan 21-02 Task 1
+// ---------------------------------------------------------------------------
+
+describe('forecast() predictions.bedtimeAfterWake (D-09)', () => {
+  const bedtimeAfterWakeSettings = {
+    minDays: 3, windowDays: 10, maxDelta: 60,
+    intenseDayOffsetMinutes: 30, eveningHour: 18,
+  };
+
+  it('bedtimeAfterWake equals buildBedtimeSeriesNoNapDay(window, settings) run through the probability-band check', () => {
+    // 3 nap-days (bedtime 21:00) + 3 no-nap-days (bedtime 22:00, uniform → band width 0)
+    const records = [
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+    ];
+    const result = forecast(records, bedtimeAfterWakeSettings, {
+      napStartLogged: false, napProbabilityScore: null, isIntenseToday: false, currentHour: 10,
+    });
+    assert.ok(!result.isColdStart);
+    assert.ok('bedtimeAfterWake' in result, 'forecast() result must always include a bedtimeAfterWake key');
+
+    // Independently derive the expected value the same way forecast() computes it.
+    const noNapSeries = buildBedtimeSeriesNoNapDay(records, bedtimeAfterWakeSettings);
+    assert.ok(noNapSeries !== null, 'test fixture must have >= minDays no-nap-day records');
+    const noNapTimes = records
+      .filter(d => d.napStart == null)
+      .map(d => timeToMinutes(d.bedtime))
+      .sort((a, b) => a - b);
+    const band = generateProbabilityBand(noNapTimes, noNapSeries.min, noNapSeries.max, bedtimeAfterWakeSettings.maxDelta);
+    assert.strictEqual(band, null, 'uniform no-nap-day bedtimes should not trigger the probability-band fallback');
+    assert.deepStrictEqual(result.bedtimeAfterWake, {
+      central: minutesToTime(noNapSeries.central),
+      min: minutesToTime(noNapSeries.min),
+      max: minutesToTime(noNapSeries.max),
+    });
+  });
+
+  it('bedtimeAfterWake is independent of predictions.bedtime when napStartLogged routes bedtime through the nap-day series (PRED-18)', () => {
+    // Nap-day bedtime (21:00) differs from no-nap-day bedtime (22:00).
+    const records = [
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+    ];
+    const result = forecast(records, bedtimeAfterWakeSettings, {
+      napStartLogged: true, isIntenseToday: false, currentHour: 10,
+    });
+    assert.ok(!result.isColdStart);
+    // predictions.bedtime routes through the nap-day sub-window (PRED-18) → "21:00"
+    assert.strictEqual(result.bedtime.central, '21:00');
+    // predictions.bedtimeAfterWake reflects ONLY the no-nap-day series → "22:00" — independent
+    assert.ok(result.bedtimeAfterWake !== null);
+    assert.strictEqual(result.bedtimeAfterWake.central, '22:00',
+      'bedtimeAfterWake must remain the raw no-nap-day series, independent of the blended/routed bedtime value');
+    assert.notStrictEqual(result.bedtimeAfterWake.central, result.bedtime.central);
+  });
+
+  it('bedtimeAfterWake is genuinely null (not a partial/empty object) when the no-nap-day sub-window is thin (< minDays)', () => {
+    // 3 nap-days + only 2 no-nap-days (< minDays=3) → buildBedtimeSeriesNoNapDay returns null
+    const records = [
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '21:00', '10:00', '11:00'),
+      makeDay('07:00', '22:00', null, null),
+      makeDay('07:00', '22:00', null, null),
+    ];
+    const result = forecast(records, bedtimeAfterWakeSettings, {
+      napStartLogged: false, napProbabilityScore: null, isIntenseToday: false, currentHour: 10,
+    });
+    assert.ok(!result.isColdStart);
+    assert.strictEqual(buildBedtimeSeriesNoNapDay(records, bedtimeAfterWakeSettings), null,
+      'test fixture must genuinely have a thin no-nap-day sub-window');
+    assert.strictEqual(result.bedtimeAfterWake, null,
+      'bedtimeAfterWake must be exactly null (not {central:null,...}) when the sub-window is thin');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 19 — forecast() split bedtime routing (PRED-18/19, D-12) — Task 2
 // ---------------------------------------------------------------------------
 
