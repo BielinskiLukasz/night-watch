@@ -62,7 +62,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 - [ ] **Phase 20: Nap Probability Redesign** — Refactor `napProbabilityScore` in `js/lib/forecast.js`: drop clock-based `elapsedWakeTime` (30%) and `windowPassed` (10%) inputs, add `dayOfWeekNapRate` (30%) from `dayOfWeekAverages()` in `metrics.js` and `sleepDebtSignal` (20%) from `sleepDebtProxy()` in `metrics.js`, keep `napFrequency` (35%) and `noNapStreakPenalty` (15%); weights sum to 100%; unit tests cover all five signals and weight totals; no circular imports (`forecast.js` may import from `metrics.js` — verify direction) (requirements: NAP-01, NAP-02, NAP-03, NAP-04)
   **Plans:** 2 plans
   Plans:
-  - [ ] 20-01-PLAN.md — napProbability() 4-signal engine rewrite + dayOfWeekAverages() extension (TDD tracer + expansion)
+  - [x] 20-01-PLAN.md — napProbability() 4-signal engine rewrite + dayOfWeekAverages() extension (TDD tracer + expansion)
   - [ ] 20-02-PLAN.md — forecast.js + today-screen.js consumption wiring (D-04/D-07)
 
 - [ ] **Phase 21: Prediction Normalization** — Add `nextReachableEvent(lastEvent, currentHour, settings)` helper (pure function, new export in `js/lib/forecast.js` or a dedicated `js/lib/forecast-utils.js`); update `today-screen.js` to render only the next reachable event card prominently and to fully hide (not collapse) nap cards when the nap window is closed via a dedicated UI flag; if `forecast-utils.js` is new it must be added to `PRECACHE_LIST` and `sw-precache.test.js`; E2E tests cover event-card visibility for each reachable-event state (requirements: PRED-23, PRED-24, UI-13)

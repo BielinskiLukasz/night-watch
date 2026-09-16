@@ -23,10 +23,10 @@
 
 ### Nap Probability Redesign
 
-- [ ] **NAP-01**: Remove `elapsedWakeTime` (30% weight) and `windowPassed` (10% weight) signals from `napProbabilityScore` — eliminate clock-based, time-varying inputs so the score is computed once at wake time and remains stable
-- [ ] **NAP-02**: Add `dayOfWeekNapRate` signal (30% weight) — fraction of same-weekday days (in rolling window) that had a nap, derived from `dayOfWeekAverages()` in `metrics.js`
-- [ ] **NAP-03**: Add `sleepDebtSignal` (20% weight) — normalized value from `sleepDebtProxy()` in `metrics.js`; higher debt increases nap probability
-- [ ] **NAP-04**: Retain `napFrequency` (35% weight) and `noNapStreakPenalty` (15% weight) from v1.3 implementation; total weights sum to 100%
+- [x] **NAP-01**: Remove `elapsedWakeTime` (30% weight) and `windowPassed` (10% weight) signals from `napProbabilityScore` — eliminate clock-based, time-varying inputs so the score is computed once at wake time and remains stable
+- [x] **NAP-02**: Add `dayOfWeekNapRate` signal (30% weight) — fraction of same-weekday days (in rolling window) that had a nap, derived from `dayOfWeekAverages()` in `metrics.js`
+- [x] **NAP-03**: Add `sleepDebtSignal` (20% weight) — normalized value from `sleepDebtProxy()` in `metrics.js`; higher debt increases nap probability
+- [x] **NAP-04**: Retain `napFrequency` (35% weight) and `noNapStreakPenalty` (15% weight) from v1.3 implementation; total weights sum to 100%
 
 ### Prediction Normalization
 
@@ -78,10 +78,10 @@
 | PRED-20 | B-048 | Phase 19 | Complete |
 | PRED-21 | B-048 | Phase 19 | Complete |
 | PRED-22 | B-048 | Phase 19 | Complete |
-| NAP-01 | B-047 | Phase 20 | Pending |
-| NAP-02 | B-047 | Phase 20 | Pending |
-| NAP-03 | B-047 | Phase 20 | Pending |
-| NAP-04 | B-047 | Phase 20 | Pending |
+| NAP-01 | B-047 | Phase 20 | Complete |
+| NAP-02 | B-047 | Phase 20 | Complete |
+| NAP-03 | B-047 | Phase 20 | Complete |
+| NAP-04 | B-047 | Phase 20 | Complete |
 | PRED-23 | B-038 | Phase 21 | Pending |
 | PRED-24 | B-038 | Phase 21 | Pending |
 | ACC-01 | B-049 | Phase 22 | Pending |
