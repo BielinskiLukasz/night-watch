@@ -927,6 +927,9 @@ describe('dayOfWeekAverages(dayRecords)', () => {
     assert.strictEqual(mon.napDuration, 120);
     // sleepDuration: average of mon1 (510) and mon2 (540) = 525
     assert.strictEqual(mon.sleepDuration, Math.round((510 + 540) / 2));
+    // NAP-02: totalDays counts both Mondays; napDays counts only mon1 (mon2 is no-nap)
+    assert.strictEqual(mon.totalDays, 2);
+    assert.strictEqual(mon.napDays, 1);
   });
 
   it('no-date record (bare HH:MM wake): contributes to no weekday bucket', () => {
