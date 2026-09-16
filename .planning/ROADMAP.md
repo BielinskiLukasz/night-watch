@@ -70,7 +70,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   **Plans:** 3 plans
   Plans:
   - [x] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
-  - [ ] 21-02-PLAN.md — predictions.bedtimeAfterWake + dual-hero rendering + "Later today" section
+  - [x] 21-02-PLAN.md — predictions.bedtimeAfterWake + dual-hero rendering + "Later today" section
   - [ ] 21-03-PLAN.md — Full E2E coverage matrix for all 5 nextReachableEvent paths
 
 - [ ] **Phase 22: Accuracy Scoring** — Add `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` to `js/lib/accuracy.js` using the linear-decay formula (D≤W → 100−(50/W)×D; W<D≤2W → 50−(50/W)×(D−W); D>2W → 0); change daily score to arithmetic mean of per-event scores; update `accuracy-screen.js` to render per-event scores and the new daily average; update backtesting engine calls in `accuracy.js` (and `accuracy-tif.js` if it references hit/miss) to call `eventAccuracyScore` — `accuracy-tif.js` must NOT import `metrics.js` (circular guard); unit tests cover formula boundary values (D=0, D=W, D=2W, D>2W) (requirements: ACC-01, ACC-02, ACC-03, ACC-04)
@@ -130,12 +130,12 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   6. `forecast-utils.js` is added to `sw.js`'s `PRECACHE_LIST` and to `tests/unit/sw-precache.test.js`
   7. E2E tests cover event-card visibility for each reachable-event state
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
+- [x] 21-01-PLAN.md — napWindowClosed decoupling + nextReachableEvent/selectNextEvent extraction (tracer)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

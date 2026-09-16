@@ -31,7 +31,7 @@
 ### Prediction Normalization
 
 - [x] **PRED-23**: `nextReachableEvent(lastEvent, currentHour, settings)` helper — returns the single next upcoming event type given the last logged event type and the current hour; used by Today screen to show only the immediately relevant prediction
-- [ ] **PRED-24**: Today screen suppresses nap prediction cards when the nap window is closed (not just collapsed); "window closed" is a dedicated UI flag derived from nap probability logic, independent of the probability score value
+- [x] **PRED-24**: Today screen suppresses nap prediction cards when the nap window is closed (not just collapsed); "window closed" is a dedicated UI flag derived from nap probability logic, independent of the probability score value
 
 ### Accuracy Scoring
 
@@ -44,7 +44,7 @@
 
 - [ ] **UI-11**: Move TIF window columns (per-event lower/upper bounds, confidence score, window width) from Metrics screen to Accuracy screen — clean separation: Metrics = what happened, Accuracy = how well predicted
 - [ ] **UI-12**: Settings modal Algorithm selector exposes three options: Classic / TIF / Algorithm C; algorithm-specific settings (Classic trim/rolling, TIF precision, Blend shrinkage) show/hide based on active selection; selector rendered at top of Forecast & Prediction fieldset (consistent with v1.3 placement)
-- [ ] **UI-13**: Today screen renders only the next reachable event card prominently using `nextReachableEvent`; secondary events remain accessible but de-emphasized; nap cards hidden (not collapsed) when window is closed
+- [x] **UI-13**: Today screen renders only the next reachable event card prominently using `nextReachableEvent`; secondary events remain accessible but de-emphasized; nap cards hidden (not collapsed) when window is closed
 
 ### Autosave
 
@@ -83,14 +83,14 @@
 | NAP-03 | B-047 | Phase 20 | Complete |
 | NAP-04 | B-047 | Phase 20 | Complete |
 | PRED-23 | B-038 | Phase 21 | Complete |
-| PRED-24 | B-038 | Phase 21 | Pending |
+| PRED-24 | B-038 | Phase 21 | Complete |
 | ACC-01 | B-049 | Phase 22 | Pending |
 | ACC-02 | B-049 | Phase 22 | Pending |
 | ACC-03 | B-049 | Phase 22 | Pending |
 | ACC-04 | B-049 | Phase 22 | Pending |
 | UI-11 | B-041 | Phase 23 | Pending |
 | UI-12 | B-032 | Phase 25 | Pending |
-| UI-13 | B-038 | Phase 21 | Pending |
+| UI-13 | B-038 | Phase 21 | Complete |
 | PLAT-01 | B-051 | Phase 24 | Pending |
 | PLAT-02 | B-051 | Phase 24 | Pending |
 | PLAT-03 | B-051 | Phase 24 | Pending |

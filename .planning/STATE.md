@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 21
 current_phase_name: Prediction Normalization
 status: executing
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-09-16T19:08:17.043Z"
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-09-16T19:39:34.984Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 21 execution started
-state_head: 0e510070b1d38d1873b6a276109f6c3b6b7c2dfa
+state_head: 5d64a03d87abe20e773679bb4330b914acc3c228
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 ## Current Position
 
 Phase: 21 (Prediction Normalization) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-16 — Phase 21 execution started
 
@@ -98,6 +98,7 @@ Last activity: 2026-09-16 — Phase 21 execution started
 | Phase 20 P02 | 8 | 2 tasks | 3 files |
 | Phase 20 P03 | 25 | 2 tasks | 4 files |
 | Phase 21 P01 | 45min | 2 tasks | 9 files |
+| Phase 21 P02 | 28min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,9 @@ Last activity: 2026-09-16 — Phase 21 execution started
 - [Phase 20]: Phase 20 Plan 03: today-screen.js todayDateStr uses formatLocalISO(new Date()) instead of toISOString() (CR-02)
 - [Phase 21]: napProbability() decouples napWindowClosed from score; strict > against napStart P90 (D-03) — Finishes Phase 20 D-11/D-12; score never collapses to 0 solely from window closing
 - [Phase 21]: bedtimeAfterWake keeps its own RESULT_TYPE literal in selectNextEvent; bedtimeAfterNap normalizes to 'bedtime' (D-07) — Preserves distinguishability for Plan 21-02's dual-hero rendering while keeping the single logged bedtime event type intact
+- [Phase 21]: Phase 21 Plan 2: bedtimeAfterWake is computed via a selectBedtime/bedtimeTimes helper lifted out of the bedtimePred IIFE to forecast() function scope, so it reuses the same probability-band-check logic as bedtime while staying independent of its blended value
+- [Phase 21]: Phase 21 Plan 2: hero card data-event-type maps bedtimeAfterWake -> 'bedtime' (LOGGABLE_EVENT_TYPE) distinct from the internal 'type' field, so E2E selectors keyed on the four real loggable event types keep working across hero and Later-Today cards
+- [Phase 21]: Phase 21 Plan 2: Later-Today auto-expand (D-13) targets both .tif-card.collapsed and .probability-band.collapsed, so opening the section also auto-expands classic probability-band cards, not just TIF cards
 
 ### Quick Tasks Completed
 
@@ -185,8 +189,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T19:08:15.049Z
-Stopped at: Completed 21-01-PLAN.md
+Last session: 2026-09-16T19:39:33.463Z
+Stopped at: Completed 21-02-PLAN.md
 Resume file: None
 
 ## Deferred Items
