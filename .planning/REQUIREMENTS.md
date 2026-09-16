@@ -13,12 +13,12 @@
 - [ ] **PRED-16**: Algorithm C interval stability check for each event — if per-model intervals overlap, use intersection (with shrinkage toward intersection center when central lies outside); if no overlap, use combined union range
 - [ ] **PRED-17**: Algorithm C covers all 4 events: wake, bedtime, nap-start, nap-end (nap-start and nap-end use wake-anchored gaps, see PRED-19/PRED-20)
 - [x] **PRED-18**: Split bedtime model (`buildBedtimeSeriesNapDay`, `buildBedtimeSeriesNoNapDay`) — separate P10/P50/P90 distributions for days with a nap vs days without; prediction selects the matching series based on today's nap status
-- [ ] **PRED-19**: When today's nap status is undetermined at bedtime prediction time, blend nap-day and no-nap-day distributions proportionally to today's nap probability score
+- [x] **PRED-19**: When today's nap status is undetermined at bedtime prediction time, blend nap-day and no-nap-day distributions proportionally to today's nap probability score
 
 ### Classic Nap Predictions (Wake-Anchored)
 
 - [x] **PRED-20**: `buildNapGapSeries(dayRecords)` in `forecast.js` — computes `(napStart − wake)` gap in minutes for each day with a recorded nap; returns array of gap values
-- [ ] **PRED-21**: Classic nap-start prediction anchors to today's actual wake time — project nap-start as `wakeAnchor + P10/P50/P90(napGap)` from `buildNapGapSeries`; replaces time-of-day percentile approach
+- [x] **PRED-21**: Classic nap-start prediction anchors to today's actual wake time — project nap-start as `wakeAnchor + P10/P50/P90(napGap)` from `buildNapGapSeries`; replaces time-of-day percentile approach
 - [x] **PRED-22**: `buildNapDurationSeries(dayRecords)` — computes `(napEnd − napStart)` in minutes per day; Classic nap-end = nap-start anchor + P10/P50/P90(napDuration)
 
 ### Nap Probability Redesign
@@ -74,9 +74,9 @@
 | PRED-16 | B-050 | Phase 25 | Pending |
 | PRED-17 | B-050 | Phase 25 | Pending |
 | PRED-18 | B-052 | Phase 19 | Complete |
-| PRED-19 | B-052 | Phase 19 | Pending |
+| PRED-19 | B-052 | Phase 19 | Complete |
 | PRED-20 | B-048 | Phase 19 | Complete |
-| PRED-21 | B-048 | Phase 19 | Pending |
+| PRED-21 | B-048 | Phase 19 | Complete |
 | PRED-22 | B-048 | Phase 19 | Complete |
 | NAP-01 | B-047 | Phase 20 | Pending |
 | NAP-02 | B-047 | Phase 20 | Pending |
