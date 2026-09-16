@@ -446,10 +446,17 @@ function subWindowBedtime(window, filterFn, fallbackOffsetMinutes, settings) {
   // Thin history — shift full-window percentiles by fixed offset (D-03 fallback)
   const base = calculatePercentiles(window, d => extractTime(d.bedtime));
   if (base === null) return null;
+  // WR-03 fix: normalize the shifted values back into [0, 1440) the same way
+  // computeDurationBand() does above — without this, a late-clustering
+  // bedtime (e.g. base.central within fallbackOffsetMinutes of midnight)
+  // produces a negative minute value that minutesToTime() does not guard
+  // against, emitting a malformed 'HH:MM' string (e.g. "-1:-20").
+  const DAY_MINUTES = 24 * 60;
+  const wrap = (m) => ((m % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
   return {
-    central: base.central - fallbackOffsetMinutes,
-    min:     base.min    - fallbackOffsetMinutes,
-    max:     base.max    - fallbackOffsetMinutes,
+    central: wrap(base.central - fallbackOffsetMinutes),
+    min:     wrap(base.min    - fallbackOffsetMinutes),
+    max:     wrap(base.max    - fallbackOffsetMinutes),
   };
 }
 
