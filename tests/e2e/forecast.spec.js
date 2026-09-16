@@ -236,3 +236,34 @@ test('missed predictions have "missed" class and "Missed by" label (D3-11)', asy
   await expect(missedLabel).toContainText(/Missed by/i);
   await expect(missedLabel).toContainText(/min/i);
 });
+
+// ── Test 8: napStart card fully disappears once the nap window has closed (Phase 21 D-01..D-05) ──
+
+test('napStart card is absent once the nap window has closed, other cards remain (Phase 21)', async ({ page }) => {
+  // 2026-06-08T20:00:00 is well past both napStart's P90 ('08:00', see below) and the
+  // default eveningHour (18) — either signal alone would suppress napStart per D-05.
+  await page.clock.setFixedTime(new Date('2026-06-08T20:00:00'));
+
+  // 7 full days of a stable wake/napStart/napEnd/bedtime cycle, napStart flat at '08:00'
+  // (so its P90 is also '08:00'), then a FINAL day truncated to only a wake event —
+  // "today's wake logged, nothing else yet". Last logged event overall is that wake.
+  const BASE = '2026-06-01';
+  const fullDayEvents = [
+    ...makeEvents(7, 'wake', '06:30', BASE, 'w'),
+    ...makeEvents(7, 'napStart', '08:00', BASE, 'ns'),
+    ...makeEvents(7, 'napEnd', '09:00', BASE, 'ne'),
+    ...makeEvents(7, 'bedtime', '21:00', BASE, 'b'),
+  ];
+  const todayOnlyWake = [
+    { id: 'today-wake', type: 'wake', at: '2026-06-08T06:30' },
+  ];
+  const db = makeDb([...fullDayEvents, ...todayOnlyWake], { minDays: 7 });
+  await seedAndReload(page, db);
+
+  await expect(page.locator('#forecast-cards')).toBeVisible();
+
+  await expect(page.locator('[data-event-type="napStart"]')).toHaveCount(0);
+  expect(await page.locator('[data-event-type="wake"]').count()).toBeGreaterThanOrEqual(1);
+  expect(await page.locator('[data-event-type="napEnd"]').count()).toBeGreaterThanOrEqual(1);
+  expect(await page.locator('[data-event-type="bedtime"]').count()).toBeGreaterThanOrEqual(1);
+});

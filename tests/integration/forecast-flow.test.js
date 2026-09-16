@@ -15,7 +15,9 @@ import { createEventLog } from '../../js/store/event-log.js';
 import { createSettingsStore } from '../../js/store/settings.js';
 import { createStorageMemory } from '../../js/adapters/storage-memory.js';
 import { createClockFixed } from '../../js/adapters/clock-fixed.js';
-import { forecast, selectNextEvent } from '../../js/lib/forecast.js';
+import { forecast } from '../../js/lib/forecast.js';
+// Phase 21 D-06/D-07/D-14: selectNextEvent moved out of forecast.js into forecast-utils.js.
+import { selectNextEvent } from '../../js/lib/forecast-utils.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers

@@ -29,7 +29,6 @@ import {
   minutesToTime,
   generateProbabilityBand,
   detectColdStart,
-  selectNextEvent,
   napProbability,
   NAP_SCORE_WEIGHTS,
   // Phase 19 — Task 1 (Tracer, D-16):
@@ -909,285 +908,13 @@ describe('detectColdStart() edge cases', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 14. selectNextEvent(predictions, dayRecords) — cycle-aware priority (D3-10)
-// ---------------------------------------------------------------------------
-//
-// Priority ordering (D3-10):
-//   Last event = bedtime    → wake > napStart > napEnd > bedtime
-//   Last event = wake       → napStart > bedtime > napEnd > wake
-//   Last event = napStart   → napEnd > bedtime > wake > napStart
-//   Last event = napEnd     → bedtime > wake > napStart > napEnd
-//
-// Within each priority tier, earliest-by-central-time wins.
-// Falls back to default priority (wake > bedtime > napStart > napEnd) when
-// last event type is unknown or dayRecords has no events.
-
-describe('selectNextEvent(predictions, dayRecords)', () => {
-  // Helper: build a mock day record with allEvents list
-  function makeDayWithEvents(events) {
-    // events is array of { type, at } objects (minimal shape for lastEvent detection)
-    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
-  }
-
-  // Standard predictions shape: { central, min, max } for each event type
-  const predictions = {
-    wake:     { central: '07:00', min: '06:30', max: '07:30' },
-    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
-    napStart: { central: '13:00', min: '12:30', max: '13:30' },
-    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
-  };
-
-  it('last event = bedtime → selects wake (priority 1 per D3-10)', () => {
-    // Priority after bedtime: wake > napStart > napEnd > bedtime
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction');
-    assert.strictEqual(result.type, 'wake');
-  });
-
-  it('last event = wake → selects napStart (priority 1 per D3-10)', () => {
-    // Priority after wake: napStart > bedtime > napEnd > wake
-    // eveningHour=25 disables PRED-08 override so normal switch fires (CI-safe)
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:30' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 25 });
-    assert.ok(result !== null, 'should return a prediction');
-    assert.strictEqual(result.type, 'napStart');
-  });
-
-  it('last event = napStart → selects napEnd (priority 1 per D3-10)', () => {
-    // Priority after napStart: napEnd > bedtime > wake > napStart
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'napStart', at: '2026-06-02T13:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction');
-    assert.strictEqual(result.type, 'napEnd');
-  });
-
-  it('last event = napEnd → selects bedtime (priority 1 per D3-10)', () => {
-    // Priority after napEnd: bedtime > wake > napStart > napEnd
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'napEnd', at: '2026-06-02T14:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction');
-    assert.strictEqual(result.type, 'bedtime');
-  });
-
-  it('last event = wake; only bedtime in predictions (no napStart) → skips to bedtime (next tier)', () => {
-    // Priority after wake: napStart > bedtime > napEnd > wake
-    // napStart is missing → skip to bedtime
-    const partialPredictions = {
-      wake:    { central: '07:00', min: '06:30', max: '07:30' },
-      bedtime: { central: '21:00', min: '20:30', max: '21:30' },
-      // napStart missing
-      // napEnd missing
-    };
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:30' }]),
-    ];
-    const result = selectNextEvent(partialPredictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction even with missing tier');
-    assert.strictEqual(result.type, 'bedtime');
-  });
-
-  it('no events logged (dayRecords empty) → returns null', () => {
-    const result = selectNextEvent(predictions, []);
-    assert.strictEqual(result, null);
-  });
-
-  it('dayRecords present but all allEvents arrays empty → returns null', () => {
-    const dayRecords = [
-      makeDayWithEvents([]),
-      makeDayWithEvents([]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.strictEqual(result, null);
-  });
-
-  it('result has { type, central, min, max } shape', () => {
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'result should not be null');
-    assert.ok('type' in result, 'result should have type');
-    assert.ok('central' in result, 'result should have central');
-    assert.ok('min' in result, 'result should have min');
-    assert.ok('max' in result, 'result should have max');
-  });
-
-  it('most recent event is determined by allEvents list across multiple days', () => {
-    // Two days — last event in most recent day should determine priority
-    const dayRecords = [
-      makeDayWithEvents([
-        { type: 'bedtime', at: '2026-06-01T21:00' },  // older day
-      ]),
-      makeDayWithEvents([
-        { type: 'wake', at: '2026-06-02T07:00' },      // most recent day's latest event
-        { type: 'napStart', at: '2026-06-02T13:00' },  // MOST RECENT overall
-      ]),
-    ];
-    // Last event = napStart → should select napEnd
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction');
-    assert.strictEqual(result.type, 'napEnd');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 15. selectNextEvent() edge cases
+// 14-16. selectNextEvent(predictions, dayRecords) / PRED-08 evening-hour
+// override — MOVED to tests/unit/forecast-utils.test.js (Phase 21 D-06/D-07/
+// D-14). selectNextEvent (and the new nextReachableEvent) now live in
+// js/lib/forecast-utils.js, not js/lib/forecast.js.
 // ---------------------------------------------------------------------------
 
-describe('selectNextEvent() edge cases', () => {
-  function makeDayWithEvents(events) {
-    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
-  }
-
-  const predictions = {
-    wake:     { central: '07:00', min: '06:30', max: '07:30' },
-    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
-    napStart: { central: '13:00', min: '12:30', max: '13:30' },
-    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
-  };
-
-  it('no events logged (dayRecords=[]) → returns null', () => {
-    const result = selectNextEvent(predictions, []);
-    assert.strictEqual(result, null);
-  });
-
-  it('prediction is null/missing for priority tier → skips to next available tier', () => {
-    // After wake, priority is napStart > bedtime > napEnd > wake
-    // Remove napStart from predictions → should select bedtime
-    const partialPredictions = {
-      wake:    { central: '07:00', min: '06:30', max: '07:30' },
-      bedtime: { central: '21:00', min: '20:30', max: '21:30' },
-      // napStart intentionally missing
-      napEnd:  { central: '14:00', min: '13:30', max: '14:30' },
-    };
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
-    ];
-    const result = selectNextEvent(partialPredictions, dayRecords);
-    assert.ok(result !== null, 'should not return null when a lower-tier prediction is available');
-    assert.strictEqual(result.type, 'bedtime');
-  });
-
-  it('last event type unknown → falls back to default priority (wake first)', () => {
-    // Unknown event type in allEvents → default priority = wake > bedtime > napStart > napEnd
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'unknownCustomType', at: '2026-06-02T12:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'should return a prediction even for unknown event types');
-    assert.strictEqual(result.type, 'wake');
-  });
-
-  it('all tiers missing from predictions → returns null', () => {
-    const emptyPredictions = {};
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
-    ];
-    const result = selectNextEvent(emptyPredictions, dayRecords);
-    assert.strictEqual(result, null);
-  });
-
-  it('result is deterministic: same input → same output (no random tiebreaking)', () => {
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }]),
-    ];
-    const result1 = selectNextEvent(predictions, dayRecords);
-    const result2 = selectNextEvent(predictions, dayRecords);
-    assert.deepStrictEqual(result1, result2, 'same input should always produce the same output');
-  });
-
-  it('isMissed field is present on result', () => {
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
-    ];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'result should not be null');
-    assert.ok('isMissed' in result, 'result should have isMissed field');
-    assert.ok(typeof result.isMissed === 'boolean', 'isMissed should be boolean');
-  });
-
-  it('probabilityBand prediction: result carries probabilityBand instead of central/min/max', () => {
-    // When a prediction uses the probabilityBand shape, selectNextEvent should pass it through
-    const bandPredictions = {
-      wake:     { central: '07:00', min: '06:30', max: '07:30' },
-      bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
-      napStart: { probabilityBand: [{ time: '13:00', prob: 50 }, { time: '13:30', prob: 90 }] },
-      napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
-    };
-    // Last event = wake → priority: napStart > bedtime > napEnd > wake
-    // eveningHour=25 disables PRED-08 override so normal switch fires (CI-safe)
-    const dayRecords = [
-      makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }]),
-    ];
-    const result = selectNextEvent(bandPredictions, dayRecords, { eveningHour: 25 });
-    assert.ok(result !== null, 'should return napStart even though it uses probabilityBand shape');
-    assert.strictEqual(result.type, 'napStart');
-    assert.ok('probabilityBand' in result, 'result should carry probabilityBand from prediction');
-    assert.ok(!('central' in result), 'result should NOT have central when prediction uses probabilityBand');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 16. selectNextEvent — PRED-08 evening-hour override (D-07)
-// ---------------------------------------------------------------------------
-//
-// Tests use time-invariant eveningHour values to avoid CI flakiness:
-//   eveningHour=0  → always fires (any hour >= 0)
-//   eveningHour=25 → never fires  (no hour >= 25)
-//
-// This tests the semantic contract, not a specific wall-clock time.
-
-describe('selectNextEvent — PRED-08 evening-hour override', () => {
-  function makeDayWithEvents(events) {
-    return { wake: null, bedtime: null, napStart: null, napEnd: null, rejected: false, allEvents: events };
-  }
-
-  const predictions = {
-    wake:     { central: '07:00', min: '06:30', max: '07:30' },
-    napStart: { central: '13:00', min: '12:30', max: '13:30' },
-    napEnd:   { central: '14:00', min: '13:30', max: '14:30' },
-    bedtime:  { central: '21:00', min: '20:30', max: '21:30' },
-  };
-
-  it('eveningHour=0, lastEvent.type=wake → returns bedtime (override always fires at any hour)', () => {
-    const dayRecords = [makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }])];
-    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 0 });
-    assert.ok(result !== null, 'result should not be null');
-    assert.strictEqual(result.type, 'bedtime', 'evening-hour override must select bedtime when eveningHour=0 and lastEvent=wake');
-  });
-
-  it('eveningHour=25, lastEvent.type=wake → returns napStart (override never fires, falls through to normal switch)', () => {
-    const dayRecords = [makeDayWithEvents([{ type: 'wake', at: '2026-06-02T07:00' }])];
-    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 25 });
-    assert.ok(result !== null, 'result should not be null');
-    assert.strictEqual(result.type, 'napStart', 'normal switch must select napStart when eveningHour=25 (never fires)');
-  });
-
-  it('eveningHour=0, lastEvent.type=bedtime → returns wake (rule only fires when lastEvent is wake)', () => {
-    const dayRecords = [makeDayWithEvents([{ type: 'bedtime', at: '2026-06-01T21:00' }])];
-    const result = selectNextEvent(predictions, dayRecords, { eveningHour: 0 });
-    assert.ok(result !== null, 'result should not be null');
-    assert.strictEqual(result.type, 'wake', 'evening-hour rule must NOT fire when lastEvent is bedtime');
-  });
-
-  it('no settings param → behaves as before (default eveningHour=18, normal switch)', () => {
-    // With no settings param, no override fires unless current hour >= 18.
-    // We use lastEvent=napEnd which never triggers the evening-hour rule regardless.
-    const dayRecords = [makeDayWithEvents([{ type: 'napEnd', at: '2026-06-02T14:00' }])];
-    const result = selectNextEvent(predictions, dayRecords);
-    assert.ok(result !== null, 'result should not be null');
-    assert.strictEqual(result.type, 'bedtime', 'napEnd → bedtime via normal switch (no settings param)');
-  });
-});
+// (moved to tests/unit/forecast-utils.test.js — see header comment above)
 
 // ---------------------------------------------------------------------------
 // 17. PRED-09 wake duration-band union
@@ -2484,17 +2211,17 @@ describe('PRED-12 napProbability', () => {
   }));
   const shortSettings = { minDays: 1, windowDays: 30, maxDelta: 60, targetSleepMinutes: 600 };
 
-  it('empty dayRecords → { score: null, signalsUsed: [], confidence: "none" } (cold start)', () => {
+  it('empty dayRecords → { score: null, signalsUsed: [], confidence: "none", napWindowClosed: false } (cold start)', () => {
     const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability([], baseSettings, ctx);
-    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none' });
+    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none', napWindowClosed: false });
   });
 
-  it('dayRecords below minDays → { score: null, signalsUsed: [], confidence: "none" } (cold start gate)', () => {
+  it('dayRecords below minDays → { score: null, signalsUsed: [], confidence: "none", napWindowClosed: false } (cold start gate)', () => {
     const highMinSettings = { ...baseSettings, minDays: 10 };
     const ctx = { currentHour: 11, currentMinute: 0, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
     const result = napProbability(allNapDays, highMinSettings, ctx);
-    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none' });
+    assert.deepStrictEqual(result, { score: null, signalsUsed: [], confidence: 'none', napWindowClosed: false });
   });
 
   it('all days have nap, streak=0, window open, wakeHHMM set → score is integer > 50', () => {
@@ -2536,25 +2263,44 @@ describe('PRED-12 napProbability', () => {
     assert.ok(result.score < 50, `no-nap history should give low score, got ${result.score}`);
   });
 
-  it('window already passed (currentTime > napStart P90) → returns 0', () => {
-    // napStart times cluster around 13:00. Set current time to 16:00 (past P90).
-    const ctx = {
+  it('window already passed (currentTime > napStart P90) → napWindowClosed:true, score stays clock-invariant (Phase 21 D-01/D-02)', () => {
+    // napStart times cluster around 13:00-13:10 (P90). Set current time to 16:00 (past P90).
+    const ctxClosed = {
       currentHour: 16,
       currentMinute: 0,
       napStreak: 0,
       todayWakeHHMM: '07:00',
       todayWeekday: null,
     };
-    const result = napProbability(allNapDays, baseSettings, ctx);
-    assert.strictEqual(result.score, 0, 'window-passed should return 0 (not null)');
+    // Identical context, but currentHour is BEFORE the nap window closes.
+    const ctxOpen = { ...ctxClosed, currentHour: 9, currentMinute: 0 };
+    const resultClosed = napProbability(allNapDays, baseSettings, ctxClosed);
+    const resultOpen = napProbability(allNapDays, baseSettings, ctxOpen);
+    assert.strictEqual(resultClosed.napWindowClosed, true, 'window-passed should report napWindowClosed:true');
+    assert.strictEqual(resultOpen.napWindowClosed, false, 'pre-close hour should report napWindowClosed:false');
+    assert.strictEqual(resultClosed.score, resultOpen.score,
+      'score must never collapse to 0 solely because napWindowClosed is true — it stays the real weighted value');
   });
 
-  it('window-closed returns 0 (integer), not null — distinguishable from cold-start', () => {
-    const ctx = { currentHour: 23, currentMinute: 59, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
-    const result = napProbability(allNapDays, baseSettings, ctx);
-    assert.strictEqual(result.score, 0);
-    // Verify it's not null (cold-start returns null, window-closed returns 0)
-    assert.notStrictEqual(result.score, null);
+  it('window-closed: napWindowClosed:true, score is the real non-null value — distinguishable from cold-start', () => {
+    const ctxClosed = { currentHour: 23, currentMinute: 59, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
+    const ctxOpen = { ...ctxClosed, currentHour: 9, currentMinute: 0 };
+    const resultClosed = napProbability(allNapDays, baseSettings, ctxClosed);
+    const resultOpen = napProbability(allNapDays, baseSettings, ctxOpen);
+    assert.strictEqual(resultClosed.napWindowClosed, true);
+    assert.strictEqual(resultClosed.score, resultOpen.score, 'score is clock-invariant across the window-close boundary');
+    // Verify it's not null (cold-start returns null; window-closed still returns a real score)
+    assert.notStrictEqual(resultClosed.score, null);
+  });
+
+  it('P90 boundary: exactly at napStart P90 minute → napWindowClosed false; one minute later → true (strict >, not >=)', () => {
+    // allNapDays napStart times: 12:55, 13:00 x3, 13:05, 13:10 x2 → P90 = 13:10 (790 min).
+    const ctxAtP90 = { currentHour: 13, currentMinute: 10, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
+    const ctxOneMinuteLater = { currentHour: 13, currentMinute: 11, napStreak: 0, todayWakeHHMM: '07:00', todayWeekday: null };
+    const resultAtP90 = napProbability(allNapDays, baseSettings, ctxAtP90);
+    const resultOneMinuteLater = napProbability(allNapDays, baseSettings, ctxOneMinuteLater);
+    assert.strictEqual(resultAtP90.napWindowClosed, false, 'exact P90 minute must NOT be closed (strict > semantics)');
+    assert.strictEqual(resultOneMinuteLater.napWindowClosed, true, 'one minute past P90 must be closed');
   });
 
   it('napStreak=5 → noNapStreak signal = 0 (weight zeroed, reduces score vs streak=0)', () => {
@@ -2622,14 +2368,17 @@ describe('PRED-12 napProbability', () => {
     assert.strictEqual(result.confidence, 'partial');
   });
 
-  it('window-closed exact shape: score:0, confidence:"partial", signalsUsed=[napFrequency, noNapStreak]', () => {
+  it('window-closed exact shape: napWindowClosed:true, confidence:"partial", signalsUsed=[napFrequency, noNapStreak], score reflects real signals (Phase 21 D-01/D-02)', () => {
     // allNapDays is a bare-string fixture (no wake/bedtime) → both new signals unavailable
-    // regardless of todayWeekday; currentHour:16 is past the ~13:00 napStart P90.
+    // regardless of todayWeekday; currentHour:16 is past the ~13:10 napStart P90.
     const ctx = { currentHour: 16, currentMinute: 0, napStreak: 0, todayWeekday: null };
     const result = napProbability(allNapDays, baseSettings, ctx);
-    assert.strictEqual(result.score, 0);
+    assert.strictEqual(result.napWindowClosed, true);
     assert.strictEqual(result.confidence, 'partial');
     assert.deepStrictEqual(result.signalsUsed, ['napFrequency', 'noNapStreak']);
+    // All-nap history (napFrequency=1) + streak=0 (noNapStreak=1) → real weighted score is
+    // 100, never collapsed to 0 just because the window closed.
+    assert.strictEqual(result.score, 100);
   });
 
   it('clock-invariance: identical dayRecords/settings/todayWeekday, different pre-window-close currentHour → deep-equal results', () => {
