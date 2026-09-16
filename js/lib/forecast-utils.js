@@ -84,8 +84,13 @@ export function nextReachableEvent(lastEvent, currentHour, settings = {}) {
  * own parenthetical: these are calculation branches only, not new logged
  * event types) — bedtimeAfterWake keeps its own field so Plan 21-02's
  * dual-hero rendering can distinguish it from the blended predictions.bedtime.
+ *
+ * Exported (WR-01 fix) so today-screen.js's dual-hero rendering path — which
+ * calls nextReachableEvent() directly instead of selectNextEvent() — can
+ * import this single source of truth instead of maintaining a byte-for-byte
+ * duplicate copy.
  */
-const PREDICTION_FIELD = Object.freeze({
+export const PREDICTION_FIELD = Object.freeze({
   wake: 'wake',
   bedtime: 'bedtime',
   napStart: 'napStart',
@@ -98,8 +103,10 @@ const PREDICTION_FIELD = Object.freeze({
  * Map a nextReachableEvent() path entry to the RESULT `type` field reported
  * to callers. bedtimeAfterWake keeps its own literal (distinguishable from
  * plain 'bedtime'); bedtimeAfterNap normalizes to 'bedtime' (D-07).
+ *
+ * Exported (WR-01 fix) — see PREDICTION_FIELD above for rationale.
  */
-const RESULT_TYPE = Object.freeze({
+export const RESULT_TYPE = Object.freeze({
   wake: 'wake',
   bedtime: 'bedtime',
   napStart: 'napStart',
@@ -107,6 +114,24 @@ const RESULT_TYPE = Object.freeze({
   bedtimeAfterWake: 'bedtimeAfterWake',
   bedtimeAfterNap: 'bedtime',
 });
+
+/**
+ * Derive the napWindowClosed flag (Phase 20/21's decoupled napProbability()
+ * signal) from a predictions object. Single source of truth (WR-01 fix) for
+ * the `predictions.napStart?.napProbabilityScore?.napWindowClosed === true`
+ * check, previously duplicated independently in this file's selectNextEvent
+ * and in today-screen.js's renderForecastSection.
+ *
+ * Safe optional-chain; defaults false when the field or the whole score
+ * object is absent (e.g. TIF algorithm active, or forecast() called
+ * directly in a unit test without napProbabilityScore threaded).
+ *
+ * @param {object} predictions  forecast() result keyed by event type
+ * @returns {boolean}
+ */
+export function isNapWindowClosed(predictions) {
+  return predictions?.napStart?.napProbabilityScore?.napWindowClosed === true;
+}
 
 /**
  * Legacy pre-Phase-21 priority-order fallback tables (D3-10), walked with
@@ -175,10 +200,7 @@ export function selectNextEvent(predictions, dayRecords, settings = {}) {
   const nowHour = new Date().getHours(); // gsd:allow-ui-clock
 
   // ── Step 3: napWindowClosed, from Phase 20/21's decoupled napProbability() flag ──
-  // Safe optional-chain; defaults false when the field or the whole score
-  // object is absent (e.g. TIF algorithm active, or forecast() called
-  // directly in a unit test without napProbabilityScore threaded).
-  const napWindowClosed = predictions.napStart?.napProbabilityScore?.napWindowClosed === true;
+  const napWindowClosed = isNapWindowClosed(predictions);
 
   // ── Step 4: delegate the reachability decision to the pure core (D-06) ────
   const reachable = nextReachableEvent(lastEvent, nowHour, {

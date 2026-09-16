@@ -45,7 +45,7 @@ import { forecast, napProbability } from '../lib/forecast.js';
 // Phase 21 D-06/D-07/D-14: selectNextEvent moved out of forecast.js into forecast-utils.js.
 // Plan 21-02 D-08: renderForecastSection calls nextReachableEvent directly (dual-hero support);
 // selectNextEvent's singular-result contract stays available in forecast-utils.js for other callers.
-import { nextReachableEvent } from '../lib/forecast-utils.js';
+import { nextReachableEvent, PREDICTION_FIELD, RESULT_TYPE, isNapWindowClosed } from '../lib/forecast-utils.js';
 import { tifForecast } from '../lib/forecast-tif.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
@@ -565,38 +565,6 @@ function findLastEvent(dayRecords) {
 }
 
 /**
- * Map a nextReachableEvent() path entry to the predictions object's field key.
- * Mirrors forecast-utils.js's internal PREDICTION_FIELD table (not exported —
- * duplicated here per Plan 21-02 Task 2, since renderForecastSection now calls
- * nextReachableEvent directly instead of going through selectNextEvent).
- * bedtimeAfterNap normalizes to the single 'bedtime' prediction field (D-07) —
- * bedtimeAfterWake keeps its own field so dual-hero rendering can distinguish
- * it from the blended predictions.bedtime.
- */
-const HERO_PREDICTION_FIELD = Object.freeze({
-  wake: 'wake',
-  bedtime: 'bedtime',
-  napStart: 'napStart',
-  napEnd: 'napEnd',
-  bedtimeAfterWake: 'bedtimeAfterWake',
-  bedtimeAfterNap: 'bedtime',
-});
-
-/**
- * Map a nextReachableEvent() path entry to the RESULT `type` field reported
- * to renderNextEventCard. Mirrors forecast-utils.js's internal RESULT_TYPE
- * table (not exported — duplicated here per Plan 21-02 Task 2).
- */
-const HERO_RESULT_TYPE = Object.freeze({
-  wake: 'wake',
-  bedtime: 'bedtime',
-  napStart: 'napStart',
-  napEnd: 'napEnd',
-  bedtimeAfterWake: 'bedtimeAfterWake',
-  bedtimeAfterNap: 'bedtime',
-});
-
-/**
  * Re-render the forecast section (dual-hero row + cold-start OR Later-Today section).
  *
  * Called on every render() invocation. Clears and repopulates:
@@ -648,7 +616,7 @@ export function renderForecastSection(predictions, settingsSnap, dayRecords, nex
   // gsd:allow-ui-clock — display-only scheduling heuristic, not domain logic.
   const currentHour = new Date().getHours(); // gsd:allow-ui-clock
   const lastEvent = findLastEvent(dayRecords);
-  const napWindowClosed = predictions.napStart?.napProbabilityScore?.napWindowClosed === true;
+  const napWindowClosed = isNapWindowClosed(predictions);
 
   // Phase 21 D-06/D-07/D-08: call nextReachableEvent directly (not
   // selectNextEvent) so the array-based dual-hero case (both napStart and
@@ -662,7 +630,7 @@ export function renderForecastSection(predictions, settingsSnap, dayRecords, nex
   // field/fallback rules selectNextEvent uses internally.
   const heroEntries = [];
   for (const entry of reachable) {
-    const fieldKey = HERO_PREDICTION_FIELD[entry];
+    const fieldKey = PREDICTION_FIELD[entry];
     const predEntry = predictions[fieldKey]
       ?? (entry === 'bedtimeAfterWake' ? predictions.bedtime : undefined);
     if (!predEntry) continue;
@@ -678,7 +646,7 @@ export function renderForecastSection(predictions, settingsSnap, dayRecords, nex
       isMissed = centralMinutes < nowMinutes;
     }
 
-    heroEntries.push({ type: HERO_RESULT_TYPE[entry], isMissed, ...predEntry });
+    heroEntries.push({ type: RESULT_TYPE[entry], isMissed, ...predEntry });
   }
 
   // Hero row: 1 or 2 cards (D-08), rendered into #next-event-card.
