@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
-current_phase: 20
-current_phase_name: Nap Probability Redesign
-status: verifying
-stopped_at: Completed 20-03-PLAN.md (gap closure)
-last_updated: "2026-09-16T17:12:40.522Z"
+current_phase: 21
+current_phase_name: prediction normalization
+status: planning
+stopped_at: Phase 20 complete, ready to plan Phase 21
+last_updated: "2026-09-16T17:25:09.362Z"
 last_activity: 2026-09-16
-last_activity_desc: Phase 20 execution started
-state_head: 63dd90794a1aa72212a42ad6a72623788ade5999
+last_activity_desc: Phase 20 complete, transitioned to Phase 21
+state_head: 7e3e915ace3fb018501f95536543dcd524178831
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
   completed_plans: 5
-  percent: 14
+  percent: 29
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 ## Current Position
 
-Phase: 20 (Nap Probability Redesign) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-09-16 — Phase 20 execution started
+Phase: 21 — prediction normalization
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-16 — Phase 20 complete, transitioned to Phase 21
 
 ## Phases
 
@@ -183,7 +183,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-09-16T17:12:39.791Z
-Stopped at: Completed 20-03-PLAN.md (gap closure)
+Stopped at: Phase 20 complete, ready to plan Phase 21
 Resume file: None
 
 ## Deferred Items
