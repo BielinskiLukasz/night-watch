@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: executing
-stopped_at: Phase 20 context gathered
-last_updated: "2026-09-16T15:34:01.247Z"
-last_activity: 2026-09-14
-last_activity_desc: Phase 19 complete, transitioned to Phase 20
-state_head: d49d5edc9bca1a58c0038090f1da18bff8f71440
+stopped_at: Phase 21 context gathered
+last_updated: "2026-09-16T15:58:06.913Z"
+last_activity: 2026-09-16
+last_activity_desc: Phase 20 execution started
+state_head: b90a6939ccfca8c8e9dbee1805d5a33b1b518366
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 17
 ---
 
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 20 — nap probability redesign
+**Current focus:** Phase 20 — Nap Probability Redesign
 
 ## Current Position
 
-Phase: 20 (Nap Probability Redesign) — READY TO EXECUTE
-Plan: Not started
+Phase: 20 (Nap Probability Redesign) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-09-14 — Phase 19 complete, transitioned to Phase 20
+Last activity: 2026-09-16 — Phase 20 execution started
 
 ## Phases
 
@@ -174,9 +174,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T14:35:48.916Z
-Stopped at: Phase 20 context gathered
-Resume file: .planning/phases/20-nap-probability-redesign/20-CONTEXT.md
+Last session: 2026-09-16T15:58:06.119Z
+Stopped at: Phase 21 context gathered
+Resume file: .planning/phases/21-prediction-normalization/21-CONTEXT.md
 
 ## Deferred Items
 
