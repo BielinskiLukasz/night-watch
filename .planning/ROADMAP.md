@@ -91,7 +91,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   Plans:
   - [x] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
   - [x] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
-  - [ ] 24-03-PLAN.md — Settings modal Backup fieldset (index.html markup + rendering/wiring + E2E)
+  - [x] 24-03-PLAN.md — Settings modal Backup fieldset (index.html markup + rendering/wiring + E2E)
   - [ ] 24-04-PLAN.md — First-launch banner on Today screen (today-screen.js + CSS + E2E)
 
 - [ ] **Phase 25: Algorithm C & Settings Modal** — Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` with dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), interval stability check (intersection/shrinkage), and coverage for all 4 events; add three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide in the Settings modal; add `forecast-blend.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests RED→GREEN for all blend and stability logic, E2E test for selector visibility (requirements: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12)
@@ -223,7 +223,7 @@ Plans:
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -232,7 +232,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
+- [x] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
