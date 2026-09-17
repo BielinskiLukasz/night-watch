@@ -77,7 +77,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   **Plans:** 3 plans
   Plans:
   - [x] 22-01-PLAN.md — eventAccuracyScore() + computeAccuracy() rewrite (bedtime split, band approximation, overall score)
-  - [ ] 22-02-PLAN.md — accuracy-tif.js bedtime nap-day/no-nap-day split
+  - [x] 22-02-PLAN.md — accuracy-tif.js bedtime nap-day/no-nap-day split
   - [ ] 22-03-PLAN.md — accuracy-screen.js rendering rewrite (avgScore column, headline, TIF table split)
 
 - [ ] **Phase 23: Metrics→Accuracy Column Migration** — Move per-event TIF window columns (lower bound, upper bound, confidence score, window width) from `metrics-screen.js` to `accuracy-screen.js`; remove the columns and their data-prep calls from the Metrics pipeline; update unit tests and E2E specs to assert columns appear on Accuracy screen and are absent from Metrics screen (requirements: UI-11)
@@ -163,12 +163,12 @@ Plans:
   4. Backtesting engine calls in `accuracy.js` (and `accuracy-tif.js` if it references hit/miss) call `eventAccuracyScore`; `accuracy-tif.js` still does not import `metrics.js` (circular-import guard)
   5. Unit tests cover formula boundary values (D=0, D=W, D=2W, D>2W)
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 22-01-PLAN.md — eventAccuracyScore() formula + computeAccuracy() rewrite: base 4 types, bedtime nap-day split, band-fallback approximation, overall headline score (tracer + expansion)
+- [x] 22-01-PLAN.md — eventAccuracyScore() formula + computeAccuracy() rewrite: base 4 types, bedtime nap-day split, band-fallback approximation, overall headline score (tracer + expansion)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

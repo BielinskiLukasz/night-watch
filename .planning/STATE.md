@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 22
 current_phase_name: Accuracy Scoring
 status: executing
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-09-17T09:15:33.586Z"
+stopped_at: Completed 22-02-PLAN.md
+last_updated: "2026-09-17T09:39:20.160Z"
 last_activity: 2026-09-17
 last_activity_desc: Phase 22 execution started
-state_head: dbfc8f985dd1ceb746ac67bf0fcf3fc293641aac
+state_head: 0fd17ba39461199e73cf7194a1d5531ff018137d
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 43
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 ## Current Position
 
 Phase: 22 (Accuracy Scoring) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-17 — Phase 22 execution started
 
@@ -101,6 +101,7 @@ Last activity: 2026-09-17 — Phase 22 execution started
 | Phase 21 P02 | 28min | 3 tasks | 7 files |
 | Phase 21 P03 | 25min | 2 tasks | 1 files |
 | Phase 22 P01 | 45min | 2 tasks | 2 files |
+| Phase 22 P02 | 20min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,7 @@ Last activity: 2026-09-17 — Phase 22 execution started
 - [Phase 22]: Phase 22 Plan 01: toleranceMinutes reuses settings.maxDelta unchanged (D-01), eventAccuracyScore returns raw unrounded number (no object wrapper)
 - [Phase 22]: Phase 22 Plan 01: bedtime nap-day/no-nap-day split classified by day's actual napStart (D-03/D-04), combined bedtime key kept as average
 - [Phase 22]: Phase 22 Plan 01: band-mode days score via probabilityBand midpoint with approximatedCount tracking (D-06/D-07); overallScore = mean of daily means excluding zero-event days, never NaN (D-10)
+- [Phase 22]: D-05: accuracy-tif.js's bedtime bucket split into bedtimeNapDay/bedtimeNoNapDay using the identical D-03 classification rule (actualDay.napStart != null), mirroring accuracy.js's split; computeTifBoundsHistory's entry shape stays unchanged (BASE_EVENT_TYPES vs EVENT_TYPES split)
 
 ### Quick Tasks Completed
 
@@ -195,8 +197,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-17T09:15:30.932Z
-Stopped at: Completed 22-01-PLAN.md
+Last session: 2026-09-17T09:39:16.649Z
+Stopped at: Completed 22-02-PLAN.md
 Resume file: None
 
 ## Deferred Items
