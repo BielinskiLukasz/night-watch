@@ -194,3 +194,31 @@ test.describe('Accuracy screen — classic avgScore grid (Phase 22, D-08..D-11)'
   });
 
 });
+
+test.describe('Accuracy screen — TIF bedtime nap-day split (Phase 22, D-05)', () => {
+
+  test('TIF accuracy table renders bedtime nap-day/no-nap-day split rows', async ({ page }) => {
+    // Same deterministic 32-day baseline fixture, with TIF selected.
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif' });
+    await seedAndReload(page, db);
+
+    // Navigate to the Accuracy tab.
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    const table = page.locator('#accuracy-screen table');
+    await expect(table).toBeVisible();
+
+    // D-05: the original 4 rows are still present.
+    await expect(table.locator('th:text-is("Wake")')).toHaveCount(1);
+    await expect(table.locator('th:text-is("Nap Start")')).toHaveCount(1);
+    await expect(table.locator('th:text-is("Nap End")')).toHaveCount(1);
+    await expect(table.locator('th:text-is("Bedtime")')).toHaveCount(1);
+
+    // D-05: the two new bedtime nap-day/no-nap-day split rows are present.
+    // (Numeric values are not asserted — TIF's window-bound arithmetic is not
+    // as trivially deterministic as the classic path's point-delta scoring.)
+    await expect(table.locator('th:text-is("Bedtime (nap day)")')).toHaveCount(1);
+    await expect(table.locator('th:text-is("Bedtime (no nap)")')).toHaveCount(1);
+  });
+
+});
