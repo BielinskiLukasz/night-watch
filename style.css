@@ -601,10 +601,10 @@ button[data-log]:hover {
   outline-offset: 2px;
 }
 
-/* Accuracy grid (D7-14) */
+/* Accuracy grid (D-09: 1 score column x 6 rows) */
 .accuracyGrid {
   display: grid;
-  grid-template-columns: auto 1fr 1fr 1fr;
+  grid-template-columns: auto 1fr;
   gap: 1px;
   background: #e2e8f0;
   border: 1px solid #e2e8f0;
@@ -616,6 +616,29 @@ button[data-log]:hover {
 .accuracyGrid > * {
   background: #fff;
   padding: 0.5rem 0.75rem;
+}
+
+/* D-07: band-approximated score marker — muted, superscript style */
+.accApprox {
+  color: #94a3b8;
+  font-size: 0.75em;
+  vertical-align: super;
+  margin-left: 0.1rem;
+}
+
+/* D-07: single summary footnote below the grid, spans both columns */
+.accFootnote {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+/* D-10: overall headline score, above the per-event grid */
+.overallScoreHeadline {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
 }
 
 /* Cold-start note for Charts and Accuracy screens (D7-09 discretion) */

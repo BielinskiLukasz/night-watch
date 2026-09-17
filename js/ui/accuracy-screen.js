@@ -1,16 +1,21 @@
 // js/ui/accuracy-screen.js
-// Phase 7, UI-05, D7-12..D7-16, D7-17..D7-18
+// Phase 7, UI-05, D7-12..D7-16, D7-17..D7-18; rewritten Phase 22, ACC-01..04, D-08..D-11.
 //
 // mountAccuracyScreen({ root, eventLog, settings }) — full implementation.
 //
 // Decisions:
 //   D7-12 — accuracy computed by retroactive backtesting (computeAccuracy)
 //   D7-13 — full history coverage; sample count per event type
-//   D7-14 — 4x3 grid: rows=event types, cols=three success metrics
 //   D7-15 — nap rows skip no-nap days; "—" when total < minDays
 //   D7-16 — pure computeAccuracy function from ../lib/accuracy.js
 //   D7-17 — stage filter via filterDayRecordsByStage (THREE-ARG FORM — RESEARCH Pitfall 1)
 //   D7-18 — "Viewing: [Stage Name]" badge at top; no stage selector here
+//   D-08  — old withinDelta/withinHalfDelta/insideBand metrics fully removed
+//   D-09  — grid is now 1 score column x 6 rows (wake/napStart/napEnd/bedtime/
+//           bedtimeNapDay/bedtimeNoNapDay), rendering computeAccuracy()'s avgScore
+//   D-10  — overall headline element above the grid, reading overallScore verbatim
+//   D-11  — scores render as plain numbers, no % suffix, no color thresholds
+//   D-07  — rows with approximatedCount > 0 show a marker + a single summary footnote
 //
 // Security invariants (T-07-06-01):
 //   - ALL cell content set via textContent — NEVER dynamic HTML injection
@@ -19,7 +24,7 @@
 //
 // Component contract:
 //   Input:  root (DOM element), eventLog (store), settings (store)
-//   Output: 4x3 accuracy grid rendered into root, or cold-start card
+//   Output: 6-row/1-col accuracy grid + overall headline rendered into root, or cold-start card
 //   Side effects: subscribes to eventLog and settings; re-renders on mutation.
 //   Return: { unsubscribe() } — same pattern as mountHistoryScreen
 
@@ -32,24 +37,24 @@ import { computeTifBoundsHistory, computeTifAccuracy } from '../lib/accuracy-tif
 // ---------------------------------------------------------------------------
 
 /**
- * Row definitions for the 4x3 accuracy grid.
- * Order matches D7-14: wake, bedtime, napStart, napEnd.
+ * Row definitions for the classic accuracy grid (D-09).
+ * 6 rows: wake, napStart, napEnd, bedtime (combined), bedtimeNapDay, bedtimeNoNapDay.
  */
 const ACCURACY_ROWS = Object.freeze([
-  { type: 'wake',     label: 'Wake'      },
-  { type: 'napStart', label: 'Nap Start' },
-  { type: 'napEnd',   label: 'Nap End'   },
-  { type: 'bedtime',  label: 'Bedtime'   },
+  { type: 'wake',            label: 'Wake'               },
+  { type: 'napStart',        label: 'Nap Start'          },
+  { type: 'napEnd',          label: 'Nap End'             },
+  { type: 'bedtime',         label: 'Bedtime (combined)'  },
+  { type: 'bedtimeNapDay',   label: 'Bedtime (nap day)'   },
+  { type: 'bedtimeNoNapDay', label: 'Bedtime (no nap)'    },
 ]);
 
 /**
- * Column definitions for the 4x3 accuracy grid.
- * Order matches D7-14: within max_delta, within max_delta/2, inside band.
+ * Column definitions for the classic accuracy grid (D-09/D-11).
+ * A single average-score column replaces the old three hit/miss counters.
  */
 const ACCURACY_COLS = Object.freeze([
-  { key: 'withinDelta',     header: 'Within max_delta'   },
-  { key: 'withinHalfDelta', header: 'Within max_delta / 2' },
-  { key: 'insideBand',      header: 'Inside band'        },
+  { key: 'avgScore', header: 'Avg Score' },
 ]);
 
 /**
@@ -130,13 +135,18 @@ function renderStageBadge(badge, snap) {
 }
 
 /**
- * Populate the accuracy CSS grid element with a header row and four data rows.
+ * Populate the accuracy CSS grid element with a header row and six data rows.
  *
- * Grid layout (D7-14):
- *   Row 1: empty label cell + 3 column header cells
- *   Rows 2-5: row label cell + 3 metric cells (one per event type)
+ * Grid layout (D-09):
+ *   Row 1: empty label cell + 1 column header cell ("Avg Score")
+ *   Rows 2-7: row label cell + 1 avgScore cell (one per event type, including
+ *             the D-03/D-04 bedtime nap-day/no-nap-day split)
  *
  * Nap rows show "—" when rowResult.total < snap.minDays (D7-15).
+ * Scores render as plain numbers, no "%" suffix (D-11).
+ * Rows with approximatedCount > 0 get a marker (D-07); a single summary
+ * footnote is appended once below the grid when any row has approximated
+ * scores (never duplicated per row).
  * All text set via textContent only — no dynamic HTML injection (T-07-06-01).
  *
  * @param {HTMLElement} gridEl  the .accuracyGrid container
@@ -146,7 +156,7 @@ function renderStageBadge(badge, snap) {
 function buildAccuracyGrid(gridEl, result, snap) {
   gridEl.replaceChildren();
 
-  // Column header row: empty top-left cell + 3 header cells
+  // Column header row: empty top-left cell + 1 header cell ("Avg Score").
   const emptyHeader = document.createElement('div');
   emptyHeader.className = 'accHeader accHeaderEmpty';
   // Accessible: label the empty top-left header cell (for screen readers)
@@ -154,16 +164,18 @@ function buildAccuracyGrid(gridEl, result, snap) {
   emptyHeader.textContent = '';
   gridEl.appendChild(emptyHeader);
 
-  for (const col of ACCURACY_COLS) {
-    const headerCell = document.createElement('div');
-    headerCell.className = 'accHeader';
-    headerCell.setAttribute('role', 'columnheader');
-    // T-07-06-01: textContent only — column headers are static strings.
-    headerCell.textContent = col.header;
-    gridEl.appendChild(headerCell);
-  }
+  const headerCell = document.createElement('div');
+  headerCell.className = 'accHeader';
+  headerCell.setAttribute('role', 'columnheader');
+  // T-07-06-01: textContent only — column header is a static string.
+  headerCell.textContent = ACCURACY_COLS[0].header;
+  gridEl.appendChild(headerCell);
 
-  // Data rows: one per event type (wake, bedtime, napStart, napEnd)
+  // D-07: total approximated-score count across all 6 rows, for the single
+  // summary footnote (never a per-row duplicated footnote).
+  let totalApproximated = 0;
+
+  // Data rows: one per event type, including the bedtime nap-day split.
   for (const row of ACCURACY_ROWS) {
     // Row label cell
     const labelCell = document.createElement('div');
@@ -174,41 +186,62 @@ function buildAccuracyGrid(gridEl, result, snap) {
     gridEl.appendChild(labelCell);
 
     const rowResult = result[row.type];
+    totalApproximated += rowResult.approximatedCount;
+
     const isNapType = NAP_TYPES.has(row.type);
     // D7-15: nap rows show "—" when fewer than minDays nap days logged.
     const showDash = isNapType && rowResult.total < snap.minDays;
 
-    for (const col of ACCURACY_COLS) {
-      const cell = document.createElement('div');
-      cell.className = 'accCell';
+    const cell = document.createElement('div');
+    cell.className = 'accCell';
 
-      if (showDash || rowResult.total === 0) {
-        // D7-15: insufficient nap data, or zero total for any type.
-        // T-07-06-01: textContent only.
-        cell.textContent = '—';
-      } else {
-        // Show percentage + sample count sub-label.
-        const pctEl = document.createElement('span');
-        pctEl.className = 'accPct';
-        // T-07-06-01: pct is a computed integer (0-100) — safe as textContent.
-        pctEl.textContent = rowResult[col.key].pct + '%';
+    if (showDash || rowResult.total === 0) {
+      // D7-15: insufficient nap data, or zero total for any type.
+      // T-07-06-01: textContent only.
+      cell.textContent = '—';
+    } else {
+      // D-11: plain-number score — no "%" suffix, no color-coded thresholds.
+      const pctEl = document.createElement('span');
+      pctEl.className = 'accPct';
+      // T-07-06-01: avgScore is a computed integer (0-100) — safe as textContent.
+      pctEl.textContent = String(rowResult.avgScore);
 
-        const countEl = document.createElement('small');
-        countEl.className = 'accCount';
-        // T-07-06-01: total is a computed integer — safe as textContent.
-        countEl.textContent = 'n=' + rowResult.total;
+      const cellChildren = [pctEl];
 
-        // Append: pct + line break + sample count.
-        cell.append(pctEl, document.createElement('br'), countEl);
+      // D-07: visually distinguish band-approximated scores.
+      if (rowResult.approximatedCount > 0) {
+        const approxEl = document.createElement('span');
+        approxEl.className = 'accApprox';
+        approxEl.textContent = '*';
+        cellChildren.push(approxEl);
       }
 
-      gridEl.appendChild(cell);
+      const countEl = document.createElement('small');
+      countEl.className = 'accCount';
+      // T-07-06-01: total is a computed integer — safe as textContent.
+      countEl.textContent = 'n=' + rowResult.total;
+
+      // Append: score [+ approx marker] + line break + sample count.
+      cell.append(...cellChildren, document.createElement('br'), countEl);
     }
+
+    gridEl.appendChild(cell);
+  }
+
+  // D-07: single footnote line below the grid when any row has
+  // approximated scores — never duplicated per row.
+  if (totalApproximated > 0) {
+    const footnote = document.createElement('div');
+    footnote.className = 'accFootnote';
+    // T-07-06-01: textContent only — totalApproximated is a computed integer.
+    footnote.textContent =
+      '* ' + totalApproximated + ' score(s) approximated from a wide probability-band midpoint';
+    gridEl.appendChild(footnote);
   }
 }
 
 /**
- * Build the TIF accuracy table element (D-04, D-05, TIF-14).
+ * Build the TIF accuracy table element (D-04, TIF-14).
  *
  * Returns a <table> with one header row (Event + 3 stat columns) and
  * four data rows (one per TIF_ACCURACY_ROWS entry).
@@ -311,8 +344,9 @@ function buildTifAccuracyGrid(stats, snap) {
 /**
  * Mount the Accuracy screen into the given root element.
  *
- * Renders a 4×3 grid (D7-14) showing three backtesting metrics for each
- * of the four event types. Shows a cold-start card when validCount < minDays.
+ * Renders a 6-row/1-col grid (D-09) showing the average score for each
+ * event type, plus an overall headline score above the grid (D-10).
+ * Shows a cold-start card when validCount < minDays.
  * Respects the active stage filter (D7-17) and shows a stage badge (D7-18).
  *
  * Sets up reactive subscriptions so the grid re-renders whenever the event
@@ -341,19 +375,25 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
   stageBadge.className = 'stageChip';
   stageBadge.hidden = true;
 
-  // Accuracy grid container (D7-14). Built once; populated by buildAccuracyGrid().
+  // Overall headline score (D-10): reads AccuracyResult.overallScore verbatim
+  // — never recomputed independently here.
+  const headlineEl = document.createElement('p');
+  headlineEl.className = 'overallScoreHeadline';
+
+  // Accuracy grid container (D-09). Built once; populated by buildAccuracyGrid().
   const gridRoot = document.createElement('div');
   gridRoot.className = 'accuracyGrid';
   gridRoot.setAttribute('role', 'grid');
   gridRoot.setAttribute('aria-label', 'Accuracy metrics for each event type');
 
   // Establish permanent structure.
-  root.replaceChildren(stageBadge, gridRoot);
+  root.replaceChildren(stageBadge, headlineEl, gridRoot);
 
   /**
    * Render the classic accuracy grid (existing path).
-   * Restores the permanent structure (stageBadge + gridRoot) if it was replaced
-   * by a cold-start or TIF render, then renders stage badge + accuracy grid.
+   * Restores the permanent structure (stageBadge + headlineEl + gridRoot) if
+   * it was replaced by a cold-start or TIF render, then renders the headline,
+   * stage badge, and accuracy grid.
    *
    * @param {HTMLElement} root
    * @param {object} accuracy   AccuracyResult from computeAccuracy
@@ -362,8 +402,11 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
   function renderAccuracy(root, accuracy, snap) {
     // Restore permanent structure if it was replaced by cold-start or TIF rendering.
     if (!root.contains(gridRoot)) {
-      root.replaceChildren(stageBadge, gridRoot);
+      root.replaceChildren(stageBadge, headlineEl, gridRoot);
     }
+    // D-10: headline reads overallScore verbatim — no independent recomputation.
+    // T-07-06-01: textContent only — overallScore is a computed integer.
+    headlineEl.textContent = 'Overall accuracy: ' + accuracy.overallScore;
     // Stage badge (D7-18): show/hide with stage.name via textContent.
     renderStageBadge(stageBadge, snap);
     // Populate the grid (clears gridRoot internally).
