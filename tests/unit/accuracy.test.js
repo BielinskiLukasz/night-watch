@@ -161,8 +161,12 @@ describe('computeAccuracy — ACC-01..04', () => {
     });
   });
 
-  describe('output shape — Task 1 interim (no split, no band yet)', () => {
-    it('per-type result objects have exactly two own keys: total, avgScore', () => {
+  describe('output shape', () => {
+    // NOTE: this test was written during Task 1 to pin the interim
+    // (not-yet-band-aware) two-key shape. Task 2 adds approximatedCount as a
+    // third key (D-06/D-07) — updated here to match the final shape once
+    // Task 2 landed, per the plan's own note that "Task 2 will add a third key".
+    it('per-type result objects have exactly three own keys: total, avgScore, approximatedCount', () => {
       const days = [
         makeDay('2025-01-01', { wake: makeEvent('2025-01-01T07:00') }),
         makeDay('2025-01-02', { wake: makeEvent('2025-01-02T07:00') }),
@@ -173,7 +177,7 @@ describe('computeAccuracy — ACC-01..04', () => {
 
       for (const type of ['wake', 'bedtime', 'napStart', 'napEnd']) {
         const keys = Object.keys(result[type]).sort();
-        assert.deepStrictEqual(keys, ['avgScore', 'total'], `${type} should have exactly total/avgScore keys`);
+        assert.deepStrictEqual(keys, ['approximatedCount', 'avgScore', 'total'], `${type} should have exactly total/avgScore/approximatedCount keys`);
       }
     });
 

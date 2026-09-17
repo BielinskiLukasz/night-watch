@@ -14,13 +14,15 @@
 //   extractActualMinutes(event) — extract HH:MM → minutes from event.at
 //   buildAccuracyResult(counters) — convert raw counters to AccuracyResult
 //
-// AccuracyResult shape (Task 1, interim — no bedtime split, no band-fallback
-// approximation counter, no overallScore yet; those land in Task 2/22-01):
+// AccuracyResult shape (final — Task 2):
 //   {
-//     wake:     { total: N, avgScore: N },
-//     bedtime:  { total: N, avgScore: N },
-//     napStart: { total: N, avgScore: N },
-//     napEnd:   { total: N, avgScore: N },
+//     wake:            { total: N, avgScore: N, approximatedCount: N },
+//     bedtime:         { total: N, avgScore: N, approximatedCount: N },
+//     bedtimeNapDay:   { total: N, avgScore: N, approximatedCount: N },
+//     bedtimeNoNapDay: { total: N, avgScore: N, approximatedCount: N },
+//     napStart:        { total: N, avgScore: N, approximatedCount: N },
+//     napEnd:          { total: N, avgScore: N, approximatedCount: N },
+//     overallScore: N,  // mean of each day's own per-day mean score (D-10)
 //   }
 //
 // Zero DOM, zero I/O — fully unit-testable with node:test.
@@ -39,7 +41,12 @@ import { forecast, timeToMinutes } from './forecast.js';
  * Object.freeze per CLAUDE.md convention.
  */
 const ACCURACY_CONFIG = Object.freeze({
-  EVENT_TYPES: Object.freeze(['wake', 'bedtime', 'napStart', 'napEnd']),
+  // The 4 keys forecast()/day records actually expose — drives the scoring
+  // loop's pred[type]/actual[type] lookups.
+  BASE_EVENT_TYPES: Object.freeze(['wake', 'bedtime', 'napStart', 'napEnd']),
+  // The 6 keys used for counter initialization and buildAccuracyResult's
+  // output — adds the D-03/D-04 bedtime nap-day/no-nap-day split.
+  EVENT_TYPES: Object.freeze(['wake', 'bedtime', 'bedtimeNapDay', 'bedtimeNoNapDay', 'napStart', 'napEnd']),
   NAP_TYPES: new Set(['napStart', 'napEnd']),
 });
 
@@ -100,25 +107,34 @@ function extractActualMinutes(event) {
 }
 
 /**
- * Convert raw counters to AccuracyResult with avgScore fields (ACC-03).
+ * Convert raw counters (+ per-day averages) to the final AccuracyResult
+ * (ACC-03, D-03/D-04, D-06/D-07, D-10).
  *
  * avgScore is Math.round(scoreSum / total). When total === 0, avgScore is 0
  * (never NaN). This satisfies T-07-02-02: no NaN leaks to UI.
  *
- * Task 1 interim shape: exactly two own keys per type, `total` and `avgScore`
- * — no other fields. Task 2 (22-01, second task) extends this.
+ * overallScore (D-10) is the mean of dailyAverages — each entry already the
+ * mean of ONE day's own per-event scores (computed by computeAccuracy from
+ * BASE_EVENT_TYPES only, never double-counting the bedtime sub-buckets).
+ * dailyAverages excludes days with zero scored events, so the headline never
+ * gets pulled toward 0 by a day that had no usable forecast/actual pairs.
  *
- * @param {{ wake, bedtime, napStart, napEnd }} counters  raw counter object ({total, scoreSum})
+ * @param {object} counters       raw counter object, keyed by ACCURACY_CONFIG.EVENT_TYPES (6 keys),
+ *   each `{ total, scoreSum, approximatedCount }`
+ * @param {number[]} dailyAverages  one entry per day that had >= 1 scored event
  * @returns {AccuracyResult}
  */
-function buildAccuracyResult(counters) {
+function buildAccuracyResult(counters, dailyAverages) {
   const result = {};
   for (const type of ACCURACY_CONFIG.EVENT_TYPES) {
     const c = counters[type];
     const total = c.total;
     const avgScore = total === 0 ? 0 : Math.round(c.scoreSum / total);
-    result[type] = { total, avgScore };
+    result[type] = { total, avgScore, approximatedCount: c.approximatedCount };
   }
+  result.overallScore = dailyAverages.length === 0
+    ? 0
+    : Math.round(dailyAverages.reduce((a, b) => a + b, 0) / dailyAverages.length);
   return result;
 }
 
@@ -147,17 +163,30 @@ function buildAccuracyResult(counters) {
  *   (total unchanged). This happens when history has fewer than minDays
  *   non-rejected records (e.g., early in history or after many rejections).
  *
- * ACC-03 LITERAL TOTAL SEMANTICS (Task 1 rewrite — behavior change):
+ * ACC-03 LITERAL TOTAL SEMANTICS (behavior change vs the pre-Phase-22
+ * implementation):
  *   total is incremented ONLY when the day has BOTH a usable forecast (a
- *   central prediction — band-mode is deferred to Task 2) AND a recorded
- *   actual time for that event type. This differs from the prior
- *   implementation, which incremented total before confirming a usable
- *   prediction existed.
+ *   central prediction OR a probabilityBand, per D-06) AND a recorded
+ *   actual time for that event type.
  *
- * BAND MODE (Task 1 — deferred):
- *   When pred[type].probabilityBand is present, this day/type is skipped
- *   entirely (not approximated, not counted). D-06/D-07 band-fallback
- *   approximation is added in Task 2.
+ * BAND MODE (D-06/D-07):
+ *   When pred[type].probabilityBand is present, forecastMinutes is
+ *   approximated as the midpoint of the band's min/max, and that event's
+ *   approximatedCount is incremented so the approximation is never silently
+ *   lost.
+ *
+ * BEDTIME NAP-DAY SPLIT (D-03/D-04):
+ *   Every scored bedtime event also fans into bedtimeNapDay or
+ *   bedtimeNoNapDay, classified by the scored day's own actual napStart
+ *   (napStart != null — Phase 19 D-04's exact definition), never by which
+ *   internal series forecast() happened to select. The combined `bedtime`
+ *   key remains the average across both sub-buckets.
+ *
+ * OVERALL HEADLINE SCORE (D-10):
+ *   Each day's own scored events (BASE_EVENT_TYPES only — never
+ *   double-counting the bedtime nap-day/no-nap-day fan-out) are averaged
+ *   into that day's daily mean. overallScore is the mean of all days'
+ *   daily means, excluding days with zero scored events.
  *
  * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
  *   Expected fields per record: date (YYYY-MM-DD), wake, bedtime, napStart,
@@ -175,13 +204,15 @@ export function computeAccuracy(dayRecords, settings) {
   // look-ahead bias prevention). Lexicographic YYYY-MM-DD sort is correct.
   const sorted = [...dayRecords].sort((a, b) => a.date < b.date ? -1 : 1);
 
-  // Raw counters for each event type.
-  const counters = {
-    wake:     { total: 0, scoreSum: 0 },
-    bedtime:  { total: 0, scoreSum: 0 },
-    napStart: { total: 0, scoreSum: 0 },
-    napEnd:   { total: 0, scoreSum: 0 },
-  };
+  // Raw counters for each of the 6 EVENT_TYPES (includes bedtime split).
+  const counters = {};
+  for (const type of ACCURACY_CONFIG.EVENT_TYPES) {
+    counters[type] = { total: 0, scoreSum: 0, approximatedCount: 0 };
+  }
+
+  // D-10: one entry per day that had >= 1 scored event, each entry the mean
+  // of that day's own per-event scores (BASE_EVENT_TYPES only).
+  const dailyAverages = [];
 
   // LOOK-AHEAD BIAS PREVENTION (RESEARCH Pitfall #2):
   //   Start at index minDays so history = sorted.slice(0, i) has at least
@@ -197,8 +228,13 @@ export function computeAccuracy(dayRecords, settings) {
     // fewer than minDays valid (non-rejected) records. Skip this day entirely.
     if (pred.isColdStart) continue;
 
-    // Score each event type for this day.
-    for (const type of ACCURACY_CONFIG.EVENT_TYPES) {
+    // D-03: classify this day once — nap-day vs no-nap-day — using only the
+    // day's own actual napStart, reusing Phase 19 D-04's exact definition.
+    const isNapDay = actual.napStart !== null;
+    const dayScores = [];
+
+    // Score each base event type for this day.
+    for (const type of ACCURACY_CONFIG.BASE_EVENT_TYPES) {
       const actualEvent = actual[type];
 
       // No actual event for this type on this day — skip.
@@ -211,26 +247,56 @@ export function computeAccuracy(dayRecords, settings) {
         if (actual.napStart === null && actual.napEnd === null) continue;
       }
 
-      // ACC-03 literal: a usable prediction must exist BEFORE total counts.
-      // Band-mode is deferred to Task 2 — for Task 1, a band means "no usable
-      // central prediction" and this day/type is excluded, not approximated.
       const prediction = pred[type];
       if (!prediction) continue;
-      if (prediction.probabilityBand) continue;
-      if (!prediction.central) continue;
 
       // Extract actual time in minutes-since-midnight.
       const actualMinutes = extractActualMinutes(actualEvent);
       if (actualMinutes === null) continue;
 
-      // Both forecast AND actual confirmed usable — this day counts now.
-      counters[type].total++;
+      // D-06: band-mode fallback — approximate forecastMinutes as the band
+      // midpoint when forecast() returned high-uncertainty probabilityBand
+      // instead of a central prediction.
+      let forecastMinutes;
+      let approximated;
+      if (prediction.probabilityBand) {
+        const bandTimes = prediction.probabilityBand.map(e => timeToMinutes(e.time));
+        const bandMin = Math.min(...bandTimes);
+        const bandMax = Math.max(...bandTimes);
+        forecastMinutes = (bandMin + bandMax) / 2;
+        approximated = true;
+      } else if (prediction.central) {
+        forecastMinutes = timeToMinutes(prediction.central);
+        approximated = false;
+      } else {
+        // No usable prediction at all — ACC-03 literal: cannot score.
+        continue;
+      }
 
-      const forecastMinutes = timeToMinutes(prediction.central);
+      // Both forecast AND actual confirmed usable — this event counts now.
       const score = eventAccuracyScore(forecastMinutes, actualMinutes, maxDelta);
+
+      counters[type].total++;
       counters[type].scoreSum += score;
+      if (approximated) counters[type].approximatedCount++;
+      dayScores.push(score);
+
+      // D-03/D-04: fan the identical bedtime score/approximation into the
+      // nap-day or no-nap-day sub-bucket, classified by THIS day's actual
+      // napStart. Reuses the same score — not recomputed. Not pushed into
+      // dayScores again (D-10's daily mean counts each logged event once).
+      if (type === 'bedtime') {
+        const subType = isNapDay ? 'bedtimeNapDay' : 'bedtimeNoNapDay';
+        counters[subType].total++;
+        counters[subType].scoreSum += score;
+        if (approximated) counters[subType].approximatedCount++;
+      }
+    }
+
+    if (dayScores.length > 0) {
+      dailyAverages.push(dayScores.reduce((a, b) => a + b, 0) / dayScores.length);
     }
   }
 
-  return buildAccuracyResult(counters);
+  return buildAccuracyResult(counters, dailyAverages);
 }
