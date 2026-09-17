@@ -370,7 +370,7 @@ function buildTifAccuracyGrid(stats, snap) {
  * @param {{
  *   root: HTMLElement,
  *   eventLog: {
- *     daysBySubjectiveNight: (cutoverHour: number) => Array<object>,
+ *     daysBySubjectiveNight: (cutoverHour: number, limit?: number, settings?: object) => Array<object>,
  *     subscribe: (fn: () => void) => () => void,
  *   },
  *   settings: {
@@ -459,7 +459,10 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
     const snap = settings.get();
 
     // Full history via subjective-night bucketing (matches computeAccuracy's expectation).
-    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour);
+    // WR-01: pass `snap` through so day records get `.rejected` annotated per
+    // the user's configured rejectedDays — matches history-screen.js and
+    // metrics-screen.js, both of which pass settings through here.
+    const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour, undefined, snap);
 
     // Stage filter (D7-17): apply THREE-ARG form — RESEARCH Pitfall 1.
     // When activeStageId is null/undefined, filterDayRecordsByStage returns allDays unchanged.
