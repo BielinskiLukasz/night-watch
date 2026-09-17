@@ -276,4 +276,61 @@ test.describe('Accuracy screen — Per-Day TIF Windows table (UI-11, D-01..D-08)
     await expect(dataRows.first()).toBeAttached();
   });
 
+  test('per-day TIF windows table shows full history — row count equals days.length, not tifBoundsHistory.length (D-06)', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif' });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    const perDayTable = page.locator('#accuracy-screen .tifPerDayTable');
+    const dataRows = perDayTable.locator('tbody tr');
+
+    // 32-day baseline fixture; default tifRollingDays=7 means
+    // tifBoundsHistory.length would be 32-7=25. This asserts the full 32,
+    // proving `days` (not tifBoundsHistory) is the row-iteration source.
+    await expect(dataRows).toHaveCount(32);
+
+    // Warm-up boundary: the LAST (bottom-most, oldest) 7 rows correspond to
+    // the first tifRollingDays chronological days, which computeTifBoundsHistory
+    // never returns a bounds entry for — all 12 non-Date cells must dash.
+    for (let i = 32 - 7; i < 32; i++) {
+      const cells = dataRows.nth(i).locator('td');
+      // 13 total cells: Date + 12 TIF fields.
+      await expect(cells).toHaveCount(13);
+      for (let c = 1; c < 13; c++) {
+        await expect(cells.nth(c)).toHaveText('—');
+      }
+    }
+
+    // D-05: most-recent-first ordering — first row's Date is the latest seeded date.
+    const firstRowDate = dataRows.first().locator('td').first();
+    await expect(firstRowDate).toHaveText('2026-06-01');
+
+    // D-05: confidence cells for a row with a real bounds entry (top 25 rows)
+    // render as two-decimal .toFixed(2) format — exact value not asserted.
+    const confCell = dataRows.first().locator('td').nth(3); // W-conf column
+    await expect(confCell).toHaveText(/^\d+\.\d{2}$/);
+  });
+
+  test('rejected day rows carry the rejected class in the per-day TIF table (D-07)', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif', rejectedDays: ['2026-05-01'] });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    const perDayTable = page.locator('#accuracy-screen .tifPerDayTable');
+    const dataRows = perDayTable.locator('tbody tr');
+    // 2026-05-01 is the earliest seeded date — bottom-most row (most-recent-first order).
+    await expect(dataRows.last()).toHaveClass(/rejected/);
+  });
+
+  test('per-day TIF windows table is fully absent in classic mode (D-08)', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'classic' });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    await expect(page.locator('#accuracy-screen .tifPerDayTable')).toHaveCount(0);
+  });
+
 });
