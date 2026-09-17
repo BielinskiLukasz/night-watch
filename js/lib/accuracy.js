@@ -1,11 +1,12 @@
 // js/lib/accuracy.js
 // Pure retroactive backtesting engine for the Accuracy screen (UI-05).
 //
-// Decisions: D7-12, D7-13, D7-14, D7-15, D7-16
-// Requirements: UI-05
+// Decisions: ACC-01, ACC-02, ACC-03, ACC-04, D-01..D-11 (Phase 22)
+// Requirements: ACC-01, ACC-02, ACC-03, ACC-04
 // Platform: PLAT-11
 //
 // Exports:
+//   eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes) → number
 //   computeAccuracy(dayRecords, settings) → AccuracyResult
 //
 // Private helpers (not exported):
@@ -13,12 +14,13 @@
 //   extractActualMinutes(event) — extract HH:MM → minutes from event.at
 //   buildAccuracyResult(counters) — convert raw counters to AccuracyResult
 //
-// AccuracyResult shape (D7-14):
+// AccuracyResult shape (Task 1, interim — no bedtime split, no band-fallback
+// approximation counter, no overallScore yet; those land in Task 2/22-01):
 //   {
-//     wake:     { total: N, withinDelta: { count, pct }, withinHalfDelta: { count, pct }, insideBand: { count, pct } },
-//     bedtime:  { ... same ... },
-//     napStart: { ... same ... },
-//     napEnd:   { ... same ... },
+//     wake:     { total: N, avgScore: N },
+//     bedtime:  { total: N, avgScore: N },
+//     napStart: { total: N, avgScore: N },
+//     napEnd:   { total: N, avgScore: N },
 //   }
 //
 // Zero DOM, zero I/O — fully unit-testable with node:test.
@@ -28,7 +30,7 @@
 // Time comparison is naive minutes-since-midnight (0-1439). For events near midnight
 // (e.g., late bedtime at 23:45), delta calculation may be artificially large if the
 // actual falls on the other side of midnight. This is a known v1 limitation; complex
-// cross-midnight cycle-aware comparison is deferred to v2.
+// cross-midnight cycle-aware comparison is deferred to v2. Not addressed by ACC-01..04.
 
 import { forecast, timeToMinutes } from './forecast.js';
 
@@ -40,6 +42,38 @@ const ACCURACY_CONFIG = Object.freeze({
   EVENT_TYPES: Object.freeze(['wake', 'bedtime', 'napStart', 'napEnd']),
   NAP_TYPES: new Set(['napStart', 'napEnd']),
 });
+
+/**
+ * Linear-decay per-event accuracy score (ACC-02).
+ *
+ * Formula (see NEW_ACC.md for the original worked-example source):
+ *   D = |actualMinutes - forecastMinutes|
+ *   D <= W:      score = 100 - (50/W) * D
+ *   W < D <= 2W: score = 50 - (50/W) * (D - W)
+ *   D > 2W:      score = 0
+ *
+ * Returns a raw, unrounded number in [0, 100] (the three branches are
+ * mutually exclusive and each produces a value in range by construction —
+ * no clamping needed). Callers (buildAccuracyResult) round aggregates.
+ *
+ * No divide-by-zero guard: every in-repo call site supplies settings.maxDelta,
+ * which settings-validate.js enforces to a minimum of 5.
+ *
+ * @param {number} forecastMinutes  predicted time (minutes since midnight)
+ * @param {number} actualMinutes    actual logged time (minutes since midnight)
+ * @param {number} toleranceMinutes tolerance window W (from settings.maxDelta)
+ * @returns {number} raw unrounded score in [0, 100]
+ */
+export function eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes) {
+  const D = Math.abs(actualMinutes - forecastMinutes);
+  if (D <= toleranceMinutes) {
+    return 100 - (50 / toleranceMinutes) * D;
+  }
+  if (D <= 2 * toleranceMinutes) {
+    return 50 - (50 / toleranceMinutes) * (D - toleranceMinutes);
+  }
+  return 0;
+}
 
 /**
  * Extract minutes-since-midnight from an event object.
@@ -66,12 +100,15 @@ function extractActualMinutes(event) {
 }
 
 /**
- * Convert raw counters to AccuracyResult with pct fields.
+ * Convert raw counters to AccuracyResult with avgScore fields (ACC-03).
  *
- * pct is Math.round(count/total*100). When total === 0, pct is 0 (never NaN).
- * This satisfies T-07-02-02: no NaN leaks to UI.
+ * avgScore is Math.round(scoreSum / total). When total === 0, avgScore is 0
+ * (never NaN). This satisfies T-07-02-02: no NaN leaks to UI.
  *
- * @param {{ wake, bedtime, napStart, napEnd }} counters  raw counter object
+ * Task 1 interim shape: exactly two own keys per type, `total` and `avgScore`
+ * — no other fields. Task 2 (22-01, second task) extends this.
+ *
+ * @param {{ wake, bedtime, napStart, napEnd }} counters  raw counter object ({total, scoreSum})
  * @returns {AccuracyResult}
  */
 function buildAccuracyResult(counters) {
@@ -79,17 +116,8 @@ function buildAccuracyResult(counters) {
   for (const type of ACCURACY_CONFIG.EVENT_TYPES) {
     const c = counters[type];
     const total = c.total;
-
-    function pct(count) {
-      return total === 0 ? 0 : Math.round(count / total * 100);
-    }
-
-    result[type] = {
-      total,
-      withinDelta:     { count: c.withinDelta,     pct: pct(c.withinDelta)     },
-      withinHalfDelta: { count: c.withinHalfDelta, pct: pct(c.withinHalfDelta) },
-      insideBand:      { count: c.insideBand,      pct: pct(c.insideBand)      },
-    };
+    const avgScore = total === 0 ? 0 : Math.round(c.scoreSum / total);
+    result[type] = { total, avgScore };
   }
   return result;
 }
@@ -97,11 +125,11 @@ function buildAccuracyResult(counters) {
 /**
  * Compute retroactive accuracy across all available history.
  *
- * Algorithm (D7-12):
+ * Algorithm (D7-12, carried forward unchanged):
  *   For each day D starting from index minDays, call forecast() with only
  *   the records BEFORE day D (no look-ahead bias — RESEARCH Pitfall #2),
- *   then compare the predicted central times to the actual logged times in
- *   day D.
+ *   then score the predicted central time against the actual logged time in
+ *   day D using eventAccuracyScore() (ACC-02).
  *
  * LOOP INVARIANT (look-ahead bias prevention):
  *   for (let i = minDays; i < sorted.length; i++) {
@@ -109,7 +137,7 @@ function buildAccuracyResult(counters) {
  *     const actual  = sorted[i];             // the day being scored
  *   }
  *
- * NAP DAY COUNTING (D7-15):
+ * NAP DAY COUNTING (D7-15, carried forward unchanged):
  *   Only increment napStart.total / napEnd.total when the actual day has
  *   a non-null napStart or napEnd. Days with no nap are excluded from
  *   nap accuracy counts.
@@ -119,18 +147,17 @@ function buildAccuracyResult(counters) {
  *   (total unchanged). This happens when history has fewer than minDays
  *   non-rejected records (e.g., early in history or after many rejections).
  *
- * BAND MODE (D3-04):
- *   When pred[type].probabilityBand is present, check if actualMinutes falls
- *   within [bandMin, bandMax]. withinDelta and withinHalfDelta are NOT
- *   incremented in band mode (the band fired because spread exceeded maxDelta).
+ * ACC-03 LITERAL TOTAL SEMANTICS (Task 1 rewrite — behavior change):
+ *   total is incremented ONLY when the day has BOTH a usable forecast (a
+ *   central prediction — band-mode is deferred to Task 2) AND a recorded
+ *   actual time for that event type. This differs from the prior
+ *   implementation, which incremented total before confirming a usable
+ *   prediction existed.
  *
- * pct GUARANTEE (T-07-02-02):
- *   All pct fields are integer 0-100, never NaN. When total === 0, pct = 0.
- *
- * PERFORMANCE NOTE:
- *   For n=300 days, this loop creates n array copies (O(n²/2) total element
- *   copies ≈ 45,000). In V8 this takes < 5ms. For n > 1000, consider chunked
- *   async execution as a future optimization.
+ * BAND MODE (Task 1 — deferred):
+ *   When pred[type].probabilityBand is present, this day/type is skipped
+ *   entirely (not approximated, not counted). D-06/D-07 band-fallback
+ *   approximation is added in Task 2.
  *
  * @param {object[]} dayRecords  array of day records from daysBySubjectiveNight()
  *   Expected fields per record: date (YYYY-MM-DD), wake, bedtime, napStart,
@@ -148,12 +175,12 @@ export function computeAccuracy(dayRecords, settings) {
   // look-ahead bias prevention). Lexicographic YYYY-MM-DD sort is correct.
   const sorted = [...dayRecords].sort((a, b) => a.date < b.date ? -1 : 1);
 
-  // Raw counters (integers) for each event type.
+  // Raw counters for each event type.
   const counters = {
-    wake:     { total: 0, withinDelta: 0, withinHalfDelta: 0, insideBand: 0 },
-    bedtime:  { total: 0, withinDelta: 0, withinHalfDelta: 0, insideBand: 0 },
-    napStart: { total: 0, withinDelta: 0, withinHalfDelta: 0, insideBand: 0 },
-    napEnd:   { total: 0, withinDelta: 0, withinHalfDelta: 0, insideBand: 0 },
+    wake:     { total: 0, scoreSum: 0 },
+    bedtime:  { total: 0, scoreSum: 0 },
+    napStart: { total: 0, scoreSum: 0 },
+    napEnd:   { total: 0, scoreSum: 0 },
   };
 
   // LOOK-AHEAD BIAS PREVENTION (RESEARCH Pitfall #2):
@@ -184,54 +211,24 @@ export function computeAccuracy(dayRecords, settings) {
         if (actual.napStart === null && actual.napEnd === null) continue;
       }
 
-      // This day counts towards the sample total for this event type.
-      // total is incremented for every day where:
-      //   - the actual event exists (checked above)
-      //   - forecast was not cold-start (checked at loop top)
-      //   - nap-day filter passed (for nap types, checked above)
-      // Note: total increments even when forecast has no central prediction for
-      // this event type (e.g., nap days exist but history had no prior naps).
-      counters[type].total++;
-
-      // Prediction for this event type. If missing or has no central and no
-      // probabilityBand, we cannot score this day — skip accuracy counting.
+      // ACC-03 literal: a usable prediction must exist BEFORE total counts.
+      // Band-mode is deferred to Task 2 — for Task 1, a band means "no usable
+      // central prediction" and this day/type is excluded, not approximated.
       const prediction = pred[type];
       if (!prediction) continue;
-      if (!prediction.central && !prediction.probabilityBand) continue;
+      if (prediction.probabilityBand) continue;
+      if (!prediction.central) continue;
 
       // Extract actual time in minutes-since-midnight.
       const actualMinutes = extractActualMinutes(actualEvent);
       if (actualMinutes === null) continue;
 
-      if (prediction.probabilityBand) {
-        // BAND MODE: forecast() returned a probability table (D3-04).
-        // The band was triggered because spread exceeded maxDelta, so
-        // withinDelta and withinHalfDelta are not meaningful here.
-        // Only check insideBand: does actual fall within [bandMin, bandMax]?
-        const bandTimes = prediction.probabilityBand.map(e => timeToMinutes(e.time));
-        const bandMin = Math.min(...bandTimes);
-        const bandMax = Math.max(...bandTimes);
-        if (actualMinutes >= bandMin && actualMinutes <= bandMax) {
-          counters[type].insideBand++;
-        }
-        // withinDelta and withinHalfDelta: not incremented in band mode.
-      } else {
-        // CENTRAL MODE: normal point prediction with confidence band.
-        const centralMinutes = timeToMinutes(prediction.central);
-        const delta = Math.abs(actualMinutes - centralMinutes);
+      // Both forecast AND actual confirmed usable — this day counts now.
+      counters[type].total++;
 
-        if (delta <= maxDelta)      counters[type].withinDelta++;
-        if (delta <= maxDelta / 2)  counters[type].withinHalfDelta++;
-
-        // insideBand in central mode: check if actual falls within [min, max].
-        if (prediction.min && prediction.max) {
-          const bandMin = timeToMinutes(prediction.min);
-          const bandMax = timeToMinutes(prediction.max);
-          if (actualMinutes >= bandMin && actualMinutes <= bandMax) {
-            counters[type].insideBand++;
-          }
-        }
-      }
+      const forecastMinutes = timeToMinutes(prediction.central);
+      const score = eventAccuracyScore(forecastMinutes, actualMinutes, maxDelta);
+      counters[type].scoreSum += score;
     }
   }
 

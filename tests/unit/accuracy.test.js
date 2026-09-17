@@ -193,9 +193,22 @@ describe('computeAccuracy — ACC-01..04', () => {
 
   describe('nap rows skip no-nap days', () => {
     it('2 total days, 1 with nap → napStart.total counts only days with napStart', () => {
+      // History days (0,1) carry nap data too — under the new ACC-03 "usable
+      // forecast AND actual" total semantics, a nap-day-only actual (day 2)
+      // needs a real napStart central prediction from history to count at
+      // all; the nap-day-filtering intent (excluding day 3, the no-nap day)
+      // is unaffected and still proven below.
       const days = [
-        makeDay('2025-01-01', { wake: makeEvent('2025-01-01T07:00') }),
-        makeDay('2025-01-02', { wake: makeEvent('2025-01-02T07:00') }),
+        makeDay('2025-01-01', {
+          wake: makeEvent('2025-01-01T07:00'),
+          napStart: makeEvent('2025-01-01T13:00'),
+          napEnd: makeEvent('2025-01-01T14:00'),
+        }),
+        makeDay('2025-01-02', {
+          wake: makeEvent('2025-01-02T07:00'),
+          napStart: makeEvent('2025-01-02T13:00'),
+          napEnd: makeEvent('2025-01-02T14:00'),
+        }),
         makeDay('2025-01-03', {
           wake: makeEvent('2025-01-03T07:00'),
           napStart: makeEvent('2025-01-03T13:00'),
