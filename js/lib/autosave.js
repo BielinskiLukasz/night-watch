@@ -23,8 +23,8 @@
 //         'prompt' re-prompts via requestPermission, 'denied' passes
 //         through directly with NO re-prompt (never silently retried).
 //
-// Testability seam (mirrors createStorageLocal(key, ls = globalThis.localStorage)
-// in js/adapters/storage-local.js): pickSaveDirectory/restoreHandle/
+// Testability seam (mirrors createStorageLocal(key, ls)'s optional-injection
+// default in js/adapters/storage-local.js): pickSaveDirectory/restoreHandle/
 // removeSaveDirectory accept an optional { picker, store } options object;
 // tests inject fakes, the runtime call sites (Plan 24-02's app.js) omit them
 // and get the real globalThis.showDirectoryPicker + createIndexedDbHandleStore().
