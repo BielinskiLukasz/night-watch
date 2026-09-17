@@ -221,4 +221,24 @@ test.describe('Accuracy screen — TIF bedtime nap-day split (Phase 22, D-05)', 
     await expect(table.locator('th:text-is("Bedtime (no nap)")')).toHaveCount(1);
   });
 
+  // WR-02: every day in the baseline fixture has a nap, so the "Bedtime (no nap)"
+  // row has zero scored days in the TIF grid. It must render as a dash, not a
+  // misleading "0%"/"±0 min" implying a real (poor) score.
+  test('TIF "Bedtime (no nap)" row dashes when it has zero scored days (WR-02)', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif' });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    const table = page.locator('#accuracy-screen table');
+    await expect(table).toBeVisible();
+
+    const noNapRow = table.locator('tr', { has: page.locator('th:text-is("Bedtime (no nap)")') });
+    const cells = noNapRow.locator('td');
+    await expect(cells).toHaveCount(3);
+    for (let i = 0; i < 3; i++) {
+      await expect(cells.nth(i)).toHaveText('—');
+    }
+  });
+
 });
