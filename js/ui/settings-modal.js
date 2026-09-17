@@ -41,6 +41,12 @@ let _jsonChangeHandler = null;
 let _stagesCrudHandler = null;
 let _addStageBtnHandler = null;
 let _forecastAlgorithmChangeHandler = null;
+// Phase 24 Plan 03 (PLAT-01/PLAT-04): Backup fieldset button handler refs —
+// same accumulation-prevention idiom as the refs above.
+let _autosavePickHandler = null;
+let _autosaveChangeHandler = null;
+let _autosaveRemoveHandler = null;
+let _autosaveExportHandler = null;
 
 /**
  * Open the Settings modal. Populates form fields from settings.get(),
@@ -50,14 +56,22 @@ let _forecastAlgorithmChangeHandler = null;
  * the CSV import flow. When provided, Import CSV button is wired to FileReader
  * → parseCSV → confirm → replace() on both stores.
  *
+ * Phase 24 Plan 03 (PLAT-01/PLAT-04): accepts an optional `autosave` deps
+ * object ({getState, pick, remove, onExport}) injected by app.js's
+ * autosaveActions (Plan 24-02). When provided, renders and wires the
+ * Backup fieldset's folder-row states and status line (D-06/D-08/D-09).
+ * settings-modal.js never imports js/lib/autosave.js directly — it only
+ * calls the methods on whatever object app.js injects.
+ *
  * @param {{
  *   settings: { get: () => object, update: (patch: object) => object, replace?: (blob: object) => void },
  *   eventLog?: { replace: (blob: object) => void },
  *   storage?: { load: () => object|null, save: (db: object) => void },
  *   id?: () => string,
+ *   autosave?: { getState: () => object, pick: () => Promise<void>, remove: () => void, onExport: () => void },
  * }} deps
  */
-export function openSettings({ settings, eventLog, storage, id }) {
+export function openSettings({ settings, eventLog, storage, id, autosave }) {
   const dlg = document.getElementById('settings');
   const form = dlg.querySelector('form');
   const errorsEl = dlg.querySelector('#settingsErrors');
@@ -376,7 +390,102 @@ export function openSettings({ settings, eventLog, storage, id }) {
   // ── Stages CRUD (Plan 06-04 / D6-13) ─────────────────────────────
   mountStagesCrud({ settings });
 
+  // ── Backup fieldset (Plan 24-03 / PLAT-01, PLAT-04) ──────────────
+  // Guarded so the modal still opens correctly in any test/context that
+  // omits the new `autosave` param (e.g. existing settings-modal.spec.js).
+  if (autosave) {
+    renderBackupSection(autosave.getState());
+    wireBackupButtons(autosave);
+  }
+
   dlg.showModal();
+}
+
+// ── Backup fieldset private helpers (Plan 24-03 / PLAT-01, PLAT-04) ────────
+
+/**
+ * Render the Backup fieldset's three mutually-exclusive folder-row states
+ * plus the session-scoped status line, from a fresh autosave.getState()
+ * snapshot. Every dynamic value is set via .hidden/.textContent only —
+ * never innerHTML (T-24-07/T-07).
+ *
+ * @param {{supported: boolean, status: string, folderName: string|null,
+ *           lastSavedAt: string|null, error: string|null}} state
+ */
+function renderBackupSection(state) {
+  const unsupportedRow = document.getElementById('autosaveUnsupportedRow');
+  const unsetRow = document.getElementById('autosaveUnsetRow');
+  const setRow = document.getElementById('autosaveSetRow');
+  const revokedNote = document.getElementById('autosaveRevokedNote');
+  const folderNameEl = document.getElementById('autosaveFolderName');
+  const statusEl = document.getElementById('autosaveStatus');
+
+  if (unsupportedRow) unsupportedRow.hidden = state.supported;
+  if (unsetRow) unsetRow.hidden = !state.supported || state.status === 'granted';
+  if (setRow) setRow.hidden = !state.supported || state.status !== 'granted';
+  if (revokedNote) revokedNote.hidden = !(state.supported && state.status === 'denied');
+  if (folderNameEl) folderNameEl.textContent = state.folderName || ''; // textContent only — T-24-07/D-08
+
+  // D-09: exactly one of error/last-saved/empty renders — never both at once.
+  if (statusEl) {
+    if (state.error) {
+      statusEl.textContent = 'Error: ' + state.error;
+      statusEl.className = 'importStatus error';
+    } else if (state.lastSavedAt) {
+      statusEl.textContent = 'Last saved: ' + state.lastSavedAt;
+      statusEl.className = 'importStatus';
+    } else {
+      statusEl.textContent = '';
+      statusEl.className = 'importStatus';
+    }
+  }
+}
+
+/**
+ * Wire the Backup fieldset's four buttons to the injected `autosave` deps
+ * object. Each handler is stored in a module-level ref and removed before
+ * being re-added, preventing listener accumulation across repeated
+ * openSettings() calls (mirrors _forecastAlgorithmChangeHandler's idiom).
+ *
+ * @param {{getState: () => object, pick: () => Promise<void>, remove: () => void, onExport: () => void}} autosave
+ */
+function wireBackupButtons(autosave) {
+  const pickBtn = document.getElementById('autosavePickBtn');
+  const changeBtn = document.getElementById('autosaveChangeBtn');
+  const removeBtn = document.getElementById('autosaveRemoveBtn');
+  const exportBtn = document.getElementById('autosaveExportBtn');
+
+  const pickOrChange = async () => {
+    await autosave.pick();
+    renderBackupSection(autosave.getState());
+  };
+
+  if (pickBtn) {
+    if (_autosavePickHandler) pickBtn.removeEventListener('click', _autosavePickHandler);
+    _autosavePickHandler = pickOrChange;
+    pickBtn.addEventListener('click', _autosavePickHandler);
+  }
+
+  if (changeBtn) {
+    if (_autosaveChangeHandler) changeBtn.removeEventListener('click', _autosaveChangeHandler);
+    _autosaveChangeHandler = pickOrChange;
+    changeBtn.addEventListener('click', _autosaveChangeHandler);
+  }
+
+  if (removeBtn) {
+    if (_autosaveRemoveHandler) removeBtn.removeEventListener('click', _autosaveRemoveHandler);
+    _autosaveRemoveHandler = () => {
+      autosave.remove();
+      renderBackupSection(autosave.getState());
+    };
+    removeBtn.addEventListener('click', _autosaveRemoveHandler);
+  }
+
+  if (exportBtn) {
+    if (_autosaveExportHandler) exportBtn.removeEventListener('click', _autosaveExportHandler);
+    _autosaveExportHandler = () => autosave.onExport();
+    exportBtn.addEventListener('click', _autosaveExportHandler);
+  }
 }
 
 // ── Stages CRUD private helpers (Plan 06-04 / D6-13) ──────────────────────────
