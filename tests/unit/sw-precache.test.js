@@ -129,4 +129,8 @@ describe('sw.js PRECACHE_LIST', () => {
   test('contains metrics-screen.js (Metrics screen UI module)', () => {
     assert.ok(precacheList.includes('./js/ui/metrics-screen.js'), 'metrics-screen.js missing from PRECACHE_LIST');
   });
+
+  test('contains autosave.js (File System Access API module)', () => {
+    assert.ok(precacheList.includes('./js/lib/autosave.js'), 'autosave.js missing from PRECACHE_LIST');
+  });
 });
