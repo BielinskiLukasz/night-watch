@@ -83,7 +83,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 - [ ] **Phase 23: Metrics→Accuracy Column Migration** — Move per-event TIF window columns (lower bound, upper bound, confidence score, window width) from `metrics-screen.js` to `accuracy-screen.js`; remove the columns and their data-prep calls from the Metrics pipeline; update unit tests and E2E specs to assert columns appear on Accuracy screen and are absent from Metrics screen (requirements: UI-11)
   **Plans:** 2 plans
   Plans:
-  - [ ] 23-01-PLAN.md — Add per-day TIF window table to Accuracy screen (buildTifPerDayTable, CSS, E2E coverage)
+  - [x] 23-01-PLAN.md — Add per-day TIF window table to Accuracy screen (buildTifPerDayTable, CSS, E2E coverage)
   - [ ] 23-02-PLAN.md — Remove TIF_COLUMNS and all rendering call sites from Metrics screen; update E2E specs
 
 - [ ] **Phase 24: Autosave** — Create `js/lib/autosave.js` exporting `pickSaveDirectory()` (calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a minimal inline wrapper), `saveToDisk(handle, jsonString)` (debounced 500ms, fires after every event-store mutation), and `restoreHandle()` (retrieves handle on launch, prompts re-permission if `queryPermission` returns `'prompt'`); wire into `app.js` via event-store subscription; add a Settings UI row for the autosave directory with graceful fallback copy and a manual Export button when the File System Access API is unavailable (Firefox, Safari, `file://`); add `autosave.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states (requirements: PLAT-01, PLAT-02, PLAT-03, PLAT-04)
@@ -193,7 +193,7 @@ Plans:
   2. The columns and their data-prep calls are removed from the Metrics pipeline
   3. Unit tests and E2E specs assert the columns appear on the Accuracy screen and are absent from the Metrics screen
 
-**Plans:** 0/2 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 **Wave 1**

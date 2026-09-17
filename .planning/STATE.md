@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 23
 current_phase_name: Metrics→Accuracy Column Migration
 status: executing
-stopped_at: Phase 22 complete, ready to plan Phase 23
-last_updated: "2026-09-17T11:45:22.949Z"
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-09-17T12:15:36.589Z"
 last_activity: 2026-09-17
-last_activity_desc: Phase 22 complete, transitioned to Phase 23
-state_head: a89bdceaf5f6c6eb0f81866c27b3daa07f09a703
+last_activity_desc: Phase 23 execution started
+state_head: 2ed1d411909a7e5278f87869ddda364d8b3f7303
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 57
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 
 ## Current Position
 
-Phase: 23 (Metrics→Accuracy Column Migration) — READY TO EXECUTE
-Plan: Not started
+Phase: 23 (Metrics→Accuracy Column Migration) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-09-17 — Phase 22 complete, transitioned to Phase 23
+Last activity: 2026-09-17 — Phase 23 execution started
 
 ## Phases
 
@@ -103,6 +103,7 @@ Last activity: 2026-09-17 — Phase 22 complete, transitioned to Phase 23
 | Phase 22 P01 | 45min | 2 tasks | 2 files |
 | Phase 22 P02 | 20min | 1 tasks | 2 files |
 | Phase 22 P03 | 25min | 2 tasks | 3 files |
+| Phase 23 P01 | 20 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,7 @@ Last activity: 2026-09-17 — Phase 22 complete, transitioned to Phase 23
 - [Phase 22]: D-05: accuracy-tif.js's bedtime bucket split into bedtimeNapDay/bedtimeNoNapDay using the identical D-03 classification rule (actualDay.napStart != null), mirroring accuracy.js's split; computeTifBoundsHistory's entry shape stays unchanged (BASE_EVENT_TYPES vs EVENT_TYPES split)
 - [Phase 22]: [Phase 22 Plan 03]: accuracy-screen.js rewritten for 6-row/1-col avgScore grid, overall headline (verbatim overallScore), approximated-score marker+footnote (D-07..D-11), TIF table bedtime split rows (D-05)
 - [Phase 22]: [Phase 22 Plan 03]: .accuracyGrid CSS grid-template-columns updated auto 1fr 1fr 1fr -> auto 1fr to match the single-column avgScore layout (Rule 1 fix)
+- [Phase 23]: Phase 23 Plan 01: buildTifPerDayTable iterates days (full history) not tifBoundsHistory as row source, to satisfy D-06 full-history requirement
 
 ### Quick Tasks Completed
 
@@ -200,8 +202,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-17T10:09:04.751Z
-Stopped at: Phase 22 complete, ready to plan Phase 23
+Last session: 2026-09-17T12:15:32.577Z
+Stopped at: Completed 23-01-PLAN.md
 Resume file: None
 
 ## Deferred Items
