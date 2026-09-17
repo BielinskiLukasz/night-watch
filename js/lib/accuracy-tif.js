@@ -18,7 +18,9 @@
 //
 // TifAccuracyResult shape (D-05, Phase 22 bedtime nap-day split):
 //   { wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay } each with:
-//   { windowHit: {count, pct}, avgWidthMin: number, highConf: {count, pct} }
+//   { windowHit: {count, pct}, avgWidthMin: number, highConf: {count, pct}, total: number }
+//   (WR-02: `total` lets callers distinguish "0% because always missed" from
+//   "0% because zero scored days" and dash the latter.)
 //
 // Zero DOM, zero I/O — fully unit-testable with node:test.
 //
@@ -182,7 +184,7 @@ export function computeTifBoundsHistory(dayRecords, settings, activityLog) {
  * @param {object[]} history     output of computeTifBoundsHistory
  * @param {object[]} dayRecords  original day records (for actual event lookup)
  * @returns {{ wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay }}
- *   each with windowHit, avgWidthMin, highConf
+ *   each with windowHit, avgWidthMin, highConf, total
  */
 export function computeTifAccuracy(history, dayRecords) {
   // Build O(1) lookup map: date string → day record
@@ -209,13 +211,37 @@ export function computeTifAccuracy(history, dayRecords) {
       const actualMinutes = extractActualMinutes(actualSlot);
       if (actualMinutes === null) continue;
 
+      // WR-03: timeToMinutes() never returns null — it throws on a non-string
+      // input and returns NaN on a malformed 'HH:MM' string. Guard on type
+      // before calling it, then check NaN after; the previous `=== null`
+      // check was dead code within the currently-documented call path.
+      if (typeof bounds.algMin !== 'string' || typeof bounds.algMax !== 'string') continue;
       const algMinMin = timeToMinutes(bounds.algMin);
-      const algMaxMin = timeToMinutes(bounds.algMax);
-      if (algMinMin === null || algMaxMin === null) continue;
+      let algMaxMin = timeToMinutes(bounds.algMax);
+      if (Number.isNaN(algMinMin) || Number.isNaN(algMaxMin)) continue;
+
+      // CR-01 / KNOWN MIDNIGHT-CROSSING BEHAVIOR: forecast-tif.js computes
+      // algMin/algMax as unbounded raw minutes and only wraps them into an
+      // 'HH:MM' string via minutesToTime()'s `% 1440` when formatting
+      // (forecast-tif.js "result is NOT wrapped mod 1440" comment;
+      // forecast.js:92-99). A bedtime (or wake) window whose raw upper bound
+      // crosses midnight (e.g. algMinRaw=1410 → "23:30", algMaxRaw=1455 →
+      // wraps to "00:15") round-trips back through timeToMinutes() here as
+      // algMinMin=1410 > algMaxMin=15 — a structurally inverted range. Left
+      // as-is this makes `width` negative (corrupting avgWidthMin) and the
+      // hit-test structurally unsatisfiable (guaranteed miss). Un-wrap the
+      // window to a monotonic minute range (extend algMaxMin past 1440) and
+      // un-wrap actualMinutes the same way before comparing, so both operate
+      // in the same reference frame. Mirrors — but actively corrects, rather
+      // than merely documents — the "KNOWN LIMITATION" naive-minutes
+      // comparison accuracy.js carries for its own (less severe) case.
+      if (algMaxMin < algMinMin) algMaxMin += 24 * 60;
+      let actualForCompare = actualMinutes;
+      if (actualForCompare < algMinMin) actualForCompare += 24 * 60;
 
       const c = counters[type];
       c.total++;
-      const isHit = actualMinutes >= algMinMin && actualMinutes <= algMaxMin;
+      const isHit = actualForCompare >= algMinMin && actualForCompare <= algMaxMin;
       if (isHit) {
         c.windowHitCount++;
       }
@@ -254,6 +280,9 @@ export function computeTifAccuracy(history, dayRecords) {
       windowHit: { count: c.windowHitCount, pct: pct(c.windowHitCount) },
       avgWidthMin: t === 0 ? 0 : c.widthSum / t,
       highConf:  { count: c.highConfCount,  pct: pct(c.highConfCount)  },
+      // WR-02: expose total so callers (buildTifAccuracyGrid) can dash rows
+      // with zero scored days instead of rendering a misleading 0%/±0 min.
+      total: t,
     };
   }
 
