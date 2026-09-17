@@ -473,7 +473,84 @@ describe('computeTifAccuracy — D-05 bedtime nap-day/no-nap-day split', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. computeTifBoundsHistory — D-05 regression: entry shape unchanged
+// 8. computeTifAccuracy — CR-01 regression: midnight-crossing prediction window
+// ---------------------------------------------------------------------------
+
+describe('computeTifAccuracy — CR-01 midnight-crossing window un-wrap', () => {
+
+  it('actual bedtime before midnight, inside the wrapped window, is a hit (not a guaranteed miss)', () => {
+    // Window [23:30, 00:15] crosses midnight — algMinMin(1410) > algMaxMin(15)
+    // when naively converted back through timeToMinutes().
+    const history = [{
+      date:     '2025-01-08',
+      wake:     null, napStart: null, napEnd: null,
+      bedtime:  { algMin: '23:30', algMax: '00:15', central: '23:50', precisionScore: 85 },
+    }];
+    // Actual bedtime at 23:45 — inside the un-wrapped window [23:30, 24:15).
+    const dayRecords = [makeDayRecord('2025-01-08', '07:00', '23:45', null, null)];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.windowHit.count, 1, 'actual inside midnight-crossing window must be a hit');
+    assert.strictEqual(result.bedtime.avgWidthMin, 45, 'width must be the un-wrapped 45 minutes, not negative');
+  });
+
+  it('actual bedtime just after midnight, inside the wrapped window, is a hit', () => {
+    const history = [{
+      date:     '2025-01-09',
+      wake:     null, napStart: null, napEnd: null,
+      bedtime:  { algMin: '23:30', algMax: '00:15', central: '23:50', precisionScore: 85 },
+    }];
+    // Actual bedtime at 00:10 (just after midnight) — inside the wrapped window.
+    const dayRecords = [makeDayRecord('2025-01-09', '07:00', '00:10', null, null)];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.windowHit.count, 1, 'actual just after midnight inside window must be a hit');
+  });
+
+  it('actual bedtime clearly outside a midnight-crossing window remains a miss', () => {
+    const history = [{
+      date:     '2025-01-10',
+      wake:     null, napStart: null, napEnd: null,
+      bedtime:  { algMin: '23:30', algMax: '00:15', central: '23:50', precisionScore: 85 },
+    }];
+    // Actual bedtime at 12:00 (midday) — clearly outside the window even after un-wrapping.
+    const dayRecords = [makeDayRecord('2025-01-10', '07:00', '12:00', null, null)];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.windowHit.count, 0, 'actual far outside window remains a miss');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// 9. computeTifAccuracy — WR-02 regression: total field for zero-total dash
+// ---------------------------------------------------------------------------
+
+describe('computeTifAccuracy — WR-02 total field exposed per event type', () => {
+
+  it('result exposes total per event type, matching scored-day count (including zero)', () => {
+    const history = [
+      {
+        date:     '2025-01-08',
+        wake:     { algMin: '06:00', algMax: '08:00', central: '07:00', precisionScore: 85 },
+        napStart: null, napEnd: null, bedtime: null,
+      },
+      {
+        date:     '2025-01-09',
+        wake:     { algMin: '06:00', algMax: '08:00', central: '07:00', precisionScore: 85 },
+        napStart: null, napEnd: null, bedtime: null,
+      },
+    ];
+    const dayRecords = [
+      makeDayRecord('2025-01-08', '07:00', '22:00', null, null),
+      makeDayRecord('2025-01-09', '07:00', '22:00', null, null),
+    ];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.wake.total, 2, 'wake.total must reflect scored day count');
+    assert.strictEqual(result.napStart.total, 0, 'napStart.total is 0 when no bounds exist for any day');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// 10. computeTifBoundsHistory — D-05 regression: entry shape unchanged
 // ---------------------------------------------------------------------------
 
 describe('computeTifBoundsHistory — D-05 regression: bounds-history entry shape unchanged', () => {
