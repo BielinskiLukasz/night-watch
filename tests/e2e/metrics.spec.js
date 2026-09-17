@@ -51,12 +51,12 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     const table = page.locator('.metricsTable');
     await expect(table).toBeVisible();
 
-    // Check column headers exist: 19 base columns + 12 TIF inline columns = 31 total.
-    // TIF columns are hidden (hidden attribute) when TIF is not active but still in DOM.
+    // Check column headers exist: 19 base columns only. The 12 TIF inline columns
+    // that used to be appended here moved to the Accuracy screen (UI-11/D-09, Phase 23).
     // Phase 18 added S.Debt (MET-14) between Comb and Day Len → 19 base columns.
     const headerCells = page.locator('.metricsTable th');
     const count = await headerCells.count();
-    expect(count).toBe(31); // 19 base + 12 TIF inline columns (Phase 14 + Phase 18 layout)
+    expect(count).toBe(19); // 19 base columns (TIF columns moved to Accuracy screen per D-09)
 
     // Check that some expected headers are present, including the new S.Debt column (MET-14)
     const headerTexts = await page.locator('.metricsTable th').allTextContents();
@@ -64,6 +64,17 @@ test.describe('Metrics Screen (MET-01..MET-06)', () => {
     expect(headerTexts).toContain('Wake');
     expect(headerTexts).toContain('Sleep');
     expect(headerTexts).toContain('S.Debt(7d)');
+
+    // UI-11/D-09: none of the 12 former TIF column labels remain on the Metrics table.
+    const formerTifLabels = [
+      'W-min', 'W-max', 'W-conf',
+      'NS-min', 'NS-max', 'NS-conf',
+      'NE-min', 'NE-max', 'NE-conf',
+      'B-min', 'B-max', 'B-conf',
+    ];
+    for (const label of formerTifLabels) {
+      expect(headerTexts).not.toContain(label);
+    }
 
     // S.Debt cold-start: seed has only 1 day (fewer than 7 qualifying records),
     // so all S.Debt cells in per-day rows must render '—' (MET-14 cold-start guard).
@@ -420,8 +431,9 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test('MET-10/boundary: TIF placeholder cells hidden when TIF is off', async ({ page }) => {
-    // Seed 8 days with classic algorithm — TIF is off
+  test('UI-11: Metrics table has no TIF columns even when TIF algorithm is active', async ({ page }) => {
+    // Seed 8 days with TIF algorithm active — proves column removal holds in TIF mode too,
+    // not just Classic (D-09 full clean removal, not a hide-only toggle).
     const events = [];
     for (let i = 0; i < 8; i++) {
       const dayNum = String(i + 1).padStart(2, '0');
@@ -435,7 +447,8 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
       settings: {
         cutoverHour: 4, timeFormat: '24h', maxDelta: 30, minDays: 1, windowDays: 7,
         statBlend: 'median', autoOutlier: false, groupingMode: 'calendar',
-        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'classic',
+        rejectedDays: [], stages: [], activeStageId: null, forecastAlgorithm: 'tif',
+        tifRollingDays: 7, trimPct: 10, precisionTarget: 60, targetSleepMinutes: 600,
       },
       events,
       activityLog: {},
@@ -447,22 +460,21 @@ test.describe('Metrics Screen: Rolling Window Aggregates (MET-09, MET-10)', () =
     await page.locator('[data-tab="metrics"]').click();
     await page.waitForSelector('.metricsTable');
 
-    // Count hidden td elements in the first aggregate row of the first rolling tbody
-    // Expected: 12 hidden cells (TIF_COLUMNS.length = 12), hidden attribute present
-    const hiddenTifCellCount = await page.evaluate(() => {
-      const firstRollingTbody = document.querySelector('.metrics-rolling-tbody');
-      if (!firstRollingTbody) return -1;
-      const firstSummaryRow = firstRollingTbody.querySelector('.metrics-summary-row');
-      if (!firstSummaryRow) return -2;
-      const allTds = firstSummaryRow.querySelectorAll('td');
-      let hiddenCount = 0;
-      for (const td of allTds) {
-        if (td.hidden) hiddenCount++;
-      }
-      return hiddenCount;
-    });
+    // Same 19-column count and same 12 negative label assertions as MET-02/MET-03, but in TIF mode.
+    const headerCells = page.locator('.metricsTable th');
+    const count = await headerCells.count();
+    expect(count).toBe(19);
 
-    expect(hiddenTifCellCount).toBe(12);
+    const headerTexts = await page.locator('.metricsTable th').allTextContents();
+    const formerTifLabels = [
+      'W-min', 'W-max', 'W-conf',
+      'NS-min', 'NS-max', 'NS-conf',
+      'NE-min', 'NE-max', 'NE-conf',
+      'B-min', 'B-max', 'B-conf',
+    ];
+    for (const label of formerTifLabels) {
+      expect(headerTexts).not.toContain(label);
+    }
   });
 
   test('MET-10/boundary: all days rejected — rolling sections render em-dash values, no JS errors', async ({ page }) => {
