@@ -16,6 +16,7 @@
 //   D-10  — overall headline element above the grid, reading overallScore verbatim
 //   D-11  — scores render as plain numbers, no % suffix, no color thresholds
 //   D-07  — rows with approximatedCount > 0 show a marker + a single summary footnote
+//   D-05  — TIF table gains matching bedtimeNapDay/bedtimeNoNapDay rows
 //
 // Security invariants (T-07-06-01):
 //   - ALL cell content set via textContent — NEVER dynamic HTML injection
@@ -64,14 +65,16 @@ const ACCURACY_COLS = Object.freeze([
 const NAP_TYPES = Object.freeze(new Set(['napStart', 'napEnd']));
 
 /**
- * Row definitions for the TIF 4×3 accuracy grid (TIF-14, D-04).
- * One row per event type; key matches TifAccuracyResult property names.
+ * Row definitions for the TIF accuracy grid (TIF-14, D-04, D-05).
+ * 6 rows: wake, napStart, napEnd, bedtime (combined), bedtimeNapDay, bedtimeNoNapDay.
  */
 const TIF_ACCURACY_ROWS = Object.freeze([
-  { key: 'wake',     label: 'Wake'      },
-  { key: 'napStart', label: 'Nap Start' },
-  { key: 'napEnd',   label: 'Nap End'   },
-  { key: 'bedtime',  label: 'Bedtime'   },
+  { key: 'wake',            label: 'Wake'               },
+  { key: 'napStart',        label: 'Nap Start'          },
+  { key: 'napEnd',          label: 'Nap End'             },
+  { key: 'bedtime',         label: 'Bedtime'             },
+  { key: 'bedtimeNapDay',   label: 'Bedtime (nap day)'   },
+  { key: 'bedtimeNoNapDay', label: 'Bedtime (no nap)'    },
 ]);
 
 /**
@@ -241,10 +244,13 @@ function buildAccuracyGrid(gridEl, result, snap) {
 }
 
 /**
- * Build the TIF accuracy table element (D-04, TIF-14).
+ * Build the TIF accuracy table element (D-04, D-05, TIF-14).
  *
  * Returns a <table> with one header row (Event + 3 stat columns) and
- * four data rows (one per TIF_ACCURACY_ROWS entry).
+ * six data rows (one per TIF_ACCURACY_ROWS entry — the original 4 event
+ * types plus the D-05 bedtimeNapDay/bedtimeNoNapDay split). The bedtime
+ * split rows render through this exact same generic stats[row.key] lookup
+ * loop — no additional branching required.
  *
  * Cell formatting (D-11):
  *   windowHit / highConf : extracted as .pct → 'N%'   (T-07-06-01: textContent only)
@@ -252,7 +258,7 @@ function buildAccuracyGrid(gridEl, result, snap) {
  *   null / missing        : '—'
  *
  * @param {object} stats  TifAccuracyResult from computeTifAccuracy:
- *   { wake, napStart, napEnd, bedtime } each with
+ *   { wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay } each with
  *   { windowHit: {count,pct}, avgWidthMin: number, highConf: {count,pct} }
  * @param {object} snap   settings snapshot (accepted for future extension — not used now)
  * @returns {HTMLTableElement}
