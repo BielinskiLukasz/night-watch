@@ -1503,6 +1503,28 @@ body.has-update-banner {
   justify-content: center; /* 44px tap target */
 }
 
+/* ── Autosave first-launch banner (D-10/D-11, Plan 24-04) ───────────────── */
+
+.autosave-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.autosave-banner[hidden] { display: none !important; }
+
+.autosave-banner button {
+  min-height: 44px; /* tap target — mirrors #update-banner .reload-btn sizing */
+  cursor: pointer;
+}
+
 /* ── Tab-switch fade (D8-11) ─────────────────────────────────────────────── */
 
 /* Transition on all screen sections; is-entering class starts opacity at 0.

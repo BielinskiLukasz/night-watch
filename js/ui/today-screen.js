@@ -819,9 +819,10 @@ function renderStageSelector(container, stages, activeStageId, settingsStore) {
  *     subscribe: (fn: (snap: object) => void) => () => void,
  *   },
  *   clock?: { now: () => Date },
+ *   autosave?: { isSupported: boolean, pick: () => Promise<void> },
  * }} deps
  */
-export function mountTodayScreen({ root, eventLog, settings, clock }) {
+export function mountTodayScreen({ root, eventLog, settings, clock, autosave }) {
   // Per-mount debounce ledger. NOTE: this is the ONE place outside the clock
   // adapter that reads a wall-clock-like value, and it deliberately uses
   // performance.now() (monotonic, non-domain) so the grep gate forbidding
@@ -884,10 +885,52 @@ export function mountTodayScreen({ root, eventLog, settings, clock }) {
   // Append addEventBtn to quickLog as its last child.
   quickLog.appendChild(addEventBtn);
 
+  // Plan 24-04 — First-launch autosave discovery banner (D-10/D-11).
+  // Rendered only when the File System Access API is supported AND the user
+  // has not already dismissed it. Not a modal — the app remains fully usable
+  // underneath. Dismissal (either button) persists via a plain browser-storage
+  // flag; only "Set up autosave" also triggers the directory picker.
+  let bannerEl = null;
+  if (autosave && autosave.isSupported && !localStorage.getItem('autosaveBannerDismissed')) { // gsd:allow-storage-local
+    const setupBtn = el('button', {
+      type: 'button',
+      className: 'autosave-banner-setup',
+      textContent: 'Set up autosave',
+    });
+    const dismissBtn = el('button', {
+      type: 'button',
+      className: 'autosave-banner-dismiss',
+      textContent: 'Dismiss',
+    });
+    bannerEl = el(
+      'div',
+      { className: 'autosave-banner' },
+      [
+        el('p', {
+          textContent: 'Back up your sleep data automatically — set up autosave to a folder on your device.',
+        }),
+        setupBtn,
+        dismissBtn,
+      ],
+    );
+    setupBtn.addEventListener('click', async () => {
+      await autosave.pick();
+      localStorage.setItem('autosaveBannerDismissed', '1'); // gsd:allow-storage-local
+      bannerEl.hidden = true;
+    });
+    dismissBtn.addEventListener('click', () => {
+      localStorage.setItem('autosaveBannerDismissed', '1'); // gsd:allow-storage-local
+      bannerEl.hidden = true;
+    });
+  }
+
   // D9-16 layout: quickLog (with addEventBtn as last child) → stageSelector → nextEventCard → coldStartMsg → forecastCards → toggle → dayList
   // Plan 260803-otj: addEventBtn moved into quickLog row to line up with other quick-log buttons.
   // Plan 06-03: stageSelectorContainer inserted between quickLog and nextEventCard (D6-09).
-  root.replaceChildren(quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList);
+  // Plan 24-04: bannerEl prepended as the first child when it was built (D-10).
+  const screenChildren = [quickLog, stageSelectorContainer, nextEventCard, coldStartMsg, forecastCards, toggle, dayList];
+  if (bannerEl) screenChildren.unshift(bannerEl);
+  root.replaceChildren(...screenChildren);
 
   // Grouping toggle click — commit-on-click via settings.update (D2-16).
   // No-op when clicking the already-active button to avoid spurious
