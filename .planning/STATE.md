@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 23 — Metrics→Accuracy Column Migration
+**Current focus:** Phase 24 — Autosave
 
 ## Current Position
 
@@ -222,6 +222,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Phase 22 (Accuracy Scoring) complete and verified — 3/3 plans, code review found and fixed 1 critical (TIF midnight-crossing windows) + 2 warnings, 880 unit/integration + 134 E2E tests passing. Next: `/gsd-discuss-phase 23` or `/gsd-plan-phase 23` for Phase 23 (Metrics→Accuracy Column Migration).
+- Phase 23 (Metrics→Accuracy Column Migration) complete and verified — 2/2 plans, UI-11 fully satisfied, code review found 0 critical / 2 warnings / 3 info (no blockers), 880 unit/integration + 138 E2E tests passing. Next: `/gsd-discuss-phase 24` or `/gsd-plan-phase 24` for Phase 24 (Autosave).
+- Follow-up (non-blocking): new `.tifPerDayTable` on the Accuracy screen has no horizontal-scroll wrapper for narrow/mobile viewports, and `.tifAccuracyTable` has no CSS styling of its own (23-REVIEW.md WR-01/WR-02).
+- `workflow.security_enforcement` is on but no `23-SECURITY.md` exists yet — run `/gsd-secure-phase 23` before shipping if a security gate is desired for this phase.
+- `workflow.ui_review` is on but no `23-UI-REVIEW.md` exists yet — run `/gsd-ui-review 23` if a UI audit is desired, given the new Accuracy screen table.
 - Consider adding a regression unit test for `subWindowBedtime`'s midnight-wrap edge case (fixed during Phase 21 code review, WR-03 — no dedicated test yet).
 - A flaky `tests/e2e/metrics.spec.js` timeout cluster (10 tests waiting on `.metricsTable`) appeared during Phase 22's wave 1/2 post-merge gates but did not reproduce during wave 3's full-suite run. Confirmed unrelated to Phase 22's files — worth a look if it recurs.

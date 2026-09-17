@@ -116,6 +116,10 @@ compared to reality.
 - ✓ Bedtime nap-day/no-nap-day split applied consistently across `accuracy.js` and `accuracy-tif.js`, plus band-approximated score marker — Phase 22 (ACC-04)
 - ✓ `accuracy-screen.js` rewritten to render the new score-based shapes (single avgScore column, overall headline, approximated-score footnote, matching TIF table split) — Phase 22 (ACC-04)
 
+**v2.0 — Prediction Engine & Autosave (Phase 23, 2026-09-17)**
+- ✓ Per-day TIF prediction-window table (12 per-event min/max/confidence columns) added to the Accuracy screen, sourced from the full stage-filtered `days` array so warm-up days render dashed rather than being silently dropped — Phase 23 (UI-11)
+- ✓ Same 12 TIF window columns and their rendering/data-prep pipeline fully removed from the Metrics screen (31→19 columns); `isTif`/TIF aggregate rows/`tifForecast` override left untouched — Phase 23 (UI-11)
+
 ### Out of Scope
 
 - **Multi-profile switching** — single subject in v1; multi-subject would change persistence shape. Defer to v2.
@@ -186,6 +190,9 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Phase 21 D-08/D-09: dual hero cards + independent `predictions.bedtimeAfterWake` field | When nap status is genuinely undetermined, showing two equally-prominent hero cards is more honest than picking one; `bedtimeAfterWake` is the raw no-nap-day series, kept separate from the blended `predictions.bedtime` | ✓ Shipped Phase 21 |
 | Phase 22: old binary within-max-delta/within-half-delta/inside-band hit-miss counters fully removed, replaced by `eventAccuracyScore()`'s linear-decay per-event score averaged into a daily/overall mean | A continuous score is a more granular accuracy signal than three overlapping binary buckets, and matches the tolerance-window mental model already used for prediction bands | ✓ Shipped Phase 22 |
 | Phase 22 code review: TIF bedtime windows that cross midnight must be un-wrapped to a monotonic minute range before hit/width computation | `minutesToTime()`'s mod-1440 wrap made a crossing window's algMin > algMax, silently corrupting `avgWidthMin` and guaranteeing a miss for late bedtimes — a realistic case for this app's users, not a synthetic edge case | ✓ Fixed Phase 22 |
+| Phase 23: new Accuracy per-day TIF table sources rows from the full `days` array, not `tifBoundsHistory` | `tifBoundsHistory` only covers `tifRollingDays` warm-up-past days; keying off it would silently drop the earliest days instead of showing them dashed | ✓ Shipped Phase 23 |
+| Phase 23: `isTif`, TIF aggregate rows, and the `tifForecast` override block deliberately kept in metrics-screen.js after removing the 12 per-event TIF columns | Metrics screen still needs TIF-mode branching for its retained aggregate rows; only the per-event min/max/confidence columns moved to Accuracy | ✓ Shipped Phase 23 |
+| Phase 23 code review: new `.tifPerDayTable` on the Accuracy screen has no scroll wrapper (unlike `.metricsTableScroll`) | Flagged as a mobile horizontal-overflow risk, not fixed in-phase — follow-up item, not a blocker | ⚠ Open follow-up |
 
 ## Current Milestone: v2.0 Prediction Engine & Autosave
 
@@ -198,14 +205,16 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - ~~Nap probability redesign: data-driven, time-independent (B-047)~~ ✓ Phase 20
 - ~~Prediction normalization: show only next reachable event (B-038)~~ ✓ Phase 21
 - ~~Linear-decay per-event accuracy scoring with tolerance window (B-049)~~ ✓ Phase 22
-- Move TIF window columns from Metrics → Accuracy screen (B-041)
+- ~~Move TIF window columns from Metrics → Accuracy screen (B-041)~~ ✓ Phase 23
 - Autosave export to user-chosen directory via File System Access API (B-051)
 
-## Current State (v2.0-partial — Phase 22 complete 2026-09-17)
+## Current State (v2.0-partial — Phase 23 complete 2026-09-17)
 
-Phases 19-22 complete. 880 unit + integration tests, 134 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22).
+Phases 19-23 complete. 880 unit + integration tests, 138 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22); the 12 per-event TIF window columns migrated from Metrics to a new per-day table on the Accuracy screen (Phase 23).
 
-**Next:** Phase 23 — Metrics→Accuracy Column Migration.
+**Next:** Phase 24 — Autosave.
+
+**Known open follow-up:** Phase 23 code review flagged the new Accuracy per-day TIF table as missing a horizontal-scroll wrapper on narrow/mobile viewports (`.tifAccuracyTable` also lacks styling) — not a blocker, but worth a small follow-up pass.
 
 ## Previous State (v1.4 — shipped 2026-09-08)
 
@@ -277,4 +286,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-17 after Phase 22 (Accuracy Scoring)*
+*Last updated: 2026-09-17 after Phase 23 (Metrics→Accuracy Column Migration)*
