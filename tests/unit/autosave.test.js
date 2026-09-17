@@ -18,7 +18,12 @@ import {
   restoreHandle,
   saveToDisk,
   removeSaveDirectory,
+  deriveAutosaveFilename,
+  createDebouncedAutosave,
+  isFileSystemAccessSupported,
+  AUTOSAVE_DEBOUNCE_MS,
 } from '../../js/lib/autosave.js';
+import { createClockFixed } from '../../js/adapters/clock-fixed.js';
 
 // -------------------- fakes --------------------
 
@@ -260,5 +265,90 @@ describe('removeSaveDirectory', () => {
     const store = makeFakeStore(null);
 
     await assert.doesNotReject(() => removeSaveDirectory({ store }));
+  });
+});
+
+// -------------------- deriveAutosaveFilename (D-01/D-02) --------------------
+
+describe('deriveAutosaveFilename', () => {
+  test('returns the literal template nightwatch-YYYY-MM-DD.json matching downloadJSON (D-01/D-02)', () => {
+    const clock = createClockFixed(new Date(2026, 5, 27, 7, 0)); // 2026-06-27T07:00
+
+    const result = deriveAutosaveFilename(clock);
+
+    assert.equal(result, 'nightwatch-2026-06-27.json');
+  });
+});
+
+// -------------------- createDebouncedAutosave (PLAT-02) --------------------
+
+describe('createDebouncedAutosave', () => {
+  test('calling trigger 3 times in immediate succession then advancing delayMs invokes fn exactly once', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+
+    let callCount = 0;
+    const fn = () => {
+      callCount += 1;
+    };
+    const trigger = createDebouncedAutosave(fn, 500);
+
+    trigger();
+    trigger();
+    trigger();
+    assert.equal(callCount, 0, 'fn not called yet — still inside debounce window');
+
+    t.mock.timers.tick(500);
+    assert.equal(callCount, 1, 'fn called exactly once after the delay following the LAST call');
+  });
+
+  test('trigger.cancel() before the delay elapses suppresses the pending invocation', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+
+    let callCount = 0;
+    const fn = () => {
+      callCount += 1;
+    };
+    const trigger = createDebouncedAutosave(fn, 500);
+
+    trigger();
+    trigger.cancel();
+    t.mock.timers.tick(500);
+
+    assert.equal(callCount, 0, 'fn never called after cancel()');
+  });
+
+  test('trigger forwards its arguments to fn', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+
+    let receivedArgs = null;
+    const fn = (...args) => {
+      receivedArgs = args;
+    };
+    const trigger = createDebouncedAutosave(fn, 500);
+
+    trigger('a', 'b');
+    t.mock.timers.tick(500);
+
+    assert.deepEqual(receivedArgs, ['a', 'b']);
+  });
+
+  test('AUTOSAVE_DEBOUNCE_MS is exported and used as the default delay (500ms, PLAT-02)', () => {
+    assert.equal(AUTOSAVE_DEBOUNCE_MS, 500);
+  });
+});
+
+// -------------------- isFileSystemAccessSupported (PLAT-04) --------------------
+
+describe('isFileSystemAccessSupported', () => {
+  test('returns true when scope.showDirectoryPicker is a function', () => {
+    assert.equal(isFileSystemAccessSupported({ showDirectoryPicker: () => {} }), true);
+  });
+
+  test('returns false when scope has no showDirectoryPicker', () => {
+    assert.equal(isFileSystemAccessSupported({}), false);
+  });
+
+  test('does not throw when called with no argument (defaults to globalThis)', () => {
+    assert.doesNotThrow(() => isFileSystemAccessSupported());
   });
 });
