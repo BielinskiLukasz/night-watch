@@ -90,7 +90,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   **Plans:** 4 plans
   Plans:
   - [x] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
-  - [ ] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
+  - [x] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
   - [ ] 24-03-PLAN.md — Settings modal Backup fieldset (index.html markup + rendering/wiring + E2E)
   - [ ] 24-04-PLAN.md — First-launch banner on Today screen (today-screen.js + CSS + E2E)
 
@@ -223,12 +223,12 @@ Plans:
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
+- [x] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
