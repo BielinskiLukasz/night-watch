@@ -223,7 +223,7 @@ Plans:
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
 
-**Plans:** 4/4 plans executed
+**Plans:** 5 plans (4 executed + 1 gap-closure)
 
 Plans:
 **Wave 1**
@@ -238,6 +238,10 @@ Plans:
 
 - [x] 24-03-PLAN.md — Settings modal Backup fieldset (index.html markup + rendering/wiring + E2E)
 - [x] 24-04-PLAN.md — First-launch banner on Today screen (today-screen.js + CSS + E2E)
+
+**Gap closure** *(from 24-VERIFICATION.md gaps_found)*
+
+- [ ] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
 
 ### Phase 25: Algorithm C & Settings Modal
 
