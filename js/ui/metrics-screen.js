@@ -21,7 +21,6 @@ import {
 } from '../lib/metrics.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { formatTime, formatDuration, formatSignedDuration } from '../lib/time.js';
-import { computeTifBoundsHistory } from '../lib/accuracy-tif.js';
 import { trimmedMinMax, tifForecast } from '../lib/forecast-tif.js';
 import { timeToMinutes, minutesToTime } from '../lib/forecast.js';
 
@@ -62,28 +61,6 @@ const COLUMNS = Object.freeze([
   { key: 'amPmSplit',               label: 'AM/PM',     isTime: false, isRatio: true  }, // NEW MET-10
   { key: 'activityAfterSleepFactor', label: 'AAS',      isTime: false, isRatio: true  },
   // SAA (sleepAfterActivityFactor) removed from COLUMNS per D-14/MET-07
-]);
-
-/**
- * TIF inline column definitions (MET-08, D-11).
- * 12 columns for 4 event types × 3 fields: algMin (time), algMax (time), precisionScore (ratio).
- * All entries carry tif:true; columns are hidden when TIF is not the active algorithm.
- * Labels abbreviated per Claude's Discretion: W=Wake, NS=Nap Start, NE=Nap End, B=Bedtime.
- * Appended at the far right of the metrics table header (after COLUMNS).
- */
-const TIF_COLUMNS = Object.freeze([
-  { key: 'wake_tif_min',      label: 'W-min',   isTime: true,  isRatio: false, tif: true },
-  { key: 'wake_tif_max',      label: 'W-max',   isTime: true,  isRatio: false, tif: true },
-  { key: 'wake_tif_conf',     label: 'W-conf',  isTime: false, isRatio: true,  tif: true },
-  { key: 'napStart_tif_min',  label: 'NS-min',  isTime: true,  isRatio: false, tif: true },
-  { key: 'napStart_tif_max',  label: 'NS-max',  isTime: true,  isRatio: false, tif: true },
-  { key: 'napStart_tif_conf', label: 'NS-conf', isTime: false, isRatio: true,  tif: true },
-  { key: 'napEnd_tif_min',    label: 'NE-min',  isTime: true,  isRatio: false, tif: true },
-  { key: 'napEnd_tif_max',    label: 'NE-max',  isTime: true,  isRatio: false, tif: true },
-  { key: 'napEnd_tif_conf',   label: 'NE-conf', isTime: false, isRatio: true,  tif: true },
-  { key: 'bedtime_tif_min',   label: 'B-min',   isTime: true,  isRatio: false, tif: true },
-  { key: 'bedtime_tif_max',   label: 'B-max',   isTime: true,  isRatio: false, tif: true },
-  { key: 'bedtime_tif_conf',  label: 'B-conf',  isTime: false, isRatio: true,  tif: true },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -196,11 +173,9 @@ function buildCell(value, colDef, snap, minMaxDate = null) {
  *
  * @param {object}  dayMetrics    the metrics row from aggregateMetrics
  * @param {object}  snap          settings snapshot
- * @param {Map}     tifBoundsMap  Map<date, TifBoundsEntry> from computeTifBoundsHistory
- * @param {boolean} isTif         true when TIF is the active forecast algorithm
  * @returns {HTMLTableRowElement}
  */
-function buildDayRow(dayMetrics, snap, tifBoundsMap, isTif) {
+function buildDayRow(dayMetrics, snap) {
   const tr = document.createElement('tr');
 
   if (dayMetrics.rejected) {
@@ -219,29 +194,6 @@ function buildDayRow(dayMetrics, snap, tifBoundsMap, isTif) {
     const col = COLUMNS[i];
     const value = dayMetrics[col.key];
     const td = buildCell(value, col, snap);
-    tr.appendChild(td);
-  }
-
-  // TIF inline cells (MET-08, D-11) — T-11-05: textContent only
-  const tifEntry = tifBoundsMap ? tifBoundsMap.get(dayMetrics.date) : null;
-  for (const col of TIF_COLUMNS) {
-    const td = document.createElement('td');
-    td.hidden = !isTif;
-    let cellText = '—';
-    if (tifEntry) {
-      // col.key format: '{eventType}_tif_{field}' e.g. 'wake_tif_min', 'napStart_tif_conf'
-      // split('_tif_') → [eventType, field]; works for all keys including 'napStart_tif_min'
-      const parts = col.key.split('_tif_');
-      const eventType = parts[0]; // 'wake', 'napStart', 'napEnd', 'bedtime'
-      const field     = parts[1]; // 'min', 'max', 'conf'
-      const bounds = tifEntry[eventType];
-      if (bounds) {
-        if (field === 'min')       cellText = formatTime(bounds.algMin, snap.timeFormat);
-        else if (field === 'max')  cellText = formatTime(bounds.algMax, snap.timeFormat);
-        else if (field === 'conf') cellText = bounds.precisionScore != null ? bounds.precisionScore.toFixed(2) : '—';
-      }
-    }
-    td.textContent = cellText; // T-11-05: textContent only
     tr.appendChild(td);
   }
 
@@ -343,7 +295,7 @@ function computeTifTrimmedStats(rows, snap) {
  * Build a TIF aggregate row (min-TIF, median-TIF, or max-TIF).
  *
  * Shows trimmed statistics for each base column computed by computeTifTrimmedStats.
- * All TIF inline columns render '—'. The row is hidden by the caller when TIF is off.
+ * The row is hidden by the caller when TIF is off.
  *
  * T-11-05: all cell content via textContent.
  *
@@ -371,13 +323,6 @@ function buildTifAggregateRow(label, tifStats, snap) {
     tr.appendChild(td);
   }
 
-  // TIF inline columns — render '—' in aggregate rows (individual bounds not repeated here)
-  for (let j = 0; j < TIF_COLUMNS.length; j++) {
-    const td = document.createElement('td');
-    td.textContent = '—';
-    tr.appendChild(td);
-  }
-
   return tr;
 }
 
@@ -391,7 +336,7 @@ function buildTifAggregateRow(label, tifStats, snap) {
  * T-11-05: textContent only — label is always a hardcoded static string.
  *
  * @param {string} label    Section label ('7-day rolling', '14-day rolling', 'All-time')
- * @param {number} colCount Total column count (COLUMNS.length + TIF_COLUMNS.length = 30)
+ * @param {number} colCount Total column count (= COLUMNS.length = 19)
  * @returns {HTMLTableRowElement}
  */
 function buildSectionHeaderRow(label, colCount) {
@@ -413,8 +358,6 @@ function buildSectionHeaderRow(label, colCount) {
  *
  * Structure: section-header row → Min row → Average row → Max row.
  * Min/Avg/Max rows always rendered even when fewer than nDays are available (D-10).
- * TIF placeholder cells (12) are appended to each aggregate row and hidden when
- * TIF is not active (D-05).
  *
  * T-11-05: all cell content via textContent (delegated to buildAggregateRow / buildCell).
  *
@@ -422,10 +365,9 @@ function buildSectionHeaderRow(label, colCount) {
  * @param {string}   label            Section label ('7-day rolling' or '14-day rolling')
  * @param {object[]} nonRejectedDays  Stage-filtered, rejection-filtered, oldest-first days
  * @param {object}   snap             Settings snapshot
- * @param {boolean}  isTif            True when TIF algorithm is active
  * @returns {HTMLTableSectionElement}
  */
-function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
+function buildRollingSection(nDays, label, nonRejectedDays, snap) {
   // Step 1: available count
   const available = nonRejectedDays.length;
 
@@ -473,24 +415,12 @@ function buildRollingSection(nDays, label, nonRejectedDays, snap, isTif) {
   tbody.classList.add('metrics-summary-tbody', 'metrics-rolling-tbody');
 
   // Step 6: section-header row spanning all columns
-  tbody.appendChild(buildSectionHeaderRow(headerLabel, COLUMNS.length + TIF_COLUMNS.length));
+  tbody.appendChild(buildSectionHeaderRow(headerLabel, COLUMNS.length));
 
   // Step 7: build Min / Average / Max aggregate rows (always rendered, D-10)
   const minRow = buildAggregateRow('Min',     result.min, snap);
   const avgRow = buildAggregateRow('Average', result.avg, snap);
   const maxRow = buildAggregateRow('Max',     result.max, snap);
-
-  // Step 8: append TIF placeholder cells to each row (D-05)
-  // Each rolling aggregate row ends with TIF_COLUMNS.length (= 12) em-dash cells,
-  // hidden when TIF is not active. This prevents column-count mismatch.
-  for (const row of [minRow, avgRow, maxRow]) {
-    for (let j = 0; j < TIF_COLUMNS.length; j++) {
-      const td = document.createElement('td');
-      td.textContent = '—';
-      td.hidden = !isTif;
-      row.appendChild(td);
-    }
-  }
 
   // Step 9: append rows to tbody
   tbody.appendChild(minRow);
@@ -698,11 +628,8 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
       max.sleepDebt = null;
     }
 
-    // TIF inline columns — compute retroactive bounds map when TIF is active (MET-08, D-11)
     const isTif = snap.forecastAlgorithm === 'tif';
     const activityLog = isTif ? eventLog.getActivityLog() : {};
-    const tifBoundsArray = isTif ? computeTifBoundsHistory(days, snap, activityLog) : [];
-    const tifBoundsMap = new Map(tifBoundsArray.map(e => [e.date, e]));
 
     // TIF aggregate rows: trimmed stats per column over the rolling window (MET-11)
     const tifTrimmedStats = isTif ? computeTifTrimmedStats(rows, snap) : null;
@@ -762,43 +689,26 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
       th.textContent = col.label;
       headerRow.appendChild(th);
     }
-    // TIF inline column headers (MET-08, D-11) — hidden when TIF is off
-    for (const col of TIF_COLUMNS) {
-      const th = document.createElement('th');
-      th.textContent = col.label; // static string — T-11-05 safe
-      th.hidden = !isTif;
-      headerRow.appendChild(th);
-    }
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
     // 7-day rolling aggregate tbody (D-06: appears first above all-time)
-    const sevenDayTbody = buildRollingSection(7, '7-day rolling', nonRejectedDays, snap, isTif);
+    const sevenDayTbody = buildRollingSection(7, '7-day rolling', nonRejectedDays, snap);
 
     // 14-day rolling aggregate tbody (D-06: inserted between 7-day and all-time)
-    const fourteenDayTbody = buildRollingSection(14, '14-day rolling', nonRejectedDays, snap, isTif);
+    const fourteenDayTbody = buildRollingSection(14, '14-day rolling', nonRejectedDays, snap);
 
     // All-time summary tbody (Avg, Min, Max + TIF rows)
     const summaryTbody = document.createElement('tbody');
     summaryTbody.classList.add('metrics-summary-tbody');
 
     // Section-header row for All-time section (D-02, D-03)
-    summaryTbody.appendChild(buildSectionHeaderRow('All-time', COLUMNS.length + TIF_COLUMNS.length));
+    summaryTbody.appendChild(buildSectionHeaderRow('All-time', COLUMNS.length));
 
     // Build aggregate rows
     const avgRow = buildAggregateRow('Average', avg, snap);
     const minRow = buildAggregateRow('Min', min, snap);
     const maxRow = buildAggregateRow('Max', max, snap);
-
-    // Append TIF placeholder cells to all-time aggregate rows (D-05, mirrors buildRollingSection)
-    for (const row of [minRow, avgRow, maxRow]) {
-      for (let j = 0; j < TIF_COLUMNS.length; j++) {
-        const td = document.createElement('td');
-        td.textContent = '—';
-        td.hidden = !isTif;
-        row.appendChild(td);
-      }
-    }
 
     summaryTbody.appendChild(minRow);
     summaryTbody.appendChild(avgRow);
@@ -824,7 +734,7 @@ export function mountMetricsScreen({ root, eventLog, settings }) {
     // Per-day rows tbody (most-recent-first, D11-03); rows is oldest-first, so iterate in reverse.
     const daysTbody = document.createElement('tbody');
     for (let i = rows.length - 1; i >= 0; i--) {
-      const dayRow = buildDayRow(rows[i], snap, tifBoundsMap, isTif);
+      const dayRow = buildDayRow(rows[i], snap);
       daysTbody.appendChild(dayRow);
     }
     table.appendChild(daysTbody);
