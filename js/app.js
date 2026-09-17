@@ -154,14 +154,52 @@ function applyTabVisibility() {
   // delegated click listener in mountBottomNav.
 }
 
+// Phase 24 Plan 02 wiring: shared export callback + autosaveActions.
+// historyOnExport is the SAME function reference used by both the History
+// screen's "Export JSON" button and the Settings Backup fieldset's fallback
+// Export button (D-03) — a single shared callback, not two independently
+// constructed ones with identical-looking bodies.
+const historyOnExport = () => downloadJSON(storage, clock);
+
+// autosaveActions is the ONLY contract Plan 24-03's settings-modal.js and
+// Plan 24-04's today-screen.js consume — neither imports js/lib/autosave.js
+// directly, matching the composition-root discipline already used for
+// eventLog/storage/clock.
+const autosaveActions = {
+  getState: () => ({ ...autosaveState }),
+  pick: async () => {
+    try {
+      const handle = await pickSaveDirectory();
+      autosaveState.handle = handle;
+      autosaveState.status = 'granted';
+      autosaveState.folderName = handle.name;
+      autosaveState.error = null;
+    } catch (e) {
+      // D-06: user cancelling the native picker (AbortError) is a silent
+      // no-op — state is left unchanged. Any other rejection surfaces.
+      if (e && e.name === 'AbortError') return;
+      autosaveState.error = (e && e.message) || 'Could not choose a folder';
+    }
+  },
+  remove: async () => {
+    await removeSaveDirectory();
+    autosaveState.handle = null;
+    autosaveState.status = 'unset';
+    autosaveState.folderName = null;
+  },
+  onExport: historyOnExport,
+};
+
 // Plan 02-04 wiring: header reads settings.subjectName for h1 + document.title
 // and exposes the gear → openSettings({settings}) entrypoint.
 // Plan 05-04: onSettings callback injects eventLog, storage, id for CSV import.
 // Plan 07-04: onTabChange removed — tab navigation moved to bottom nav (D7-01).
+// Plan 24-02: onSettings callback also injects autosaveActions ({getState,
+// pick, remove, onExport}) for the Settings modal's Backup fieldset.
 mountHeader({
   root: headerEl,
   settings,
-  onSettings: () => openSettings({ settings, eventLog, storage, id: newEventId }),
+  onSettings: () => openSettings({ settings, eventLog, storage, id: newEventId, autosave: autosaveActions }),
 });
 
 // Plan 03-04 wiring: mountTodayScreen now includes the full forecast section
@@ -169,18 +207,29 @@ mountHeader({
 // updates). The forecast function and selectNextEvent are imported internally
 // by today-screen.js — D3-13 (derived state), D3-12 (reactive on data change).
 // The composition root only provides eventLog + settings (the two data sources).
-mountTodayScreen({ root: todayScreenEl, eventLog, settings, clock });
+// Plan 24-02: today-screen.js receives only the minimal autosave slice it
+// needs (isSupported, pick) — never getState/remove/onExport, which are
+// Settings-only concerns.
+mountTodayScreen({
+  root: todayScreenEl,
+  eventLog,
+  settings,
+  clock,
+  autosave: { isSupported: autosaveState.supported, pick: autosaveActions.pick },
+});
 
 // Plan 04-02 wiring: History screen — read-only day-column table (Wave 2).
 // Plan 05-03 wiring: onExport callback injects downloadJSON so the Export JSON
 // button on the History toolbar can trigger a download without importing
 // storage/clock into history-screen.js directly (composition-root pattern).
+// Plan 24-02: reuses the shared historyOnExport reference (D-03) rather than
+// a second, separately-constructed arrow function.
 const historyScreen = historyTableRootEl
   ? mountHistoryScreen({
       root: historyTableRootEl,
       eventLog,
       settings,
-      onExport: () => downloadJSON(storage, clock),
+      onExport: historyOnExport,
     })
   : null;
 
