@@ -16,7 +16,17 @@ findings:
   warning: 3
   info: 3
   total: 7
-status: issues_found
+status: partially_fixed
+fixed_at: 2026-09-17T00:00:00Z
+fixed:
+  - CR-01
+  - WR-01
+  - WR-02
+  - WR-03
+not_addressed:
+  - IN-01
+  - IN-02
+  - IN-03
 ---
 
 # Phase 22: Code Review Report
@@ -24,7 +34,7 @@ status: issues_found
 **Reviewed:** 2026-09-17T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 7
-**Status:** issues_found
+**Status:** partially_fixed (CR-01, WR-01, WR-02, WR-03 fixed; IN-01/02/03 not addressed — out of scope for this fix pass)
 
 ## Summary
 
@@ -115,6 +125,18 @@ At minimum, document the limitation as explicitly as `accuracy.js` does, and
 guard against negative width being summed (e.g. skip or `Math.abs` with a
 comment) so a single wrapped day cannot silently poison the aggregate stat.
 
+**Outcome: FIXED.** `computeTifAccuracy` now un-wraps `algMax` past 1440 when
+it is smaller than `algMin` (midnight-crossing window) and un-wraps
+`actualMinutes` relative to the window before both the hit-test and the
+width sum, per the suggested fix. A "KNOWN MIDNIGHT-CROSSING BEHAVIOR"
+comment documents the wrap in `js/lib/accuracy-tif.js`, mirroring
+`accuracy.js`'s existing "KNOWN LIMITATION" style. Combined with WR-03's fix
+in the same code region (dead-code null guard replaced with a type + NaN
+guard) since both touched the same lines.
+Tests: `tests/unit/accuracy-tif.test.js` — "CR-01 midnight-crossing window
+un-wrap" (3 new cases: before-midnight hit, after-midnight hit, clear miss).
+Commits: `86b5743` (RED — failing tests), `b161e72` (GREEN — fix).
+
 ## Warnings
 
 ### WR-01: Accuracy screen never applies the user's rejected-days setting
@@ -149,6 +171,12 @@ Consequences for this phase's own engine:
 const allDays = eventLog.daysBySubjectiveNight(snap.cutoverHour, undefined, snap);
 ```
 
+**Outcome: FIXED.** Applied exactly the suggested fix — `snap` is now passed
+as the third argument, matching `metrics-screen.js:645`. No new automated
+test was added (glue-code config passthrough, not new business logic); the
+existing e2e suite for the accuracy screen was re-run and still passes.
+Commit: `b76758d`.
+
 ### WR-02: TIF accuracy grid shows "0%"/"±0 min" instead of "—" for event types with zero scored days
 
 **File:** `js/ui/accuracy-screen.js:300-325` (`buildTifAccuracyGrid`)
@@ -180,6 +208,19 @@ does, e.g. have `computeTifAccuracy` expose `total` on each type's result (or ha
 `buildTifAccuracyGrid` accept per-row total counts) and dash the row when
 `total === 0`, mirroring `buildAccuracyGrid`'s `rowResult.total === 0` check.
 
+**Outcome: FIXED.** `computeTifAccuracy`'s per-type result now includes
+`total` (the counter it already tracked internally). `buildTifAccuracyGrid`
+dashes the entire row when `eventStats.total === 0`, mirroring
+`buildAccuracyGrid`'s existing check. Checked `tests/unit/accuracy-tif.test.js`
+for "exactly N keys" style assertions on the `computeTifAccuracy` result
+object — none exist (only `computeTifBoundsHistory`'s entry shape has such an
+assertion, a different function), so no existing assertions needed updating.
+Tests: new unit test asserting `result[type].total`, and a new e2e test
+asserting the "Bedtime (no nap)" row dashes on the baseline fixture (which
+has zero no-nap days) instead of showing a misleading "0%"/"±0 min".
+Commits: `86b5743` + `ba2ff87` (RED — failing unit + e2e tests), `b161e72`
+(GREEN — total field threaded through the lib), `0f409d8` (GREEN — UI dash).
+
 ### WR-03: `computeTifAccuracy`'s null guard for algMin/algMax cannot actually catch invalid input
 
 **File:** `js/lib/accuracy-tif.js:212-214`
@@ -209,6 +250,13 @@ const algMinMin = timeToMinutes(bounds.algMin);
 const algMaxMin = timeToMinutes(bounds.algMax);
 if (Number.isNaN(algMinMin) || Number.isNaN(algMaxMin)) continue;
 ```
+
+**Outcome: FIXED.** Applied exactly the suggested fix, combined into the same
+edit as CR-01 since both touch the same lines (`bounds.algMin`/`algMax`
+guard-then-convert block). `algMaxMin` is declared `let` rather than `const`
+since CR-01's fix reassigns it during un-wrap. Commit: `b161e72` (same
+commit as the CR-01 fix, per the review's own instruction to combine them
+carefully).
 
 ## Info
 
