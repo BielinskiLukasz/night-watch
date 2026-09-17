@@ -262,3 +262,124 @@ describe('computeAccuracy — ACC-01..04', () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// Task 2: bedtime nap-day split (D-03/D-04), band-fallback approximation
+// (D-06/D-07), overall headline score (D-10).
+// ---------------------------------------------------------------------------
+
+describe('computeAccuracy — Task 2 (D-03/D-04/D-06/D-07/D-10)', () => {
+
+  describe('bedtime nap-day/no-nap-day split (D-03/D-04)', () => {
+    it('bedtime.total = bedtimeNapDay.total + bedtimeNoNapDay.total; both sub-buckets score 100 at D=0', () => {
+      // History establishes bedtime central = 22:00 via 2 history days.
+      // Day 2 (nap day, napStart != null) scores bedtime D=0.
+      // Day 3 (no-nap day, napStart == null) also scores bedtime D=0.
+      const days = [
+        makeDay('2025-01-01', { bedtime: makeEvent('2025-01-01T22:00') }),
+        makeDay('2025-01-02', { bedtime: makeEvent('2025-01-02T22:00') }),
+        makeDay('2025-01-03', {
+          bedtime: makeEvent('2025-01-03T22:00'),
+          napStart: makeEvent('2025-01-03T13:00'),
+          napEnd: makeEvent('2025-01-03T14:00'),
+        }),
+        makeDay('2025-01-04', {
+          bedtime: makeEvent('2025-01-04T22:00'),
+          // no nap on this day
+        }),
+      ];
+
+      const result = computeAccuracy(days, { minDays: 2, maxDelta: 30, windowDays: 7 });
+
+      assert.strictEqual(result.bedtime.total, 2, 'bedtime.total should count both scored days');
+      assert.strictEqual(result.bedtime.avgScore, 100);
+      assert.strictEqual(result.bedtimeNapDay.total, 1, 'bedtimeNapDay.total should count only the nap day');
+      assert.strictEqual(result.bedtimeNapDay.avgScore, 100);
+      assert.strictEqual(result.bedtimeNoNapDay.total, 1, 'bedtimeNoNapDay.total should count only the no-nap day');
+      assert.strictEqual(result.bedtimeNoNapDay.avgScore, 100);
+      assert.strictEqual(result.bedtime.total, result.bedtimeNapDay.total + result.bedtimeNoNapDay.total);
+    });
+  });
+
+  describe('band-mode approximation (D-06/D-07)', () => {
+    it('wake band-mode day: approximatedCount=1, score derived from band midpoint', () => {
+      // History wake times 06:00 (360min) and 10:00 (600min) are far enough
+      // apart (spread=240min >> maxDelta=30) that forecast() returns a
+      // probabilityBand instead of a central prediction. bandMin=360,
+      // bandMax=600 → midpoint=480min=08:00. Actual wake=08:00 → D=0 → score=100.
+      const days = [
+        makeDay('2025-01-01', { wake: makeEvent('2025-01-01T06:00') }),
+        makeDay('2025-01-02', { wake: makeEvent('2025-01-02T10:00') }),
+        makeDay('2025-01-03', { wake: makeEvent('2025-01-03T08:00') }),
+      ];
+
+      const result = computeAccuracy(days, { minDays: 2, maxDelta: 30, windowDays: 7 });
+
+      assert.strictEqual(result.wake.total, 1);
+      assert.strictEqual(result.wake.approximatedCount, 1, 'band-derived score must increment approximatedCount');
+      assert.strictEqual(result.wake.avgScore, 100, 'score should be computed from the band midpoint (480min) vs actual (480min) → D=0 → 100');
+    });
+  });
+
+  describe('overall headline score (D-10)', () => {
+    it('overallScore = mean of each day\'s own per-day mean score, excluding zero-event days', () => {
+      // History: wake=07:00 (420min), bedtime=22:00 (1320min) on both history days.
+      // Day 2: wake=07:00 (D=0→100), bedtime=22:00 (D=0→100) → dayMean=100.
+      // Day 3: wake=07:30 (D=30=W→50), bedtime=null (no actual, excluded) → dayMean=50.
+      // Day 4: everything null → zero scored events → excluded entirely from the mean.
+      const days = [
+        makeDay('2025-01-01', { wake: makeEvent('2025-01-01T07:00'), bedtime: makeEvent('2025-01-01T22:00') }),
+        makeDay('2025-01-02', { wake: makeEvent('2025-01-02T07:00'), bedtime: makeEvent('2025-01-02T22:00') }),
+        makeDay('2025-01-03', { wake: makeEvent('2025-01-03T07:00'), bedtime: makeEvent('2025-01-03T22:00') }),
+        makeDay('2025-01-04', { wake: makeEvent('2025-01-04T07:30') }), // bedtime null
+        makeDay('2025-01-05', {}), // zero scored events — must not pull headline toward 0
+      ];
+
+      const result = computeAccuracy(days, { minDays: 2, maxDelta: 30, windowDays: 7 });
+
+      // Hand-computed: dailyAverages = [100 (day index2), 50 (day index3)]
+      // day index4 (zero events) excluded entirely.
+      const expected = Math.round((100 + 50) / 2);
+      assert.strictEqual(result.overallScore, expected, `overallScore should be ${expected}, excluding the zero-event day`);
+    });
+
+    it('computeAccuracy([], settings) → overallScore=0 (never NaN), bedtimeNapDay is a fully-zeroed bucket', () => {
+      const result = computeAccuracy([], { minDays: 7, maxDelta: 30, windowDays: 7 });
+
+      assert.strictEqual(result.overallScore, 0);
+      assert.deepStrictEqual(result.bedtimeNapDay, { total: 0, avgScore: 0, approximatedCount: 0 });
+    });
+  });
+
+  describe('approximatedCount defaults to 0 when no band-mode days occur', () => {
+    it('every type has approximatedCount === 0 (never undefined) on an all-central-prediction fixture', () => {
+      const days = [
+        makeDay('2025-01-01', {
+          wake: makeEvent('2025-01-01T07:00'),
+          bedtime: makeEvent('2025-01-01T22:00'),
+          napStart: makeEvent('2025-01-01T13:00'),
+          napEnd: makeEvent('2025-01-01T14:00'),
+        }),
+        makeDay('2025-01-02', {
+          wake: makeEvent('2025-01-02T07:00'),
+          bedtime: makeEvent('2025-01-02T22:00'),
+          napStart: makeEvent('2025-01-02T13:00'),
+          napEnd: makeEvent('2025-01-02T14:00'),
+        }),
+        makeDay('2025-01-03', {
+          wake: makeEvent('2025-01-03T07:00'),
+          bedtime: makeEvent('2025-01-03T22:00'),
+          napStart: makeEvent('2025-01-03T13:00'),
+          napEnd: makeEvent('2025-01-03T14:00'),
+        }),
+      ];
+
+      const result = computeAccuracy(days, { minDays: 2, maxDelta: 30, windowDays: 7 });
+
+      for (const type of ['wake', 'bedtime', 'bedtimeNapDay', 'bedtimeNoNapDay', 'napStart', 'napEnd']) {
+        assert.strictEqual(result[type].approximatedCount, 0, `${type}.approximatedCount should default to 0`);
+      }
+    });
+  });
+
+});
