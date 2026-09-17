@@ -255,11 +255,12 @@ function buildAccuracyGrid(gridEl, result, snap) {
  * Cell formatting (D-11):
  *   windowHit / highConf : extracted as .pct → 'N%'   (T-07-06-01: textContent only)
  *   avgWidthMin           : '±N min' (Math.round)
- *   null / missing        : '—'
+ *   null / missing / total === 0 : '—' (WR-02: zero scored days dashes, mirroring
+ *                                        buildAccuracyGrid's rowResult.total === 0 check)
  *
  * @param {object} stats  TifAccuracyResult from computeTifAccuracy:
  *   { wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay } each with
- *   { windowHit: {count,pct}, avgWidthMin: number, highConf: {count,pct} }
+ *   { windowHit: {count,pct}, avgWidthMin: number, highConf: {count,pct}, total: number }
  * @param {object} snap   settings snapshot (accepted for future extension — not used now)
  * @returns {HTMLTableElement}
  */
@@ -300,6 +301,13 @@ function buildTifAccuracyGrid(stats, snap) {
     // stats[row.key] may be absent/null when no data exists for this event type.
     const eventStats = (stats && stats[row.key]) != null ? stats[row.key] : null;
 
+    // WR-02: eventStats.total === 0 means zero scored days for this event
+    // type (e.g. an unused nap-day/no-nap-day bucket) — computeTifAccuracy
+    // always returns a fully-populated 0-valued object rather than null in
+    // that case, so this explicit total check is required to dash the row.
+    // Mirrors buildAccuracyGrid's `rowResult.total === 0` handling above.
+    const showDash = eventStats === null || eventStats.total === 0;
+
     for (const col of TIF_ACCURACY_COLS) {
       const td = document.createElement('td');
 
@@ -307,7 +315,7 @@ function buildTifAccuracyGrid(stats, snap) {
       // windowHit and highConf are { count, pct } objects — we render .pct.
       // avgWidthMin is a plain number.
       let cellValue = null;
-      if (eventStats !== null) {
+      if (eventStats !== null && !showDash) {
         if (col.key === 'avgWidthMin') {
           // Plain number; null means no data (not expected from current impl,
           // but guarded for robustness).
@@ -319,8 +327,9 @@ function buildTifAccuracyGrid(stats, snap) {
         }
       }
 
-      if (cellValue === null) {
-        // No data — D-08 / ASSUMPTION TIF-14 no-nap.
+      if (showDash || cellValue === null) {
+        // WR-02: zero scored days for this event type, or no data at all —
+        // D-08 / ASSUMPTION TIF-14 no-nap.
         // T-07-06-01: textContent only.
         td.textContent = '—';
       } else if (col.key === 'avgWidthMin') {
