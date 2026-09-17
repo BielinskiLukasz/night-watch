@@ -284,7 +284,7 @@ describe('deriveAutosaveFilename', () => {
 
 describe('createDebouncedAutosave', () => {
   test('calling trigger 3 times in immediate succession then advancing delayMs invokes fn exactly once', (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+    t.mock.timers.enable({ apis: ['setTimeout'] });
 
     let callCount = 0;
     const fn = () => {
@@ -302,7 +302,7 @@ describe('createDebouncedAutosave', () => {
   });
 
   test('trigger.cancel() before the delay elapses suppresses the pending invocation', (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+    t.mock.timers.enable({ apis: ['setTimeout'] });
 
     let callCount = 0;
     const fn = () => {
@@ -318,7 +318,7 @@ describe('createDebouncedAutosave', () => {
   });
 
   test('trigger forwards its arguments to fn', (t) => {
-    t.mock.timers.enable({ apis: ['setTimeout', 'clearTimeout'] });
+    t.mock.timers.enable({ apis: ['setTimeout'] });
 
     let receivedArgs = null;
     const fn = (...args) => {

@@ -29,6 +29,8 @@
 // tests inject fakes, the runtime call sites (Plan 24-02's app.js) omit them
 // and get the real globalThis.showDirectoryPicker + createIndexedDbHandleStore().
 
+import { formatLocalISO } from './time.js';
+
 const DB_NAME = 'nightwatch-autosave';
 const DB_VERSION = 1;
 const STORE_NAME = 'handles';
@@ -166,5 +168,49 @@ export async function removeSaveDirectory({ store } = {}) {
   await (store ?? createIndexedDbHandleStore()).remove();
 }
 
-// deriveAutosaveFilename, isFileSystemAccessSupported, createDebouncedAutosave
-// are added in Task 2 (filename derivation, debounce, and support detection).
+/**
+ * Derive the autosave filename for the given clock value — byte-identical
+ * in shape to import-export.js's downloadJSON filename (D-01/D-02).
+ *
+ * @param {{ now: () => Date }} clock
+ * @returns {string}
+ */
+export function deriveAutosaveFilename(clock) {
+  return `nightwatch-${formatLocalISO(clock.now()).slice(0, 10)}.json`;
+}
+
+/**
+ * Direct, synchronous, stateless capability check for the File System
+ * Access API (PLAT-04). Must never fall back to navigator.userAgent
+ * sniffing — a UA-string approach would silently misclassify a genuinely
+ * supporting browser the moment its UA string changes.
+ *
+ * @param {any} [scope]
+ * @returns {boolean}
+ */
+export function isFileSystemAccessSupported(scope = globalThis) {
+  return typeof scope.showDirectoryPicker === 'function';
+}
+
+/**
+ * Wrap fn in a trailing-edge debounce: the returned trigger(...args) clears
+ * any pending timeout and schedules a new one calling fn(...args) after
+ * delayMs from the LAST call. trigger.cancel() suppresses a pending
+ * invocation entirely.
+ *
+ * @param {(...args: any[]) => void} fn
+ * @param {number} [delayMs]
+ * @returns {((...args: any[]) => void) & { cancel: () => void }}
+ */
+export function createDebouncedAutosave(fn, delayMs = AUTOSAVE_DEBOUNCE_MS) {
+  let timeoutId = null;
+  function trigger(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delayMs);
+  }
+  trigger.cancel = () => {
+    clearTimeout(timeoutId);
+    timeoutId = null;
+  };
+  return trigger;
+}
