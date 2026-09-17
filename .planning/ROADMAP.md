@@ -80,7 +80,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 22-02-PLAN.md — accuracy-tif.js bedtime nap-day/no-nap-day split
   - [x] 22-03-PLAN.md — accuracy-screen.js rendering rewrite (avgScore column, headline, TIF table split)
 
-- [ ] **Phase 23: Metrics→Accuracy Column Migration** — Move per-event TIF window columns (lower bound, upper bound, confidence score, window width) from `metrics-screen.js` to `accuracy-screen.js`; remove the columns and their data-prep calls from the Metrics pipeline; update unit tests and E2E specs to assert columns appear on Accuracy screen and are absent from Metrics screen (requirements: UI-11)
+- [x] **Phase 23: Metrics→Accuracy Column Migration** — Move per-event TIF window columns (lower bound, upper bound, confidence score, window width) from `metrics-screen.js` to `accuracy-screen.js`; remove the columns and their data-prep calls from the Metrics pipeline; update unit tests and E2E specs to assert columns appear on Accuracy screen and are absent from Metrics screen (requirements: UI-11) (completed 2026-09-17)
   **Plans:** 2 plans
   Plans:
   - [x] 23-01-PLAN.md — Add per-day TIF window table to Accuracy screen (buildTifPerDayTable, CSS, E2E coverage)
@@ -193,7 +193,7 @@ Plans:
   2. The columns and their data-prep calls are removed from the Metrics pipeline
   3. Unit tests and E2E specs assert the columns appear on the Accuracy screen and are absent from the Metrics screen
 
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -202,7 +202,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 23-02-PLAN.md — Remove TIF_COLUMNS and all rendering call sites from Metrics screen; update E2E specs
+- [x] 23-02-PLAN.md — Remove TIF_COLUMNS and all rendering call sites from Metrics screen; update E2E specs
 
 ### Phase 24: Autosave
 
