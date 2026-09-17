@@ -32,6 +32,17 @@ import { mountChartsScreen } from './ui/charts-screen.js';
 import { mountAccuracyScreen } from './ui/accuracy-screen.js';
 import { mountMetricsScreen } from './ui/metrics-screen.js';
 import { downloadJSON } from './lib/import-export.js';
+import { formatLocalISO } from './lib/time.js';
+import {
+  isFileSystemAccessSupported,
+  pickSaveDirectory,
+  removeSaveDirectory,
+  restoreHandle,
+  saveToDisk,
+  deriveAutosaveFilename,
+  createDebouncedAutosave,
+  AUTOSAVE_DEBOUNCE_MS,
+} from './lib/autosave.js';
 import { openSettings } from './ui/settings-modal.js';
 
 const storage = createStorageLocal('nightwatch:db');
@@ -43,6 +54,64 @@ const clock = createClockSystem();
 // happens before event-log writes — though both apply migrateV1ToV2.
 const settings = createSettingsStore({ storage });
 const eventLog = createEventLog({ storage, clock, id: newEventId });
+
+// Phase 24 Plan 02 additions (PLAT-02, PLAT-03): autosave state + wiring.
+// autosaveState is a module-scope object read (as a shallow copy) via
+// autosaveActions.getState() below — Plan 24-03's Settings Backup fieldset
+// and Plan 24-04's Today-screen banner never touch it directly.
+const autosaveState = {
+  supported: isFileSystemAccessSupported(),
+  status: 'unset',
+  handle: null,
+  folderName: null,
+  lastSavedAt: null,
+  error: null,
+};
+
+// PLAT-02 concurrency guard: prevents a second overlapping saveToDisk call
+// against the same handle while one is still in-flight — the next eventLog
+// mutation naturally re-arms the debounce and retries.
+let autosaveSaving = false;
+
+async function performAutosave() {
+  if (!autosaveState.supported || autosaveState.status !== 'granted' || !autosaveState.handle) return;
+  if (autosaveSaving) return;
+  autosaveSaving = true;
+  try {
+    const json = JSON.stringify(storage.load(), null, 2);
+    const filename = deriveAutosaveFilename(clock);
+    await saveToDisk(autosaveState.handle, json, filename);
+    autosaveState.lastSavedAt = formatLocalISO(clock.now()).slice(11, 16);
+    autosaveState.error = null;
+  } catch (e) {
+    // D-05: keep the persisted handle and retry on the next mutation instead
+    // of clearing it — most real-world failures here are transient (e.g. a
+    // cloud-sync folder temporarily unavailable). Never clear handle/status
+    // from this catch branch; the error must always surface, never be
+    // silently swallowed (T-24-04).
+    autosaveState.error = (e && e.message) || 'Save failed';
+  } finally {
+    autosaveSaving = false;
+  }
+}
+
+const debouncedAutosave = createDebouncedAutosave(performAutosave, AUTOSAVE_DEBOUNCE_MS);
+// PLAT-02: event-store mutations only — settings.subscribe() must NEVER be
+// given debouncedAutosave/performAutosave (a settings-only change like
+// cutoverHour must never trigger a disk write, per D-05).
+eventLog.subscribe(debouncedAutosave);
+
+// PLAT-03 / T-24-05: restore the persisted directory handle exactly once at
+// boot — never from inside eventLog.subscribe/settings.subscribe or any
+// other reactive render loop, which would degenerate into a
+// permission-prompt-spam loop firing on every logged event.
+if (autosaveState.supported) {
+  restoreHandle().then(({ handle, status }) => {
+    autosaveState.handle = handle;
+    autosaveState.status = handle ? status : 'unset';
+    autosaveState.folderName = handle ? handle.name : null;
+  }).catch(() => {});
+}
 
 // D4-08: activeTab persists at module scope so subscription re-renders
 // (from eventLog.subscribe / settings.subscribe) do not reset the tab.
