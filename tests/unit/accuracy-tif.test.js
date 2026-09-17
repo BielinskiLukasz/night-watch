@@ -377,4 +377,117 @@ describe('computeTifAccuracy — null entry exclusion', () => {
     assert.strictEqual(result.napStart.windowHit.count, 0, 'napStart excluded (null bounds)');
   });
 
+  it('null bedtime entry is excluded from bedtime, bedtimeNapDay, AND bedtimeNoNapDay alike', () => {
+    const history = [{
+      date:     '2025-01-08',
+      wake:     null,
+      napStart: null,
+      napEnd:   null,
+      bedtime:  null,
+    }];
+    // napStart non-null (nap day) — must still be excluded from ALL three bedtime buckets.
+    const dayRecords = [makeDayRecord('2025-01-08', '07:00', '22:00', '13:00', '14:30')];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.windowHit.count, 0, 'null bedtime excluded from bedtime totals');
+    assert.strictEqual(result.bedtime.avgWidthMin,      0, 'null bedtime excluded from bedtime avgWidthMin');
+    assert.strictEqual(result.bedtimeNapDay.windowHit.count, 0, 'null bedtime excluded from bedtimeNapDay totals');
+    assert.strictEqual(result.bedtimeNapDay.avgWidthMin,      0, 'null bedtime excluded from bedtimeNapDay avgWidthMin');
+    assert.strictEqual(result.bedtimeNoNapDay.windowHit.count, 0, 'null bedtime excluded from bedtimeNoNapDay totals');
+    assert.strictEqual(result.bedtimeNoNapDay.avgWidthMin,      0, 'null bedtime excluded from bedtimeNoNapDay avgWidthMin');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// 6. computeTifAccuracy — D-05 bedtime nap-day/no-nap-day split
+// ---------------------------------------------------------------------------
+
+describe('computeTifAccuracy — D-05 bedtime nap-day/no-nap-day split', () => {
+
+  it('config shape: result has all 6 event type keys (base 4 + bedtimeNapDay/bedtimeNoNapDay)', () => {
+    const result = computeTifAccuracy([], []);
+    for (const type of ['wake', 'napStart', 'napEnd', 'bedtime', 'bedtimeNapDay', 'bedtimeNoNapDay']) {
+      assert.ok(Object.prototype.hasOwnProperty.call(result, type), `result must have ${type}`);
+    }
+  });
+
+  it('fan-out independence: nap-day bedtime hit and no-nap-day bedtime miss bucket separately', () => {
+    const bedtimeBounds = { algMin: '21:00', algMax: '22:00', central: '21:30', precisionScore: 85 };
+    const history = [
+      {
+        date:     '2025-01-08',
+        wake:     null,
+        napStart: null,
+        napEnd:   null,
+        bedtime:  bedtimeBounds,
+      },
+      {
+        date:     '2025-01-09',
+        wake:     null,
+        napStart: null,
+        napEnd:   null,
+        bedtime:  bedtimeBounds,
+      },
+    ];
+    const dayRecords = [
+      // Day A: nap day, bedtime actual 21:30 is inside [21:00, 22:00] — hit.
+      makeDayRecord('2025-01-08', '07:00', '21:30', '13:00', '14:30'),
+      // Day B: no-nap day, bedtime actual 23:00 is outside [21:00, 22:00] — miss.
+      makeDayRecord('2025-01-09', '07:00', '23:00', null, null),
+    ];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.windowHit.count, 1, 'combined bedtime: one hit total');
+    assert.strictEqual(result.bedtimeNapDay.windowHit.count, 1, 'bedtimeNapDay: the nap-day hit');
+    assert.strictEqual(result.bedtimeNapDay.windowHit.pct,   100, 'bedtimeNapDay: 1/1 = 100%');
+    assert.strictEqual(result.bedtimeNoNapDay.windowHit.count, 0, 'bedtimeNoNapDay: the no-nap-day miss');
+    assert.strictEqual(result.bedtimeNoNapDay.windowHit.pct,   0, 'bedtimeNoNapDay: 0/1 = 0%');
+  });
+
+  it('avgWidthMin fan-out: nap-day and no-nap-day widths computed independently, combined bedtime stays blended', () => {
+    const history = [
+      {
+        // width 120: [21:00, 23:00]
+        date:     '2025-01-08',
+        wake:     null, napStart: null, napEnd: null,
+        bedtime:  { algMin: '21:00', algMax: '23:00', central: '22:00', precisionScore: 85 },
+      },
+      {
+        // width 60: [21:00, 22:00]
+        date:     '2025-01-09',
+        wake:     null, napStart: null, napEnd: null,
+        bedtime:  { algMin: '21:00', algMax: '22:00', central: '21:30', precisionScore: 90 },
+      },
+    ];
+    const dayRecords = [
+      // Day A: nap day (napStart non-null) — belongs to bedtimeNapDay, width 120.
+      makeDayRecord('2025-01-08', '07:00', '21:30', '13:00', '14:30'),
+      // Day B: no-nap day (napStart null) — belongs to bedtimeNoNapDay, width 60.
+      makeDayRecord('2025-01-09', '07:00', '21:30', null, null),
+    ];
+    const result = computeTifAccuracy(history, dayRecords);
+    assert.strictEqual(result.bedtime.avgWidthMin, 90, 'combined bedtime avgWidthMin blends both (120+60)/2');
+    assert.strictEqual(result.bedtimeNapDay.avgWidthMin, 120, 'bedtimeNapDay avgWidthMin is only its own subset');
+    assert.strictEqual(result.bedtimeNoNapDay.avgWidthMin, 60, 'bedtimeNoNapDay avgWidthMin is only its own subset');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// 7. computeTifBoundsHistory — D-05 regression: entry shape unchanged
+// ---------------------------------------------------------------------------
+
+describe('computeTifBoundsHistory — D-05 regression: bounds-history entry shape unchanged', () => {
+
+  it('every non-null entry has exactly 4 own keys (wake/napStart/napEnd/bedtime) plus date — never bedtimeNapDay/bedtimeNoNapDay', () => {
+    const fixture = buildFixture12();
+    const result = computeTifBoundsHistory(fixture, STANDARD_SETTINGS, {});
+    assert.ok(result.length > 0, 'fixture must produce at least one entry');
+    for (const entry of result) {
+      const keys = Object.keys(entry).sort();
+      assert.deepStrictEqual(keys, ['bedtime', 'date', 'napEnd', 'napStart', 'wake']);
+      assert.ok(!Object.prototype.hasOwnProperty.call(entry, 'bedtimeNapDay'), 'entry must never have bedtimeNapDay');
+      assert.ok(!Object.prototype.hasOwnProperty.call(entry, 'bedtimeNoNapDay'), 'entry must never have bedtimeNoNapDay');
+    }
+  });
+
 });
