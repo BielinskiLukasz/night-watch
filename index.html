@@ -334,7 +334,34 @@
         <p id="importStatus" class="importStatus" aria-live="polite"></p>
       </fieldset>
 
-      <!-- Group 5: Stages — STAGE-01 (Plan 06-04 / D6-13). Stage list populated dynamically by settings-modal.js. -->
+      <!-- Group 5: Backup — PLAT-01/PLAT-04 (Plan 24-03 / D-06, D-07, D-08). Static markup,
+           three mutually-exclusive state rows toggled via .hidden by settings-modal.js's
+           renderBackupSection() — mirrors the #tifOptions/#classicOptions convention above.
+           No element here carries a `name` attribute (none are FormData-read on Save). -->
+      <fieldset id="backupFieldset">
+        <legend>Backup</legend>
+        <p class="backupHelp">Automatically save a dated backup of your data to a folder you choose, after every logged event.</p>
+
+        <div id="autosaveUnsupportedRow" hidden>
+          <p class="hint">Automatic backup isn't available in this browser. Use Export JSON below to save a manual backup.</p>
+          <button type="button" id="autosaveExportBtn" class="btnImport">Export JSON</button>
+        </div>
+
+        <div id="autosaveUnsetRow" hidden>
+          <button type="button" id="autosavePickBtn" class="btnImport">Choose folder</button>
+          <p id="autosaveRevokedNote" class="hint" hidden>Access to the previous backup folder was revoked. Choose a folder again to resume automatic backups.</p>
+        </div>
+
+        <div id="autosaveSetRow" hidden>
+          <p>Saving to: <strong id="autosaveFolderName"></strong></p>
+          <button type="button" id="autosaveChangeBtn" class="btnImport">Change folder</button>
+          <button type="button" id="autosaveRemoveBtn" class="btnImport">Remove</button>
+        </div>
+
+        <p id="autosaveStatus" class="importStatus" aria-live="polite"></p>
+      </fieldset>
+
+      <!-- Group 6: Stages — STAGE-01 (Plan 06-04 / D6-13). Stage list populated dynamically by settings-modal.js. -->
       <!-- CRITICAL: id="stagesFieldset" preserved — settings-modal.js queries this ID. -->
       <fieldset id="stagesFieldset">
         <legend>Stages</legend>
