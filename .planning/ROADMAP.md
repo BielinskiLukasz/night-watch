@@ -76,7 +76,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 - [ ] **Phase 22: Accuracy Scoring** — Add `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` to `js/lib/accuracy.js` using the linear-decay formula (D≤W → 100−(50/W)×D; W<D≤2W → 50−(50/W)×(D−W); D>2W → 0); change daily score to arithmetic mean of per-event scores; update `accuracy-screen.js` to render per-event scores and the new daily average; update backtesting engine calls in `accuracy.js` (and `accuracy-tif.js` if it references hit/miss) to call `eventAccuracyScore` — `accuracy-tif.js` must NOT import `metrics.js` (circular guard); unit tests cover formula boundary values (D=0, D=W, D=2W, D>2W) (requirements: ACC-01, ACC-02, ACC-03, ACC-04)
   **Plans:** 3 plans
   Plans:
-  - [ ] 22-01-PLAN.md — eventAccuracyScore() + computeAccuracy() rewrite (bedtime split, band approximation, overall score)
+  - [x] 22-01-PLAN.md — eventAccuracyScore() + computeAccuracy() rewrite (bedtime split, band approximation, overall score)
   - [ ] 22-02-PLAN.md — accuracy-tif.js bedtime nap-day/no-nap-day split
   - [ ] 22-03-PLAN.md — accuracy-screen.js rendering rewrite (avgScore column, headline, TIF table split)
 
@@ -163,7 +163,7 @@ Plans:
   4. Backtesting engine calls in `accuracy.js` (and `accuracy-tif.js` if it references hit/miss) call `eventAccuracyScore`; `accuracy-tif.js` still does not import `metrics.js` (circular-import guard)
   5. Unit tests cover formula boundary values (D=0, D=W, D=2W, D>2W)
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 **Wave 1**

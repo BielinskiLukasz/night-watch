@@ -35,9 +35,9 @@
 
 ### Accuracy Scoring
 
-- [ ] **ACC-01**: `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` pure function in `js/lib/accuracy.js` — linear-decay tolerance-window formula; D = |actual − forecast| in minutes
-- [ ] **ACC-02**: Scoring formula: D ≤ W → Score = 100 − (50/W) × D; W < D ≤ 2W → Score = 50 − (50/W) × (D − W); D > 2W → Score = 0
-- [ ] **ACC-03**: Daily accuracy score = arithmetic mean of per-event `eventAccuracyScore` values for events with both forecast and actual times recorded
+- [x] **ACC-01**: `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` pure function in `js/lib/accuracy.js` — linear-decay tolerance-window formula; D = |actual − forecast| in minutes
+- [x] **ACC-02**: Scoring formula: D ≤ W → Score = 100 − (50/W) × D; W < D ≤ 2W → Score = 50 − (50/W) × (D − W); D > 2W → Score = 0
+- [x] **ACC-03**: Daily accuracy score = arithmetic mean of per-event `eventAccuracyScore` values for events with both forecast and actual times recorded
 - [ ] **ACC-04**: Per-event scores and daily average replace the current binary within-max-delta hit/miss metric; Accuracy screen renders the new scores; backtesting engine in `accuracy.js` updated to call `eventAccuracyScore`
 
 ### Screen Changes
@@ -84,9 +84,9 @@
 | NAP-04 | B-047 | Phase 20 | Complete |
 | PRED-23 | B-038 | Phase 21 | Complete |
 | PRED-24 | B-038 | Phase 21 | Complete |
-| ACC-01 | B-049 | Phase 22 | Pending |
-| ACC-02 | B-049 | Phase 22 | Pending |
-| ACC-03 | B-049 | Phase 22 | Pending |
+| ACC-01 | B-049 | Phase 22 | Complete |
+| ACC-02 | B-049 | Phase 22 | Complete |
+| ACC-03 | B-049 | Phase 22 | Complete |
 | ACC-04 | B-049 | Phase 22 | Pending |
 | UI-11 | B-041 | Phase 23 | Pending |
 | UI-12 | B-032 | Phase 25 | Pending |

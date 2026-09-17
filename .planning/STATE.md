@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 22
 current_phase_name: Accuracy Scoring
 status: executing
-stopped_at: Phase 21 complete, ready to plan Phase 22
-last_updated: "2026-09-17T08:43:56.937Z"
-last_activity: 2026-09-16
-last_activity_desc: Phase 21 complete, transitioned to Phase 22
-state_head: 132ad704547397464336fc0d366bf7fdc1926a39
+stopped_at: Completed 22-01-PLAN.md
+last_updated: "2026-09-17T09:15:33.586Z"
+last_activity: 2026-09-17
+last_activity_desc: Phase 22 execution started
+state_head: dbfc8f985dd1ceb746ac67bf0fcf3fc293641aac
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
   percent: 43
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 ## Current Position
 
-Phase: 22 (Accuracy Scoring) — READY TO EXECUTE
-Plan: Not started
+Phase: 22 (Accuracy Scoring) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-09-16 — Phase 21 complete, transitioned to Phase 22
+Last activity: 2026-09-17 — Phase 22 execution started
 
 ## Phases
 
@@ -100,6 +100,7 @@ Last activity: 2026-09-16 — Phase 21 complete, transitioned to Phase 22
 | Phase 21 P01 | 45min | 2 tasks | 9 files |
 | Phase 21 P02 | 28min | 3 tasks | 7 files |
 | Phase 21 P03 | 25min | 2 tasks | 1 files |
+| Phase 22 P01 | 45min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,9 @@ Last activity: 2026-09-16 — Phase 21 complete, transitioned to Phase 22
 - [Phase 21]: Phase 21 Plan 2: hero card data-event-type maps bedtimeAfterWake -> 'bedtime' (LOGGABLE_EVENT_TYPE) distinct from the internal 'type' field, so E2E selectors keyed on the four real loggable event types keep working across hero and Later-Today cards
 - [Phase 21]: Phase 21 Plan 2: Later-Today auto-expand (D-13) targets both .tif-card.collapsed and .probability-band.collapsed, so opening the section also auto-expands classic probability-band cards, not just TIF cards
 - [Phase 21]: Phase 21 Plan 3: widened windowDays to 14 in the dual-hero E2E fixture so a nap-day sub-window and a >= minDays no-nap-day sub-window resolve simultaneously within one rolling window (predictions.napStart and predictions.bedtimeAfterWake both real data).
+- [Phase 22]: Phase 22 Plan 01: toleranceMinutes reuses settings.maxDelta unchanged (D-01), eventAccuracyScore returns raw unrounded number (no object wrapper)
+- [Phase 22]: Phase 22 Plan 01: bedtime nap-day/no-nap-day split classified by day's actual napStart (D-03/D-04), combined bedtime key kept as average
+- [Phase 22]: Phase 22 Plan 01: band-mode days score via probabilityBand midpoint with approximatedCount tracking (D-06/D-07); overallScore = mean of daily means excluding zero-event days, never NaN (D-10)
 
 ### Quick Tasks Completed
 
@@ -191,8 +195,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-16T20:05:14.954Z
-Stopped at: Phase 21 complete, ready to plan Phase 22
+Last session: 2026-09-17T09:15:30.932Z
+Stopped at: Completed 22-01-PLAN.md
 Resume file: None
 
 ## Deferred Items
