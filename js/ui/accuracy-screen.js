@@ -32,6 +32,7 @@
 import { computeAccuracy } from '../lib/accuracy.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 import { computeTifBoundsHistory, computeTifAccuracy } from '../lib/accuracy-tif.js';
+import { formatTime } from '../lib/time.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants (Object.freeze per CLAUDE.md convention)
@@ -86,6 +87,26 @@ const TIF_ACCURACY_COLS = Object.freeze([
   { key: 'windowHit',  label: 'Win Hit %'  },
   { key: 'avgWidthMin', label: 'Avg Width' },
   { key: 'highConf',   label: 'High Conf %' },
+]);
+
+/**
+ * Column definitions for the new per-day TIF windows table (UI-11, D-04, D-05).
+ * 12 entries — min/max/conf triples for each of the 4 event types, in this
+ * exact order. No 4th "window width" field (D-04 — never shipped anywhere).
+ */
+const TIF_PERDAY_COLUMNS = Object.freeze([
+  { eventType: 'wake',     field: 'min',  label: 'W-min'  },
+  { eventType: 'wake',     field: 'max',  label: 'W-max'  },
+  { eventType: 'wake',     field: 'conf', label: 'W-conf' },
+  { eventType: 'napStart', field: 'min',  label: 'NS-min'  },
+  { eventType: 'napStart', field: 'max',  label: 'NS-max'  },
+  { eventType: 'napStart', field: 'conf', label: 'NS-conf' },
+  { eventType: 'napEnd',   field: 'min',  label: 'NE-min'  },
+  { eventType: 'napEnd',   field: 'max',  label: 'NE-max'  },
+  { eventType: 'napEnd',   field: 'conf', label: 'NE-conf' },
+  { eventType: 'bedtime',  field: 'min',  label: 'B-min'  },
+  { eventType: 'bedtime',  field: 'max',  label: 'B-max'  },
+  { eventType: 'bedtime',  field: 'conf', label: 'B-conf' },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -266,6 +287,10 @@ function buildAccuracyGrid(gridEl, result, snap) {
  */
 function buildTifAccuracyGrid(stats, snap) {
   const table = document.createElement('table');
+  // Selector-safety hook only (no visual/structural change) — keeps E2E
+  // locators unambiguous now that a second <table> (buildTifPerDayTable)
+  // exists in the same section (UI-11).
+  table.className = 'tifAccuracyTable';
 
   // ---- thead: 'Event' + one th per stat column ----
   const thead = document.createElement('thead');
@@ -342,6 +367,100 @@ function buildTifAccuracyGrid(stats, snap) {
         td.textContent = cellValue + '%';
       }
 
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  return table;
+}
+
+/**
+ * Build the new per-day TIF windows table (UI-11, D-02..D-08).
+ *
+ * Iterates `days` (already newest-first, the full stage-filtered history) —
+ * NOT `tifBoundsHistory`, which omits the first tifRollingDays/minDays
+ * warm-up days entirely. `tifBoundsHistory` is used only as a date-keyed
+ * lookup source, so every logged day gets a row, with '—' cells for dates
+ * computeTifBoundsHistory never returned an entry for (D-06: full history,
+ * no reduction).
+ *
+ * Rows for rejected days (day.rejected === true) carry the 'rejected' class
+ * (D-07); style.css dims them via `.tifPerDayTable tr.rejected td`.
+ *
+ * Cell formatting mirrors metrics-screen.js's former buildDayRow convention
+ * (D-05): min/max via formatTime(bounds.algMin/algMax, snap.timeFormat);
+ * conf via bounds.precisionScore.toFixed(2); '—' when bounds or
+ * precisionScore is missing.
+ *
+ * T-23-01 (threat register): all cell content set via textContent only —
+ * never innerHTML.
+ *
+ * @param {object[]} days               stage-filtered day records, newest-first
+ * @param {object[]} tifBoundsHistory   output of computeTifBoundsHistory (lookup only)
+ * @param {object}   snap               settings snapshot
+ * @returns {HTMLTableElement}
+ */
+function buildTifPerDayTable(days, tifBoundsHistory, snap) {
+  const tifBoundsMap = new Map(tifBoundsHistory.map(e => [e.date, e]));
+
+  const table = document.createElement('table');
+  table.className = 'tifPerDayTable';
+
+  // ---- thead: Date (sticky) + 12 TIF_PERDAY_COLUMNS headers ----
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  const dateHeader = document.createElement('th');
+  dateHeader.className = 'sticky-col';
+  // T-07-06-01: textContent only — static string.
+  dateHeader.textContent = 'Date';
+  headerRow.appendChild(dateHeader);
+
+  for (const col of TIF_PERDAY_COLUMNS) {
+    const th = document.createElement('th');
+    // T-07-06-01: textContent only — static column label.
+    th.textContent = col.label;
+    headerRow.appendChild(th);
+  }
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // ---- tbody: one tr per day in `days` (already newest-first — do NOT reverse) ----
+  const tbody = document.createElement('tbody');
+
+  for (const day of days) {
+    const tr = document.createElement('tr');
+    if (day.rejected) tr.classList.add('rejected');
+
+    const dateCell = document.createElement('td');
+    dateCell.className = 'sticky-col';
+    // T-07-06-01: textContent only — date is from data.
+    dateCell.textContent = day.date || '—';
+    tr.appendChild(dateCell);
+
+    const tifEntry = tifBoundsMap.get(day.date);
+
+    for (const col of TIF_PERDAY_COLUMNS) {
+      const td = document.createElement('td');
+      let cellText = '—';
+
+      const bounds = tifEntry ? tifEntry[col.eventType] : null;
+      if (bounds) {
+        if (col.field === 'min') {
+          cellText = formatTime(bounds.algMin, snap.timeFormat);
+        } else if (col.field === 'max') {
+          cellText = formatTime(bounds.algMax, snap.timeFormat);
+        } else if (col.field === 'conf') {
+          cellText = bounds.precisionScore != null ? bounds.precisionScore.toFixed(2) : '—';
+        }
+      }
+
+      // T-07-06-01: textContent only.
+      td.textContent = cellText;
       tr.appendChild(td);
     }
 
@@ -431,14 +550,17 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
   /**
    * Render the TIF accuracy grid (full implementation — TIF-14, D-01, D-04).
    *
-   * Replaces root content with a section containing the TIF 4×3 accuracy table.
+   * Replaces root content with a section containing the TIF 4×3 accuracy table,
+   * followed by the UI-11 per-day TIF windows table (D-01, D-02, D-03).
    * Separates from the classic path — no stageBadge/gridRoot used here.
    *
    * @param {HTMLElement} root
-   * @param {object} tifStats   TifAccuracyResult from computeTifAccuracy
-   * @param {object} snap       settings snapshot
+   * @param {object} tifStats           TifAccuracyResult from computeTifAccuracy
+   * @param {object} snap               settings snapshot
+   * @param {object[]} tifBoundsHistory output of computeTifBoundsHistory (UI-11 lookup source)
+   * @param {object[]} days             stage-filtered day records, newest-first (UI-11 row source)
    */
-  function renderTifAccuracy(root, tifStats, snap) {
+  function renderTifAccuracy(root, tifStats, snap, tifBoundsHistory, days) {
     const section = document.createElement('section');
     section.className = 'accuracy-section';
     const h2 = document.createElement('h2');
@@ -447,6 +569,14 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
     section.appendChild(h2);
     const grid = buildTifAccuracyGrid(tifStats, snap);
     section.appendChild(grid);
+
+    // UI-11 (D-02, D-03): per-day TIF windows table below the summary table.
+    const h3 = document.createElement('h3');
+    // T-07-06-01: textContent only — static string.
+    h3.textContent = 'Per-Day TIF Windows';
+    section.appendChild(h3);
+    section.appendChild(buildTifPerDayTable(days, tifBoundsHistory, snap));
+
     root.replaceChildren(section);
   }
 
@@ -486,7 +616,7 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
       const activityLog = eventLog.getActivityLog();
       const tifBoundsHistory = computeTifBoundsHistory(days, snap, activityLog);
       const tifStats = computeTifAccuracy(tifBoundsHistory, days);
-      renderTifAccuracy(root, tifStats, snap);
+      renderTifAccuracy(root, tifStats, snap, tifBoundsHistory, days);
     } else {
       // Classic path: compute accuracy and delegate DOM updates to renderAccuracy.
       const accuracy = computeAccuracy(days, snap);

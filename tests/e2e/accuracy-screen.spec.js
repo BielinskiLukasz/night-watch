@@ -205,7 +205,7 @@ test.describe('Accuracy screen — TIF bedtime nap-day split (Phase 22, D-05)', 
     // Navigate to the Accuracy tab.
     await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
 
-    const table = page.locator('#accuracy-screen table');
+    const table = page.locator('#accuracy-screen .tifAccuracyTable');
     await expect(table).toBeVisible();
 
     // D-05: the original 4 rows are still present.
@@ -230,7 +230,7 @@ test.describe('Accuracy screen — TIF bedtime nap-day split (Phase 22, D-05)', 
 
     await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
 
-    const table = page.locator('#accuracy-screen table');
+    const table = page.locator('#accuracy-screen .tifAccuracyTable');
     await expect(table).toBeVisible();
 
     const noNapRow = table.locator('tr', { has: page.locator('th:text-is("Bedtime (no nap)")') });
@@ -239,6 +239,41 @@ test.describe('Accuracy screen — TIF bedtime nap-day split (Phase 22, D-05)', 
     for (let i = 0; i < 3; i++) {
       await expect(cells.nth(i)).toHaveText('—');
     }
+  });
+
+});
+
+test.describe('Accuracy screen — Per-Day TIF Windows table (UI-11, D-01..D-08)', () => {
+
+  test('per-day TIF windows table renders below the summary table with 13 columns', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif' });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    // D-01/D-02: new table exists inside the same accuracy-section.
+    const perDayTable = page.locator('#accuracy-screen .tifPerDayTable');
+    await expect(perDayTable).toBeVisible();
+
+    // D-03: sub-heading between the two tables.
+    const subHeading = page.locator('#accuracy-screen section.accuracy-section h3');
+    await expect(subHeading).toHaveText('Per-Day TIF Windows');
+
+    // D-04: exactly 13 header columns (Date + 12 TIF fields), no 4th "window width" field.
+    const headerCells = perDayTable.locator('thead th');
+    await expect(headerCells).toHaveCount(13);
+    const headerTexts = await headerCells.allTextContents();
+    expect(headerTexts).toEqual([
+      'Date',
+      'W-min', 'W-max', 'W-conf',
+      'NS-min', 'NS-max', 'NS-conf',
+      'NE-min', 'NE-max', 'NE-conf',
+      'B-min', 'B-max', 'B-conf',
+    ]);
+
+    // At least one data row exists.
+    const dataRows = perDayTable.locator('tbody tr');
+    await expect(dataRows.first()).toBeAttached();
   });
 
 });

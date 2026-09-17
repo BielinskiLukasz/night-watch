@@ -1821,6 +1821,64 @@ button[data-log] {
   background-color: rgba(79, 70, 229, 0.05);
 }
 
+/* ==========================================================================
+ * Plan 23-01 — Accuracy Screen Per-Day TIF Windows table (UI-11)
+ * ==========================================================================
+ *
+ * Mirrors .metricsTable's sticky-header/sticky-first-column and rejected-day
+ * dimming rules exactly (D-05, D-07) — this table replaces the equivalent
+ * columns formerly rendered on the Metrics screen.
+ */
+
+.tifPerDayTable {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  background-color: #fff;
+}
+
+.tifPerDayTable th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f1f5f9;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+}
+
+.tifPerDayTable th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.tifPerDayTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+
+.tifPerDayTable td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #fff;
+  text-align: left;
+  font-weight: 600;
+  color: #334155;
+}
+
+.tifPerDayTable tr.rejected td {
+  opacity: 0.5;
+  background-color: rgba(0, 0, 0, 0.025);
+}
+
 /* ── Empty state styling ───────────────────────────────────────────────– */
 
 .emptyState {
