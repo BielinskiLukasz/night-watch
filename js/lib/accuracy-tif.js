@@ -16,8 +16,8 @@
 // TifBounds shape (D-10 + D-07 central for median-TIF in Plan 03):
 //   { algMin: string, algMax: string, central: string|null, precisionScore: number|null }
 //
-// TifAccuracyResult shape (D-05):
-//   { wake, napStart, napEnd, bedtime } each with:
+// TifAccuracyResult shape (D-05, Phase 22 bedtime nap-day split):
+//   { wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay } each with:
 //   { windowHit: {count, pct}, avgWidthMin: number, highConf: {count, pct} }
 //
 // Zero DOM, zero I/O — fully unit-testable with node:test.
@@ -25,6 +25,15 @@
 // NOTE: Do NOT import from metrics.js here — this would create a circular import
 // (metrics.js → forecast.js; forecast-tif.js → metrics.js; accuracy-tif.js must
 // not close the cycle). Circular-import guard per CLAUDE.md §Pitfalls.
+//
+// BASE_EVENT_TYPES vs EVENT_TYPES (Phase 22 D-05):
+//   BASE_EVENT_TYPES is the 4 keys tifForecast() actually returns bounds for —
+//   computeTifBoundsHistory iterates ONLY this list, so its entry shape is
+//   unchanged by this split. EVENT_TYPES is the 6-key superset (adds
+//   bedtimeNapDay/bedtimeNoNapDay) used by computeTifAccuracy for counter
+//   init/result-building only — computeTifAccuracy fans the existing combined
+//   bedtime bounds into both nap-day sub-buckets using the day's own actual
+//   napStart, mirroring accuracy.js's D-03 classification exactly.
 
 import { tifForecast } from './forecast-tif.js';
 import { timeToMinutes } from './forecast.js';
@@ -34,7 +43,12 @@ import { timeToMinutes } from './forecast.js';
 // ---------------------------------------------------------------------------
 
 const ACCURACY_TIF_CONFIG = Object.freeze({
-  EVENT_TYPES: Object.freeze(['wake', 'napStart', 'napEnd', 'bedtime']),
+  // The 4 keys tifForecast() actually returns bounds for — used unchanged by
+  // computeTifBoundsHistory's entry-building loop.
+  BASE_EVENT_TYPES: Object.freeze(['wake', 'napStart', 'napEnd', 'bedtime']),
+  // The 6 keys used only by computeTifAccuracy for counter init/result-
+  // building — adds the D-05 bedtime nap-day/no-nap-day split.
+  EVENT_TYPES: Object.freeze(['wake', 'napStart', 'napEnd', 'bedtime', 'bedtimeNapDay', 'bedtimeNoNapDay']),
 });
 
 // ---------------------------------------------------------------------------
@@ -119,7 +133,7 @@ export function computeTifBoundsHistory(dayRecords, settings, activityLog) {
     }
 
     const entry = { date: actual.date };
-    for (const type of ACCURACY_TIF_CONFIG.EVENT_TYPES) {
+    for (const type of ACCURACY_TIF_CONFIG.BASE_EVENT_TYPES) {
       const p = pred[type];
       entry[type] = (p && p.algMin != null && p.algMax != null)
         ? {
@@ -150,20 +164,31 @@ export function computeTifBoundsHistory(dayRecords, settings, activityLog) {
  *
  * NULL HANDLING (ASSUMPTION MET-08 boundary):
  *   Days where bounds for a specific event type are null are excluded from
- *   that type's totals — null TIF bounds are not treated as a miss.
+ *   that type's totals — null TIF bounds are not treated as a miss. This
+ *   applies identically to bedtimeNapDay/bedtimeNoNapDay — a null combined
+ *   bedtime bounds excludes the day from all three bedtime buckets.
  *
  * pct GUARANTEE (T-14-02-02):
  *   All pct fields are integer 0-100, never NaN. When total === 0, pct = 0.
  *
+ * BEDTIME NAP-DAY SPLIT (D-05, mirrors accuracy.js's D-03 exactly):
+ *   Every scored bedtime event also fans into bedtimeNapDay or
+ *   bedtimeNoNapDay, classified by the scored day's own actual napStart
+ *   (napStart != null — Phase 19 D-04's exact definition), never by which
+ *   internal series tifForecast() happened to select. The hit/width/highConf
+ *   values are the SAME already-computed values as the combined `bedtime`
+ *   bucket — not recomputed — just duplicated into the matching sub-bucket.
+ *
  * @param {object[]} history     output of computeTifBoundsHistory
  * @param {object[]} dayRecords  original day records (for actual event lookup)
- * @returns {{ wake, napStart, napEnd, bedtime }}  each with windowHit, avgWidthMin, highConf
+ * @returns {{ wake, napStart, napEnd, bedtime, bedtimeNapDay, bedtimeNoNapDay }}
+ *   each with windowHit, avgWidthMin, highConf
  */
 export function computeTifAccuracy(history, dayRecords) {
   // Build O(1) lookup map: date string → day record
   const dayByDate = new Map(dayRecords.map(d => [d.date, d]));
 
-  // Initialize counters for each event type
+  // Initialize counters for each event type (6 keys — includes bedtime split).
   const counters = {};
   for (const type of ACCURACY_TIF_CONFIG.EVENT_TYPES) {
     counters[type] = { total: 0, windowHitCount: 0, widthSum: 0, highConfCount: 0 };
@@ -173,7 +198,8 @@ export function computeTifAccuracy(history, dayRecords) {
     const actualDay = dayByDate.get(entry.date);
     if (!actualDay) continue; // no matching day record — skip
 
-    for (const type of ACCURACY_TIF_CONFIG.EVENT_TYPES) {
+    // The 4 real keys present on a bounds-history entry.
+    for (const type of ACCURACY_TIF_CONFIG.BASE_EVENT_TYPES) {
       const bounds = entry[type];
       if (bounds == null) continue; // null bounds — excluded from totals (ASSUMPTION MET-08)
 
@@ -189,12 +215,27 @@ export function computeTifAccuracy(history, dayRecords) {
 
       const c = counters[type];
       c.total++;
-      if (actualMinutes >= algMinMin && actualMinutes <= algMaxMin) {
+      const isHit = actualMinutes >= algMinMin && actualMinutes <= algMaxMin;
+      if (isHit) {
         c.windowHitCount++;
       }
-      c.widthSum += algMaxMin - algMinMin;
-      if (bounds.precisionScore != null && bounds.precisionScore >= 80) {
+      const width = algMaxMin - algMinMin;
+      c.widthSum += width;
+      const isHighConf = bounds.precisionScore != null && bounds.precisionScore >= 80;
+      if (isHighConf) {
         c.highConfCount++;
+      }
+
+      // D-05: fan the identical bedtime hit/width/highConf into the nap-day
+      // or no-nap-day sub-bucket, classified by THIS day's actual napStart.
+      // Reuses the same already-computed values — not recomputed.
+      if (type === 'bedtime') {
+        const isNapDay = actualDay.napStart != null;
+        const sub = counters[isNapDay ? 'bedtimeNapDay' : 'bedtimeNoNapDay'];
+        sub.total++;
+        if (isHit) sub.windowHitCount++;
+        sub.widthSum += width;
+        if (isHighConf) sub.highConfCount++;
       }
     }
   }
