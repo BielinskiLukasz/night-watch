@@ -22,11 +22,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-14)
+See: .planning/PROJECT.md (updated 2026-09-17)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 22 — Accuracy Scoring
+**Current focus:** Phase 23 — Metrics→Accuracy Column Migration
 
 ## Current Position
 
@@ -218,5 +218,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Phase 21 (Prediction Normalization) complete and verified. Next: `/gsd-discuss-phase 22` or `/gsd-plan-phase 22` for Phase 22 (Accuracy Scoring).
+- Phase 22 (Accuracy Scoring) complete and verified — 3/3 plans, code review found and fixed 1 critical (TIF midnight-crossing windows) + 2 warnings, 880 unit/integration + 134 E2E tests passing. Next: `/gsd-discuss-phase 23` or `/gsd-plan-phase 23` for Phase 23 (Metrics→Accuracy Column Migration).
 - Consider adding a regression unit test for `subWindowBedtime`'s midnight-wrap edge case (fixed during Phase 21 code review, WR-03 — no dedicated test yet).
+- A flaky `tests/e2e/metrics.spec.js` timeout cluster (10 tests waiting on `.metricsTable`) appeared during Phase 22's wave 1/2 post-merge gates but did not reproduce during wave 3's full-suite run. Confirmed unrelated to Phase 22's files — worth a look if it recurs.
