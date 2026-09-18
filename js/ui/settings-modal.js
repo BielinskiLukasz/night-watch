@@ -102,6 +102,12 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
     if (precisionTargetEl) precisionTargetEl.value = String(s.precisionTarget ?? 60);
     const tifRollingDaysEl = form.elements.namedItem('tifRollingDays');
     if (tifRollingDaysEl) tifRollingDaysEl.value = String(s.tifRollingDays ?? 7);
+    const blendWindowDaysEl = form.elements.namedItem('blendWindowDays');
+    if (blendWindowDaysEl) blendWindowDaysEl.value = String(s.blendWindowDays ?? 90);
+    const blendTrimPctEl = form.elements.namedItem('blendTrimPct');
+    if (blendTrimPctEl) blendTrimPctEl.value = String(s.blendTrimPct ?? 25);
+    const blendShrinkageEl = form.elements.namedItem('blendShrinkage');
+    if (blendShrinkageEl) blendShrinkageEl.value = String(s.blendShrinkage ?? 0.3);
     const firstDayOfWeekEl = form.elements.namedItem('firstDayOfWeek');
     if (firstDayOfWeekEl) firstDayOfWeekEl.value = s.firstDayOfWeek ?? 'monday';
     const targetSleepEl = form.elements.namedItem('targetSleepMinutes');
@@ -111,9 +117,11 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
     const noNapOffsetEl = form.elements.namedItem('noNapBedtimeOffsetMinutes');
     if (noNapOffsetEl) noNapOffsetEl.value = String(s.noNapBedtimeOffsetMinutes ?? 30);
     const tifOptionsEl = document.getElementById('tifOptions');
-    if (tifOptionsEl) tifOptionsEl.hidden = (s.forecastAlgorithm !== 'tif');
     const classicOptionsEl = document.getElementById('classicOptions');
-    if (classicOptionsEl) classicOptionsEl.hidden = (s.forecastAlgorithm === 'tif');
+    const blendOptionsEl = document.getElementById('blendOptions');
+    if (classicOptionsEl) classicOptionsEl.hidden = (s.forecastAlgorithm !== 'classic');
+    if (tifOptionsEl) tifOptionsEl.hidden = (s.forecastAlgorithm !== 'tif');
+    if (blendOptionsEl) blendOptionsEl.hidden = (s.forecastAlgorithm !== 'blend');
   }
 
   populateForm(snap);
@@ -140,7 +148,8 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
     }
   }
 
-  // D10-12: wire forecastAlgorithm change → show/hide #tifOptions
+  // D10-12 / Phase 25 D-14: wire forecastAlgorithm change → show/hide
+  // #classicOptions/#tifOptions/#blendOptions (three-way).
   const forecastAlgorithmEl = form.elements.namedItem('forecastAlgorithm');
   const tifOptionsEl        = document.getElementById('tifOptions');
   if (forecastAlgorithmEl && tifOptionsEl) {
@@ -148,10 +157,12 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
       forecastAlgorithmEl.removeEventListener('change', _forecastAlgorithmChangeHandler);
     }
     _forecastAlgorithmChangeHandler = () => {
-      const isTif = forecastAlgorithmEl.value === 'tif';
-      tifOptionsEl.hidden = !isTif;
+      const algo = forecastAlgorithmEl.value;
       const classicEl = document.getElementById('classicOptions');
-      if (classicEl) classicEl.hidden = isTif;
+      const blendEl = document.getElementById('blendOptions');
+      if (classicEl) classicEl.hidden = (algo !== 'classic');
+      tifOptionsEl.hidden = (algo !== 'tif');
+      if (blendEl) blendEl.hidden = (algo !== 'blend');
     };
     forecastAlgorithmEl.addEventListener('change', _forecastAlgorithmChangeHandler);
   }
@@ -189,6 +200,9 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
         trimPct:          Number(data.get('trimPct') ?? 10),
         precisionTarget:  Number(data.get('precisionTarget') ?? 60),
         tifRollingDays:   Number(data.get('tifRollingDays') ?? 7),
+        blendWindowDays:  Number(data.get('blendWindowDays') ?? 90),
+        blendTrimPct:     Number(data.get('blendTrimPct') ?? 25),
+        blendShrinkage:   Number(data.get('blendShrinkage') ?? 0.3),
         eveningHour:               Number(data.get('eveningHour') ?? 18),
         noNapBedtimeOffsetMinutes: Number(data.get('noNapBedtimeOffsetMinutes') ?? 30),
         intenseDayOffsetMinutes:   settings.get().intenseDayOffsetMinutes ?? 30,
