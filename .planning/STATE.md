@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 25 — Algorithm C & Settings Modal
+**Current focus:** v2.0 milestone complete (Phases 19-25) — ready for `/gsd-complete-milestone v2.0`
 
 ## Current Position
 
@@ -254,11 +254,15 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Phase 24 (Autosave) complete and verified — 5/5 plans (incl. gap-closure plan 24-05), PLAT-01..04 fully satisfied, goal re-verification passed 9/9, 903 unit/integration + 146 E2E tests passing. Next: `/gsd-discuss-phase 25` or `/gsd-plan-phase 25` for Phase 25 (Algorithm C & Settings Modal).
+- Phase 25 (Algorithm C & Settings Modal) complete and verified — 9/9 plans (incl. 4 gap-closure plans: 25-06, 25-07, 25-08, 25-09), PRED-13..17 + UI-12 fully satisfied, goal verification passed 6/6 must-haves, 984 unit/integration + 150 E2E tests passing. **This was the last phase of v2.0** — milestone is 100% complete (7/7 phases). Next: `/gsd-complete-milestone v2.0` to archive and prepare for the next milestone.
+- Follow-up (non-blocking, from 25-REVIEW.md): `alignNearReference()`'s tie-break contradicts its own docstring (favors value-DAY on exact 720-min ties, not "ties keep value") — reused unchanged by the new 25-09 circular-median code, so worth fixing the doc or the behavior together.
+- Follow-up (non-blocking, from 25-REVIEW.md): `blendForecast()`'s cold-start branch drops `detectColdStart()`'s `minDaysRemaining` (mirrors tifForecast's existing shape) — `today-screen.js`'s `renderColdStartMessage()` reads that field for every algorithm, so a cold-started Algorithm C (or TIF) user sees "Log 0 more days" instead of the real count. Pre-existing TIF gap since Phase 10, newly inherited by Algorithm C.
+- Follow-up (non-blocking, from 25-REVIEW.md): no E2E Save→reload round-trip test for `blendWindowDays`/`blendTrimPct`/`blendShrinkage`; a stray `console.log` in the CSV import handler; a stale `noNapBedtimeOffsetMinutes` literal in two `settings-validate.test.js` fixtures; blank-input-coerces-to-0 in `settings-modal.js`'s numeric FormData handling.
 - Follow-up (non-blocking, from 24-REVIEW.md): the first-launch banner's own "Set up autosave" button (`js/ui/today-screen.js`) sets `autosaveBannerDismissed` unconditionally after `autosave.pick()`, even on cancel/AbortError — same bug class as the Settings-modal gap 24-05 fixed, but in the sibling code path 24-05 deliberately didn't touch.
 - Follow-up (non-blocking, from 24-REVIEW.md): `autosaveActions.remove()` in `js/app.js` has no try/catch (unhandled rejection on failure); `autosaveState.error`/`lastSavedAt` aren't reset on pick/remove transitions (stale status line); IndexedDB connections in `createIndexedDbHandleStore` are never closed.
 - Follow-up (non-blocking): new `.tifPerDayTable` on the Accuracy screen has no horizontal-scroll wrapper for narrow/mobile viewports, and `.tifAccuracyTable` has no CSS styling of its own (23-REVIEW.md WR-01/WR-02).
-- `workflow.security_enforcement` is on but no `24-SECURITY.md` exists yet — run `/gsd-secure-phase 24` before shipping if a security gate is desired for this phase.
-- `workflow.ui_review` is on but no `24-UI-REVIEW.md` exists yet — run `/gsd-ui-review 24` if a UI audit is desired, given the new Settings Backup fieldset and first-launch banner.
+- `workflow.security_enforcement` is on but no `25-SECURITY.md` exists yet — run `/gsd-secure-phase 25` before shipping if a security gate is desired for this phase.
+- `workflow.ui_review` is on but no `25-UI-REVIEW.md` exists yet — run `/gsd-ui-review 25` if a UI audit is desired, given the new three-way algorithm selector in the Settings modal.
 - Consider adding a regression unit test for `subWindowBedtime`'s midnight-wrap edge case (fixed during Phase 21 code review, WR-03 — no dedicated test yet).
 - A flaky `tests/e2e/metrics.spec.js` timeout cluster (10 tests waiting on `.metricsTable`) appeared during Phase 22's wave 1/2 post-merge gates but did not reproduce during wave 3's full-suite run. Confirmed unrelated to Phase 22's files — worth a look if it recurs.
+- A similar flaky cluster reappeared during Phase 25's post-merge full-suite run (`next-reachable-event.spec.js` + `settings-modal.spec.js`, `browserContext.newPage` timeouts under 150-test parallel load) — confirmed non-reproducing and unrelated to Phase 25's files when re-run with `--workers=1`. Likely environment resource contention, not a product regression; worth investigating if it recurs across phases.
