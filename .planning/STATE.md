@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: executing
-stopped_at: Completed 20-05-PLAN.md (gap closure G-20-16 item 3)
-last_updated: "2026-09-18T20:04:23.537Z"
+stopped_at: Completed 20-06-PLAN.md (gap closure G-20-15, G-20-16 item 2)
+last_updated: "2026-09-18T20:54:15.565Z"
 last_activity: 2026-09-18
 last_activity_desc: Phase 20 execution started
-state_head: de92fe32e4c639c42820325f98abf00705b5a9a6
+state_head: 9130a7c5f34c5519ea2637a06b69c831a7d2ac03
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 86
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 ## Current Position
 
 Phase: 20 (Nap Probability Redesign) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-09-18 — Phase 20 execution started
 
@@ -120,6 +120,7 @@ Last activity: 2026-09-18 — Phase 20 execution started
 | Phase 25 P09 | 20min | 2 tasks | 2 files |
 | Phase 20 P04 | 15min | 1 tasks | 2 files |
 | Phase 20 P05 | 12min | 1 tasks | 2 files |
+| Phase 20 P06 | 47min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,7 @@ Last activity: 2026-09-18 — Phase 20 execution started
 - [Phase 25]: [Phase 25 Plan 09]: circularTrimmedBand()/circularMean() reuse Plan 25-08's alignNearReference()/wrapToDay() primitives upstream at the raw-sample and cross-model-averaging layers, closing CR-01's remaining root cause without touching stabilityCheck() itself
 - [Phase 20]: Phase 20 Plan 04: gate PRED-19 bedtime blend on napProbabilityScore.napWindowClosed — closed window routes to pure no-nap-day series, bypassing the score blend (G-20-16)
 - [Phase 20]: Phase 20 Plan 05: No minDays gate on the no-nap-day historic bedtime substitute band, matching forecast-blend.js Model 3's graceful-degradation contract (G-20-16 item 3)
+- [Phase 20]: Phase 20 Plan 06: Details loop no longer excludes hero's own type (G-20-15); bedtime slot substitutes bedtimeAfterWake with distinct label once napStartHiddenToday and bedtimeAfterWake truthy (G-20-16 item 2)
 
 ### Quick Tasks Completed
 
@@ -242,8 +244,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T20:04:17.578Z
-Stopped at: Completed 20-05-PLAN.md (gap closure G-20-16 item 3)
+Last session: 2026-09-18T20:54:09.316Z
+Stopped at: Completed 20-06-PLAN.md (gap closure G-20-15, G-20-16 item 2)
 Resume file: None
 
 ## Deferred Items
