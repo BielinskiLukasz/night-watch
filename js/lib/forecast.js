@@ -789,19 +789,29 @@ export function forecast(dayRecords, settings, context = {}) {
       }
       // null (thin sub-window) → fall through to PRED-10 / overall
     } else if (napProbabilityScore !== null && napProbabilityScore.score !== null) {
-      // Nap status undetermined → blend proportionally by score (PRED-19, D-05)
-      const napDaySeries = buildBedtimeSeriesNapDay(window, settings);
-      const noNapDaySeries = buildBedtimeSeriesNoNapDay(window, settings);
-      if (napDaySeries !== null && noNapDaySeries !== null) {
-        const ratio = napProbabilityScore.score / 100;
-        const blended = {
-          central: Math.round(ratio * napDaySeries.central + (1 - ratio) * noNapDaySeries.central),
-          min:     Math.min(napDaySeries.min, noNapDaySeries.min),
-          max:     Math.max(napDaySeries.max, noNapDaySeries.max),
-        };
-        return selectBedtime(blended);
+      if (napProbabilityScore.napWindowClosed) {
+        // G-20-16: window has definitively closed for today (no nap started) →
+        // route to the pure no-nap-day series, never blend in nap-day statistics.
+        const noNapDaySeries = buildBedtimeSeriesNoNapDay(window, settings);
+        if (noNapDaySeries !== null) {
+          return selectBedtime(noNapDaySeries);
+        }
+        // null (thin no-nap-day sub-window) → fall through to PRED-10 / overall
+      } else {
+        // Nap status undetermined → blend proportionally by score (PRED-19, D-05)
+        const napDaySeries = buildBedtimeSeriesNapDay(window, settings);
+        const noNapDaySeries = buildBedtimeSeriesNoNapDay(window, settings);
+        if (napDaySeries !== null && noNapDaySeries !== null) {
+          const ratio = napProbabilityScore.score / 100;
+          const blended = {
+            central: Math.round(ratio * napDaySeries.central + (1 - ratio) * noNapDaySeries.central),
+            min:     Math.min(napDaySeries.min, noNapDaySeries.min),
+            max:     Math.max(napDaySeries.max, noNapDaySeries.max),
+          };
+          return selectBedtime(blended);
+        }
+        // One or both sub-series null (D-08) → fall through to PRED-10 / overall
       }
-      // One or both sub-series null (D-08) → fall through to PRED-10 / overall
     }
     // napProbabilityScore absent/null, or napProbabilityScore.score === null (D-07/Phase 20 D-04) → fall through to PRED-10 / overall
 
