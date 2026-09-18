@@ -32,12 +32,24 @@ describe('DEFAULT_SETTINGS', () => {
     assert.equal(DEFAULT_SETTINGS.statBlend, 'median');
   });
 
-  it('has exactly 22 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18; noNapBedtimeOffsetMinutes removed D-10)', () => {
-    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 22);
+  it('has exactly 25 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 + 3 Phase 25 fields; noNapBedtimeOffsetMinutes removed D-10)', () => {
+    assert.equal(Object.keys(DEFAULT_SETTINGS).length, 25);
   });
 
   it('has tifRollingDays: 7 default (TIF-13)', () => {
     assert.strictEqual(DEFAULT_SETTINGS.tifRollingDays, 7);
+  });
+
+  it('has blendWindowDays: 90 default (D-11)', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendWindowDays, 90);
+  });
+
+  it('has blendTrimPct: 25 default (D-12)', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendTrimPct, 25);
+  });
+
+  it('has blendShrinkage: 0.3 default (D-13)', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendShrinkage, 0.3);
   });
 
   // -------------------------------------------------------------------------
@@ -564,6 +576,137 @@ describe('migrateV1ToV2 — Phase 13 tifRollingDays injection', () => {
     assert.equal(result, blob, 'must return same blob reference for v2');
     assert.strictEqual(result.settings.tifRollingDays, 14,
       'existing tifRollingDays must not be clobbered');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// migrateV1ToV2 — Phase 25 forward-compat migration (D-11, D-12, D-13)
+// ---------------------------------------------------------------------------
+
+describe('migrateV1ToV2 — Phase 25 blend-settings injection', () => {
+  let infoSpy;
+
+  before(() => {
+    infoSpy = mock.method(console, 'info', () => {});
+  });
+
+  after(() => {
+    infoSpy.mock.restore();
+  });
+
+  it('v2 blob without blendWindowDays: migrateV1ToV2 injects blendWindowDays: 90', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'classic', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendWindowDays, 90,
+      'blendWindowDays must be injected as 90 for v2 blob missing it');
+  });
+
+  it('v2 blob with existing blendWindowDays: migrateV1ToV2 does not clobber it', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'blend', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7, blendWindowDays: 45,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendWindowDays, 45,
+      'existing blendWindowDays must not be clobbered');
+  });
+
+  it('v2 blob without blendTrimPct: migrateV1ToV2 injects blendTrimPct: 25', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'classic', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendTrimPct, 25,
+      'blendTrimPct must be injected as 25 for v2 blob missing it');
+  });
+
+  it('v2 blob with existing blendTrimPct: migrateV1ToV2 does not clobber it', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'blend', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7, blendTrimPct: 15,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendTrimPct, 15,
+      'existing blendTrimPct must not be clobbered');
+  });
+
+  it('v2 blob without blendShrinkage: migrateV1ToV2 injects blendShrinkage: 0.3', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'classic', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendShrinkage, 0.3,
+      'blendShrinkage must be injected as 0.3 for v2 blob missing it');
+  });
+
+  it('v2 blob with existing blendShrinkage: migrateV1ToV2 does not clobber it', () => {
+    const blob = {
+      version: 2,
+      settings: {
+        subjectName: 'Test', cutoverHour: 4, stages: [], activeStageId: null,
+        confirmBeforeLogging: false, forecastAlgorithm: 'blend', trimPct: 10,
+        precisionTarget: 60, intenseDays: [], eveningHour: 18,
+        intenseDayOffsetMinutes: 30, tifRollingDays: 7, blendShrinkage: 0.5,
+      },
+      events: [],
+      activityLog: {},
+    };
+    const result = migrateV1ToV2(blob, DEFAULT_SETTINGS);
+    assert.equal(result, blob, 'must return same blob reference for v2');
+    assert.strictEqual(result.settings.blendShrinkage, 0.5,
+      'existing blendShrinkage must not be clobbered');
+  });
+
+  it('fresh install: 3 Phase 25 blend fields present with correct defaults', () => {
+    const result = migrateV1ToV2(null, DEFAULT_SETTINGS);
+    assert.strictEqual(result.settings.blendWindowDays, 90);
+    assert.strictEqual(result.settings.blendTrimPct, 25);
+    assert.strictEqual(result.settings.blendShrinkage, 0.3);
   });
 });
 
