@@ -125,14 +125,15 @@ test('after 32 valid-day events (all 4 types), prediction cards appear (D3-08)',
   await expect(heroCard).toBeVisible();
   await expect(heroCard).toHaveAttribute('data-event-type', 'wake');
 
-  // Every other event type (napStart, napEnd, bedtime) lives inside the
-  // collapsed-by-default "Later today" section (Phase 21 D-10/D-11/D-12).
+  // Every event type — including the hero's own (wake), per G-20-15 gap
+  // closure — lives inside the collapsed-by-default "Details" section
+  // (renamed from "Later today"; Phase 21 D-10/D-11/D-12, Phase 20-06).
   const laterToday = page.locator('.later-today-section');
   await expect(laterToday).toBeVisible();
   await laterToday.locator('summary').click();
 
   const cardCount = await page.locator('#forecast-cards .prediction-card').count();
-  expect(cardCount).toBe(3);
+  expect(cardCount).toBe(4);
 
   const firstCard = page.locator('#forecast-cards .prediction-card').first();
   await expect(firstCard).toBeVisible();

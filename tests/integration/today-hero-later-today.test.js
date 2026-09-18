@@ -131,14 +131,29 @@ class MockElement extends MockNode {
 }
 
 /**
- * Matches a selector against a node's classList. Supports single ('.foo')
- * AND compound ('.foo.bar') class selectors — the production auto-expand
- * listener in today-screen.js queries '.tif-card.collapsed' /
- * '.probability-band.collapsed', which today-card-collapse.test.js's
- * original single-class-only matcher could not resolve.
+ * Matches a selector against a node's classList and/or attributes. Supports:
+ *   - single ('.foo') AND compound ('.foo.bar') class selectors — the
+ *     production auto-expand listener in today-screen.js queries
+ *     '.tif-card.collapsed' / '.probability-band.collapsed', which
+ *     today-card-collapse.test.js's original single-class-only matcher
+ *     could not resolve.
+ *   - attribute-value selectors ('[data-event-type="wake"]') — 20-06 G-20-15
+ *     regression coverage needs to assert a card's data-event-type directly,
+ *     which the original class-only matcher silently always failed (never
+ *     matched, regardless of the actual DOM state) rather than raising an
+ *     error, letting a stale assertion pass for the wrong reason.
  */
 function _matchesSel(node, selector) {
-  if (!node || !node.classList) return false;
+  if (!node) return false;
+  if (selector.startsWith('[')) {
+    const m = selector.match(/^\[([\w-]+)(?:="([^"]*)")?\]$/);
+    if (!m || !node.getAttribute) return false;
+    const [, attrName, attrValue] = m;
+    const actual = node.getAttribute(attrName);
+    if (actual === null) return false;
+    return attrValue === undefined ? true : actual === attrValue;
+  }
+  if (!node.classList) return false;
   if (selector.startsWith('.')) {
     const classes = selector.slice(1).split('.').filter(Boolean);
     return classes.length > 0 && classes.every((cls) => node.classList.contains(cls));
@@ -256,13 +271,16 @@ describe('renderForecastSection "Later today" section (D-10/D-11/D-12/D-13)', ()
     assert.strictEqual(laterToday.open, undefined, 'must not start with `open` set (collapsed by default, D-11)');
   });
 
-  it('the hero (wake) is rendered into nextEventCard, not duplicated inside Later Today', () => {
+  it('the hero (wake) is rendered into nextEventCard AND also gets its own detail card inside Details', () => {
     const { nextEventCard, laterToday } = renderAndGetLaterToday();
     const hero = nextEventCard.querySelector('.next-event-hero');
     assert.ok(hero, 'hero card must be present in nextEventCard');
     assert.strictEqual(hero.getAttribute('data-event-type'), 'wake');
-    const wakeInLaterToday = laterToday.querySelector('[data-event-type="wake"]');
-    assert.strictEqual(wakeInLaterToday, null, 'wake must not also appear inside Later Today');
+    // G-20-15 gap closure: the hero's own type is no longer excluded from
+    // Details, so the next predicted event always has a detail card
+    // somewhere, not just a vague hero card.
+    const wakeCardsInLaterToday = laterToday.querySelectorAll('[data-event-type="wake"]');
+    assert.strictEqual(wakeCardsInLaterToday.length, 1, 'wake must also appear inside Details, exactly once');
   });
 
   it('a nested TIF-shaped card starts with .collapsed', () => {

@@ -268,10 +268,19 @@ test('bedtime -> wake: single hero, Later Today has napStart/napEnd/bedtime', as
   expect(await laterToday.getAttribute('open')).toBeNull();
 
   await laterToday.locator('summary').click();
-  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(3);
+  // G-20-15: Details now also carries a detail card for the hero's own type
+  // (wake) alongside napStart/napEnd/bedtime — 4 cards, not 3.
+  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(4);
+  await expect(laterToday.locator('[data-event-type="wake"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napEnd"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(1);
+
+  // G-20-15 concrete proof: the hero's own detail card carries real, matching
+  // data — not a stale placeholder — by comparing central times.
+  const heroTime = await heroCard.locator('.time-central').textContent();
+  const detailWakeTime = await laterToday.locator('[data-event-type="wake"] .time-central').textContent();
+  expect(detailWakeTime).toBe(heroTime);
 });
 
 // ── Test 2: napStart -> napEnd ───────────────────────────────────────────────
@@ -294,9 +303,12 @@ test('napStart -> napEnd: single hero, Later Today has wake/napStart/bedtime', a
   expect(await laterToday.getAttribute('open')).toBeNull();
 
   await laterToday.locator('summary').click();
-  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(3);
+  // G-20-15: Details now also carries a detail card for the hero's own type
+  // (napEnd) alongside wake/napStart/bedtime — 4 cards, not 3.
+  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(4);
   await expect(laterToday.locator('[data-event-type="wake"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(1);
+  await expect(laterToday.locator('[data-event-type="napEnd"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(1);
 });
 
@@ -321,10 +333,13 @@ test('napEnd -> bedtime: single hero, Later Today has wake/napStart/napEnd', asy
   expect(await laterToday.getAttribute('open')).toBeNull();
 
   await laterToday.locator('summary').click();
-  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(3);
+  // G-20-15: Details now also carries a detail card for the hero's own type
+  // (bedtime) alongside wake/napStart/napEnd — 4 cards, not 3.
+  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(4);
   await expect(laterToday.locator('[data-event-type="wake"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napEnd"]')).toHaveCount(1);
+  await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(1);
 });
 
 // ── Test 4: wake (window closed) -> bedtimeAfterWake only, napStart absent ───
@@ -361,6 +376,40 @@ test('wake (window closed) -> bedtimeAfterWake only, napStart fully absent from 
   expect(await page.locator('[data-event-type="bedtime"]').count()).toBeGreaterThanOrEqual(1);
 });
 
+// ── Test 4b: G-20-16 item 2 — bedtime/bedtimeAfterWake label distinction ─────
+
+test('window closed: Details bedtime slot shows the distinct no-nap label, not the plain bedtime label', async ({ page }) => {
+  // Reuses Test 5's dual-hero fixture (real no-nap-day history, so
+  // predictions.bedtimeAfterWake has actual data — unlike makeWindowClosedDb,
+  // which has no no-nap-day history at all and would leave bedtimeAfterWake
+  // null) but pins the clock PAST the default eveningHour(18) instead of
+  // before it. Past eveningHour, napStartHiddenToday is true regardless of
+  // napWindowClosed, collapsing the dual-hero case down to a single
+  // bedtimeAfterWake hero — the G-20-16 item 2 substitution case.
+  await page.clock.setFixedTime(new Date('2026-05-17T20:00:00'));
+
+  const db = makeDualHeroDb();
+  await seedAndReload(page, db);
+
+  await expect(page.locator('#forecast-cards')).toBeVisible();
+
+  const laterToday = page.locator('.later-today-section');
+  await expect(laterToday).toBeVisible();
+  await laterToday.locator('summary').click();
+
+  // data-event-type still reads 'bedtime' (single-logged-event-type contract,
+  // Phase 21 D-07 / T-21-01), even though the underlying series is the
+  // no-nap-day substitute.
+  const bedtimeCard = laterToday.locator('[data-event-type="bedtime"]');
+  await expect(bedtimeCard).toHaveCount(1);
+
+  const labelText = await bedtimeCard.locator('.event-label').first().textContent();
+  expect(labelText).toMatch(/no nap/i);
+  // Contrast with the plain nap-day/undetermined label used elsewhere
+  // (e.g. Test 3's napEnd -> bedtime Details card, which stays 'Bedtime').
+  expect(labelText?.trim().toLowerCase()).not.toBe('bedtime');
+});
+
 // ── Test 5: wake (window open) -> dual hero [napStart, bedtimeAfterWake] ─────
 
 test('wake (window open) -> dual hero [napStart, bedtimeAfterWake]', async ({ page }) => {
@@ -386,17 +435,17 @@ test('wake (window open) -> dual hero [napStart, bedtimeAfterWake]', async ({ pa
   const bedtimeTime = await bedtimeHero.locator('.time-central').textContent();
   expect(napStartTime).not.toBe(bedtimeTime);
 
-  // Later Today contains only wake + napEnd (both hero types, and the
-  // hero-implied 'bedtime', are excluded).
+  // G-20-15: Details now also carries detail cards for both hero types
+  // (napStart, bedtime) alongside wake + napEnd — 4 cards, not 2.
   const laterToday = page.locator('.later-today-section');
   await expect(laterToday).toBeVisible();
   await laterToday.locator('summary').click();
 
-  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(2);
+  await expect(laterToday.locator('.prediction-card, .tif-card')).toHaveCount(4);
   await expect(laterToday.locator('[data-event-type="wake"]')).toHaveCount(1);
   await expect(laterToday.locator('[data-event-type="napEnd"]')).toHaveCount(1);
-  await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(0);
-  await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(0);
+  await expect(laterToday.locator('[data-event-type="napStart"]')).toHaveCount(1);
+  await expect(laterToday.locator('[data-event-type="bedtime"]')).toHaveCount(1);
 });
 
 // ── Test 6: TIF auto-expand inside Later Today (D-13) ────────────────────────
