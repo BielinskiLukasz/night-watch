@@ -47,6 +47,7 @@ import { forecast, napProbability } from '../lib/forecast.js';
 // selectNextEvent's singular-result contract stays available in forecast-utils.js for other callers.
 import { nextReachableEvent, PREDICTION_FIELD, RESULT_TYPE, isNapWindowClosed } from '../lib/forecast-utils.js';
 import { tifForecast } from '../lib/forecast-tif.js';
+import { blendForecast } from '../lib/forecast-blend.js';
 import { filterDayRecordsByStage } from '../lib/stages.js';
 
 /** Single source of truth for the 4 quick-log button definitions (D-10).
@@ -1179,7 +1180,9 @@ export function mountTodayScreen({ root, eventLog, settings, clock, autosave }) 
     const isNoNapDay = (currentHour >= snap.eveningHour) && (todayDayRecord?.napStart == null);
     const predictions = snap.forecastAlgorithm === 'tif'
       ? tifForecast(forecastDaysOldestFirst, snap, activityLog, isNoNapDay)
-      : forecast(forecastDaysOldestFirst, snap, forecastContext);
+      : snap.forecastAlgorithm === 'blend'
+        ? blendForecast(forecastDaysOldestFirst, snap, activityLog, isNoNapDay)
+        : forecast(forecastDaysOldestFirst, snap, forecastContext);
 
     // Attach napProbabilityScore to napStart prediction for UI rendering (PRED-12).
     if (predictions.napStart && !predictions.isColdStart) {
