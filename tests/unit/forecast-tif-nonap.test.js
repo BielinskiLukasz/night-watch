@@ -49,6 +49,32 @@ const defaultNoNapSettings = {
   forecastAlgorithm: 'tif',
 };
 
+/**
+ * Build a 10-day fixture where bedtime differs between nap days and no-nap
+ * days, so tests can detect whether the Activity-after-nap band (nap-day
+ * anchored) or the no-nap-day substitute band drove the bedtime prediction.
+ * Nap days keep bedtime '22:00' (matching makeNoNapFixture); no-nap days use
+ * '21:00'. napStart/napEnd/wake shape is otherwise identical to makeNoNapFixture.
+ *
+ * @param {number[]} noNapIndices  indices (0-based) that are no-nap days
+ * @returns {object[]}
+ */
+function makeVariedBedtimeFixture(noNapIndices = []) {
+  return Array.from({ length: 10 }, (_, i) => {
+    const dayNum = String(i + 1).padStart(2, '0');
+    const isNoNap = noNapIndices.includes(i);
+    return {
+      date:     `2024-01-${dayNum}`,
+      wake:     '07:30',
+      napStart: isNoNap ? null : '13:00',
+      napEnd:   isNoNap ? null : '14:30',
+      bedtime:  isNoNap ? '21:00' : '22:00',
+      allEvents: [],
+      rejected: false,
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -132,6 +158,55 @@ describe('tifForecast() TIF-16 no-nap-day substitution', () => {
     assert.ok(
       !result.wake.sourceWindows.some(w => w.label === 'Post-no-nap sleep-length band'),
       'wake.sourceWindows should NOT contain Post-no-nap sleep-length band when isNoNapDay=false',
+    );
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// G-20-16 item 3: gate Activity-after-nap band on isNoNapDay
+// ---------------------------------------------------------------------------
+
+describe('tifForecast() G-20-16 item 3: Activity-after-nap band gated on isNoNapDay', () => {
+
+  it('isNoNapDay=true, nap day present in window → bedtime.sourceWindows must NOT contain Activity-after-nap band', () => {
+    // Nap day at index 9 (last) resolves napEndAnchor; 4 no-nap days (2,4,6,8)
+    const fixture = makeVariedBedtimeFixture([2, 4, 6, 8]);
+    const result  = tifForecast(fixture, defaultNoNapSettings, {}, true);
+
+    assert.ok(
+      !result.bedtime.sourceWindows.some(w => w.label === 'Activity-after-nap band'),
+      'bedtime.sourceWindows should NOT contain Activity-after-nap band when isNoNapDay=true',
+    );
+  });
+
+  it('isNoNapDay=true, no-nap-day bedtimes differ from nap-day bedtimes → substitute band present and central differs', () => {
+    const fixture = makeVariedBedtimeFixture([2, 4, 6, 8]);
+    const resultNoNap = tifForecast(fixture, defaultNoNapSettings, {}, true);
+    const resultNapDay = tifForecast(fixture, defaultNoNapSettings, {}, false);
+
+    assert.ok(
+      resultNoNap.bedtime.sourceWindows.some(w => w.label === 'Historic bedtime band (no-nap days)'),
+      'bedtime.sourceWindows should contain Historic bedtime band (no-nap days) substitute',
+    );
+    assert.notStrictEqual(
+      resultNoNap.bedtime.central,
+      resultNapDay.bedtime.central,
+      'bedtime.central with the no-nap substitute should differ from the Activity-after-nap-band-driven result',
+    );
+  });
+
+  it('isNoNapDay=false → Activity-after-nap band still appears exactly as before (regression pin)', () => {
+    const fixture = makeVariedBedtimeFixture([2, 4, 6, 8]);
+    const result  = tifForecast(fixture, defaultNoNapSettings, {}, false);
+
+    assert.ok(
+      result.bedtime.sourceWindows.some(w => w.label === 'Activity-after-nap band'),
+      'bedtime.sourceWindows should contain Activity-after-nap band when isNoNapDay=false',
+    );
+    assert.ok(
+      !result.bedtime.sourceWindows.some(w => w.label === 'Historic bedtime band (no-nap days)'),
+      'bedtime.sourceWindows should NOT contain the no-nap substitute band when isNoNapDay=false',
     );
   });
 
