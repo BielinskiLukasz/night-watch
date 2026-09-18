@@ -136,14 +136,18 @@ export function stabilityCheck(intervals, central, shrinkage) {
 }
 
 // ---------------------------------------------------------------------------
-// wrapToDay — private; used by Plan 25-02's wake-/nap-end-anchored bedtime
-// duration bands (D-03/D-04), which can project past midnight.
+// wrapToDay — exported for direct unit testing (Plan 25-07, WR-01). Used by
+// wake's A2 band, bedtime's Models 2/3 (Plan 25-01/25-02), and now also
+// napStartModel1/napEndModel1/napEndModel2 (Plan 25-07) — every anchor+gap/
+// duration sum that can project past midnight is wrapped into [0, DAY)
+// before combineModels()/stabilityCheck() compares it against sibling models
+// built from already-wrapped 'HH:MM' clock-time strings.
 // ---------------------------------------------------------------------------
 
 const DAY = 24 * 60;
 
 /** Wrap a raw-minutes value back into [0, DAY). */
-function wrapToDay(m) {
+export function wrapToDay(m) {
   return ((m % DAY) + DAY) % DAY;
 }
 
@@ -240,9 +244,9 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
     const gapBand = trimmedBand([...napGaps].sort((a, b) => a - b), blendTrimPct, rejectedInWindow);
     if (gapBand) {
       napStartModel1 = {
-        min:    wakeAnchorMin + gapBand.min,
-        max:    wakeAnchorMin + gapBand.max,
-        median: wakeAnchorMin + gapBand.median,
+        min:    wrapToDay(wakeAnchorMin + gapBand.min),
+        max:    wrapToDay(wakeAnchorMin + gapBand.max),
+        median: wrapToDay(wakeAnchorMin + gapBand.median),
       };
     }
   }
@@ -283,9 +287,9 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
     const gapBand2 = trimmedBand([...napGaps].sort((a, b) => a - b), blendTrimPct, rejectedInWindow);
     if (gapBand2 && durBand2) {
       napEndModel1 = {
-        min:    wakeAnchorMin + gapBand2.min    + durBand2.min,
-        max:    wakeAnchorMin + gapBand2.max    + durBand2.max,
-        median: wakeAnchorMin + gapBand2.median + durBand2.median,
+        min:    wrapToDay(wakeAnchorMin + gapBand2.min    + durBand2.min),
+        max:    wrapToDay(wakeAnchorMin + gapBand2.max    + durBand2.max),
+        median: wrapToDay(wakeAnchorMin + gapBand2.median + durBand2.median),
       };
     }
   }
@@ -298,9 +302,9 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
   if (napStartAnchorHHMM != null && durBand2) {
     const napStartAnchorMin = timeToMinutes(napStartAnchorHHMM);
     napEndModel2 = {
-      min:    napStartAnchorMin + durBand2.min,
-      max:    napStartAnchorMin + durBand2.max,
-      median: napStartAnchorMin + durBand2.median,
+      min:    wrapToDay(napStartAnchorMin + durBand2.min),
+      max:    wrapToDay(napStartAnchorMin + durBand2.max),
+      median: wrapToDay(napStartAnchorMin + durBand2.median),
     };
   }
 

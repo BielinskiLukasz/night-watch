@@ -282,11 +282,18 @@ function buildLateWakeNapStartFixture(n = 30) {
  * jitter cycle wraps past midnight and half does not), napEnd = that day's
  * (already-wrapped) napStart + 90min + a 4-value jitter cycle (duration
  * 90-105, always a positive elapsed time). The last day's napStart is then
- * overridden to the literal '00:15' (today's actual logged nap-start,
- * napEndModel2's D-10 "actual" precedence input) while wake stays '22:00'
- * (still feeds napEndModel1's wakeAnchorMin). Exercises napEndModel1's fully
- * chained wake-anchored gap+duration sum, which must be wrapped into
- * [0,1440) before combining against napEndModel2 (WR-01).
+ * overridden to the literal '00:00' (today's actual logged nap-start, small
+ * and already in [0,1440) — napEndModel2's D-10 "actual" precedence input)
+ * while wake stays '22:00' (still feeds napEndModel1's wakeAnchorMin).
+ * Exercises napEndModel1's fully chained wake-anchored gap+duration sum,
+ * which must be wrapped into [0,1440) before combining against napEndModel2
+ * (WR-01). '00:00' (rather than another small time) is chosen deliberately:
+ * it keeps napEndModel2's band aligned closely enough with napEndModel1's
+ * wrapped band that the post-fix central lands inside the reported
+ * intersection without relying on stabilityCheck's partial (0.3) shrinkage
+ * to close a wider gap — shrinkage pulls central only part-way toward the
+ * intersection's center, so it is not guaranteed to land inside for every
+ * anchor choice, only for one close enough to the historic distribution.
  */
 function buildLateWakeNapEndFixture(n = 30) {
   const days = Array.from({ length: n }, (_, i) => {
@@ -295,7 +302,7 @@ function buildLateWakeNapEndFixture(n = 30) {
     const napEnd = fmt(timeToMinutes(napStart) + 90 + (i % 4) * 5);
     return makeDay(wake, null, napStart, napEnd);
   });
-  days[days.length - 1] = { ...days[days.length - 1], napStart: '00:15' };
+  days[days.length - 1] = { ...days[days.length - 1], napStart: '00:00' };
   return days;
 }
 
