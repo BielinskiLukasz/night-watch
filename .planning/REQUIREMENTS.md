@@ -7,7 +7,7 @@
 
 ### Prediction Engine (Algorithm C)
 
-- [ ] **PRED-13**: `js/lib/forecast-blend.js` exports `blendForecast(dayRecords, snap)` — Algorithm C entry point returning the same top-level prediction shape as Classic and TIF so `today-screen.js` can swap between all three transparently
+- [x] **PRED-13**: `js/lib/forecast-blend.js` exports `blendForecast(dayRecords, snap)` — Algorithm C entry point returning the same top-level prediction shape as Classic and TIF so `today-screen.js` can swap between all three transparently
 - [x] **PRED-14**: Algorithm C wake prediction — dual-model median blend of A1 (historic wake-up band) and A2 (sleep-length band projected from last bedtime); median of each model's trimmed distribution, final central = average of the two medians
 - [x] **PRED-15**: Algorithm C bedtime prediction — three-band blend: Historic bedtime band + Day-length band + Activity-after-nap band (AA band); central = average of the three trimmed medians
 - [x] **PRED-16**: Algorithm C interval stability check for each event — if per-model intervals overlap, use intersection (with shrinkage toward intersection center when central lies outside); if no overlap, use combined union range
@@ -43,7 +43,7 @@
 ### Screen Changes
 
 - [x] **UI-11**: Move TIF window columns (per-event lower/upper bounds, confidence score, window width) from Metrics screen to Accuracy screen — clean separation: Metrics = what happened, Accuracy = how well predicted
-- [ ] **UI-12**: Settings modal Algorithm selector exposes three options: Classic / TIF / Algorithm C; algorithm-specific settings (Classic trim/rolling, TIF precision, Blend shrinkage) show/hide based on active selection; selector rendered at top of Forecast & Prediction fieldset (consistent with v1.3 placement)
+- [x] **UI-12**: Settings modal Algorithm selector exposes three options: Classic / TIF / Algorithm C; algorithm-specific settings (Classic trim/rolling, TIF precision, Blend shrinkage) show/hide based on active selection; selector rendered at top of Forecast & Prediction fieldset (consistent with v1.3 placement)
 - [x] **UI-13**: Today screen renders only the next reachable event card prominently using `nextReachableEvent`; secondary events remain accessible but de-emphasized; nap cards hidden (not collapsed) when window is closed
 
 ### Autosave
@@ -68,7 +68,7 @@
 
 | Requirement | Backlog | Phase | Status |
 |-------------|---------|-------|--------|
-| PRED-13 | B-050 | Phase 25 | Pending |
+| PRED-13 | B-050 | Phase 25 | Complete |
 | PRED-14 | B-050 | Phase 25 | Complete |
 | PRED-15 | B-050 | Phase 25 | Complete |
 | PRED-16 | B-050 | Phase 25 | Complete |
@@ -89,7 +89,7 @@
 | ACC-03 | B-049 | Phase 22 | Complete |
 | ACC-04 | B-049 | Phase 22 | Complete |
 | UI-11 | B-041 | Phase 23 | Complete |
-| UI-12 | B-032 | Phase 25 | Pending |
+| UI-12 | B-032 | Phase 25 | Complete |
 | UI-13 | B-038 | Phase 21 | Complete |
 | PLAT-01 | B-051 | Phase 24 | Complete |
 | PLAT-02 | B-051 | Phase 24 | Complete |
