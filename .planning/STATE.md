@@ -2,19 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
-current_phase: 25
-status: completed
-stopped_at: Phase 25 complete — all phases complete
-last_updated: "2026-09-18T17:43:18.665Z"
+current_phase: 20
+current_phase_name: Nap Probability Redesign
+status: executing
+stopped_at: Completed 20-04-PLAN.md (gap closure G-20-16 item 1)
+last_updated: "2026-09-18T19:56:39.361Z"
 last_activity: 2026-09-18
-last_activity_desc: Phase 25 complete
-state_head: 70823c5a05fd7b230738b8517713c3b22f824b1b
+last_activity_desc: Phase 20 execution started
+state_head: a5e37654524a6dd59db2fd2723c49212126d4423
 progress:
   total_phases: 7
-  completed_phases: 7
-  total_plans: 27
-  completed_plans: 27
-  percent: 100
+  completed_phases: 6
+  total_plans: 31
+  completed_plans: 28
+  percent: 86
 ---
 
 # Project State
@@ -25,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** v1.5 milestone complete (Phases 19-25) — ready for `/gsd-complete-milestone v1.5`
+**Current focus:** Phase 20 — Nap Probability Redesign
 
 ## Current Position
 
-Phase: 25
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-09-18 - Completed quick task 260918-s1x: Rename in-progress milestone from v2.0 to v1.5 (Prediction Engine & Autosave) across .planning docs
+Phase: 20 (Nap Probability Redesign) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-09-18 — Phase 20 execution started
 
 ## Phases
 
@@ -117,6 +118,7 @@ Last activity: 2026-09-18 - Completed quick task 260918-s1x: Rename in-progress 
 | Phase 25 P07 | 15min | 1 tasks | 2 files |
 | Phase 25 P08 | 21min | 1 tasks | 2 files |
 | Phase 25 P09 | 20min | 2 tasks | 2 files |
+| Phase 20 P04 | 15min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -212,6 +214,7 @@ Last activity: 2026-09-18 - Completed quick task 260918-s1x: Rename in-progress 
 - [Phase 25]: Phase 25 Plan 08: DAY constant relocated (not duplicated) to before stabilityCheck's section; wrapToDay itself stays in its original position — only DAY moved, matching the plan's exact instruction
 - [Phase 25]: Phase 25 Plan 08: stabilityCheck() hardened via self-unwrap (selfUnwrapInterval) + align-to-reference (alignNearReference) + re-wrap, closing CR-01 circular-interval defect with zero changes to combineModels() or the 6 model-construction call sites
 - [Phase 25]: [Phase 25 Plan 09]: circularTrimmedBand()/circularMean() reuse Plan 25-08's alignNearReference()/wrapToDay() primitives upstream at the raw-sample and cross-model-averaging layers, closing CR-01's remaining root cause without touching stabilityCheck() itself
+- [Phase 20]: Phase 20 Plan 04: gate PRED-19 bedtime blend on napProbabilityScore.napWindowClosed — closed window routes to pure no-nap-day series, bypassing the score blend (G-20-16)
 
 ### Quick Tasks Completed
 
@@ -237,8 +240,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T17:06:36.902Z
-Stopped at: Phase 25 complete — all phases complete
+Last session: 2026-09-18T19:56:32.433Z
+Stopped at: Completed 20-04-PLAN.md (gap closure G-20-16 item 1)
 Resume file: None
 
 ## Deferred Items
