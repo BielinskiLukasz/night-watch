@@ -22,11 +22,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-17)
+See: .planning/PROJECT.md (updated 2026-09-18)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** Phase 24 — Autosave
+**Current focus:** Phase 25 — Algorithm C & Settings Modal
 
 ## Current Position
 
@@ -214,7 +214,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T08:39:57.981Z
+Last session: 2026-09-18
 Stopped at: Phase 24 complete, ready to plan Phase 25
 Resume file: None
 
@@ -232,9 +232,11 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Phase 23 (Metrics→Accuracy Column Migration) complete and verified — 2/2 plans, UI-11 fully satisfied, code review found 0 critical / 2 warnings / 3 info (no blockers), 880 unit/integration + 138 E2E tests passing. Next: `/gsd-discuss-phase 24` or `/gsd-plan-phase 24` for Phase 24 (Autosave).
+- Phase 24 (Autosave) complete and verified — 5/5 plans (incl. gap-closure plan 24-05), PLAT-01..04 fully satisfied, goal re-verification passed 9/9, 903 unit/integration + 146 E2E tests passing. Next: `/gsd-discuss-phase 25` or `/gsd-plan-phase 25` for Phase 25 (Algorithm C & Settings Modal).
+- Follow-up (non-blocking, from 24-REVIEW.md): the first-launch banner's own "Set up autosave" button (`js/ui/today-screen.js`) sets `autosaveBannerDismissed` unconditionally after `autosave.pick()`, even on cancel/AbortError — same bug class as the Settings-modal gap 24-05 fixed, but in the sibling code path 24-05 deliberately didn't touch.
+- Follow-up (non-blocking, from 24-REVIEW.md): `autosaveActions.remove()` in `js/app.js` has no try/catch (unhandled rejection on failure); `autosaveState.error`/`lastSavedAt` aren't reset on pick/remove transitions (stale status line); IndexedDB connections in `createIndexedDbHandleStore` are never closed.
 - Follow-up (non-blocking): new `.tifPerDayTable` on the Accuracy screen has no horizontal-scroll wrapper for narrow/mobile viewports, and `.tifAccuracyTable` has no CSS styling of its own (23-REVIEW.md WR-01/WR-02).
-- `workflow.security_enforcement` is on but no `23-SECURITY.md` exists yet — run `/gsd-secure-phase 23` before shipping if a security gate is desired for this phase.
-- `workflow.ui_review` is on but no `23-UI-REVIEW.md` exists yet — run `/gsd-ui-review 23` if a UI audit is desired, given the new Accuracy screen table.
+- `workflow.security_enforcement` is on but no `24-SECURITY.md` exists yet — run `/gsd-secure-phase 24` before shipping if a security gate is desired for this phase.
+- `workflow.ui_review` is on but no `24-UI-REVIEW.md` exists yet — run `/gsd-ui-review 24` if a UI audit is desired, given the new Settings Backup fieldset and first-launch banner.
 - Consider adding a regression unit test for `subWindowBedtime`'s midnight-wrap edge case (fixed during Phase 21 code review, WR-03 — no dedicated test yet).
 - A flaky `tests/e2e/metrics.spec.js` timeout cluster (10 tests waiting on `.metricsTable`) appeared during Phase 22's wave 1/2 post-merge gates but did not reproduce during wave 3's full-suite run. Confirmed unrelated to Phase 22's files — worth a look if it recurs.

@@ -120,6 +120,10 @@ compared to reality.
 - ✓ Per-day TIF prediction-window table (12 per-event min/max/confidence columns) added to the Accuracy screen, sourced from the full stage-filtered `days` array so warm-up days render dashed rather than being silently dropped — Phase 23 (UI-11)
 - ✓ Same 12 TIF window columns and their rendering/data-prep pipeline fully removed from the Metrics screen (31→19 columns); `isTif`/TIF aggregate rows/`tifForecast` override left untouched — Phase 23 (UI-11)
 
+**v2.0 — Prediction Engine & Autosave (Phase 24, 2026-09-18)**
+- ✓ Autosave to a user-picked local directory via the File System Access API: pick/persist/restore round trip through an inline IndexedDB handle store, debounced (500ms) write on every event-log mutation, graceful fallback (manual Export button + explanatory note) when the API is unavailable — Phase 24 (PLAT-01, PLAT-02, PLAT-03, PLAT-04)
+- ✓ Settings "Backup" fieldset with 4 folder-row states (unsupported/unset/denied/set) and a first-launch discovery banner on the Today screen, both writing/reading a shared `autosaveBannerDismissed` flag so dismissal state stays consistent across either entry point — Phase 24
+
 ### Out of Scope
 
 - **Multi-profile switching** — single subject in v1; multi-subject would change persistence shape. Defer to v2.
@@ -193,6 +197,8 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Phase 23: new Accuracy per-day TIF table sources rows from the full `days` array, not `tifBoundsHistory` | `tifBoundsHistory` only covers `tifRollingDays` warm-up-past days; keying off it would silently drop the earliest days instead of showing them dashed | ✓ Shipped Phase 23 |
 | Phase 23: `isTif`, TIF aggregate rows, and the `tifForecast` override block deliberately kept in metrics-screen.js after removing the 12 per-event TIF columns | Metrics screen still needs TIF-mode branching for its retained aggregate rows; only the per-event min/max/confidence columns moved to Accuracy | ✓ Shipped Phase 23 |
 | Phase 23 code review: new `.tifPerDayTable` on the Accuracy screen has no scroll wrapper (unlike `.metricsTableScroll`) | Flagged as a mobile horizontal-overflow risk, not fixed in-phase — follow-up item, not a blocker | ⚠ Open follow-up |
+| Phase 24: banner-dismissal flag set from Settings' `pickOrChange` handler (not by passing `isConfigured` into `mountTodayScreen`) | `js/app.js` calls `restoreHandle()` asynchronously then `mountTodayScreen(...)` synchronously in the same tick, so `autosaveState.status` is still `'unset'` at every `mountTodayScreen` call — passing `isConfigured` would silently fail to suppress the banner for a folder configured in a prior session. Writing the flag at the moment of a real, completed Settings pick sidesteps the race entirely. | ✓ Shipped Phase 24 |
+| Phase 24 code review: first-launch banner's own "Set up autosave" button sets the dismissal flag unconditionally after `await autosave.pick()`, regardless of whether the pick succeeded or was cancelled — same bug class as the fixed Settings-modal gap, in the sibling `today-screen.js` code path the gap-closure plan deliberately did not touch | Flagged post-fix, not addressed in-phase — the gap-closure plan's scope was limited to `24-VERIFICATION.md`'s two entries; this is a new, related finding | ⚠ Open follow-up |
 
 ## Current Milestone: v2.0 Prediction Engine & Autosave
 
@@ -206,15 +212,17 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - ~~Prediction normalization: show only next reachable event (B-038)~~ ✓ Phase 21
 - ~~Linear-decay per-event accuracy scoring with tolerance window (B-049)~~ ✓ Phase 22
 - ~~Move TIF window columns from Metrics → Accuracy screen (B-041)~~ ✓ Phase 23
-- Autosave export to user-chosen directory via File System Access API (B-051)
+- ~~Autosave export to user-chosen directory via File System Access API (B-051)~~ ✓ Phase 24
 
-## Current State (v2.0-partial — Phase 23 complete 2026-09-17)
+## Current State (v2.0-partial — Phase 24 complete 2026-09-18)
 
-Phases 19-23 complete. 880 unit + integration tests, 138 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22); the 12 per-event TIF window columns migrated from Metrics to a new per-day table on the Accuracy screen (Phase 23).
+Phases 19-24 complete. 903 unit + integration tests, 146 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22); the 12 per-event TIF window columns migrated from Metrics to a new per-day table on the Accuracy screen (Phase 23); autosave to a user-picked local directory via the File System Access API with an inline IndexedDB handle store, debounced writes, a Settings "Backup" fieldset, and a first-launch discovery banner — including a gap-closure pass fixing a Remove-handler race and a banner-dismissal detection gap (Phase 24).
 
-**Next:** Phase 24 — Autosave.
+**Next:** Phase 25 — Algorithm C & Settings Modal.
 
-**Known open follow-up:** Phase 23 code review flagged the new Accuracy per-day TIF table as missing a horizontal-scroll wrapper on narrow/mobile viewports (`.tifAccuracyTable` also lacks styling) — not a blocker, but worth a small follow-up pass.
+**Known open follow-ups:**
+- Phase 23 code review flagged the new Accuracy per-day TIF table as missing a horizontal-scroll wrapper on narrow/mobile viewports (`.tifAccuracyTable` also lacks styling) — not a blocker, but worth a small follow-up pass.
+- Phase 24 code review flagged: the banner's own "Set up autosave" button doesn't gate the dismissal flag on pick success (same bug class as the fixed Settings-modal gap, different code path); `autosaveActions.remove()` has no try/catch; `autosaveState.error`/`lastSavedAt` aren't reset on pick/remove transitions; IndexedDB connections in `createIndexedDbHandleStore` are never closed. None block the phase goal — tracked for a future pass.
 
 ## Previous State (v1.4 — shipped 2026-09-08)
 
@@ -286,4 +294,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-17 after Phase 23 (Metrics→Accuracy Column Migration)*
+*Last updated: 2026-09-18 after Phase 24 (Autosave)*
