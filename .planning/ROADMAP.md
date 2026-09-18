@@ -95,7 +95,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 24-04-PLAN.md — First-launch banner on Today screen (today-screen.js + CSS + E2E)
   - [x] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
 
-- [ ] **Phase 25: Algorithm C & Settings Modal** — Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` with dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), interval stability check (intersection/shrinkage), and coverage for all 4 events; add three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide in the Settings modal; add `forecast-blend.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests RED→GREEN for all blend and stability logic, E2E test for selector visibility (requirements: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12)
+- [x] **Phase 25: Algorithm C & Settings Modal** — Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` with dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), interval stability check (intersection/shrinkage), and coverage for all 4 events; add three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide in the Settings modal; add `forecast-blend.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests RED→GREEN for all blend and stability logic, E2E test for selector visibility (requirements: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12) (completed 2026-09-18)
   **Plans:** 5 plans
   Plans:
   - [x] 25-01-PLAN.md — forecast-blend.js wake dual-model blend + shared trim/stability helpers + sw precache (TDD tracer + expansion)
@@ -265,7 +265,7 @@ Plans:
   5. `forecast-blend.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   6. Unit tests (RED→GREEN) cover all blend and stability logic; E2E test covers selector visibility
 
-**Plans:** 9/9 plans executed; 4 gap-closure plans (25-06, 25-07, 25-08 closed; 25-09 pending)
+**Plans:** 9/9 plans complete
 
 Plans:
 **Wave 1**
