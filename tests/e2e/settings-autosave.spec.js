@@ -120,4 +120,32 @@ test.describe('Supported pick-and-save flow (PLAT-01/PLAT-02)', () => {
     await page.locator('button.settingsTrigger').click();
     await expect(page.locator('#autosaveStatus')).toHaveText(/^Last saved: \d{2}:\d{2}$/);
   });
+
+  test('Remove flips the row back to unset without closing or reopening Settings (Gap A regression)', async ({ page }) => {
+    await page.locator('button.settingsTrigger').click();
+    await page.click('#autosavePickBtn');
+    await expect(page.locator('#autosaveSetRow')).toBeVisible();
+
+    await page.click('#autosaveRemoveBtn');
+
+    // No reload, no re-open of Settings, no waitForTimeout — Playwright's
+    // default auto-retrying assertions (5s) are the only wait allowed here.
+    // Before the Fix 1 await, this times out because the pre-fix handler
+    // reads a stale getState() snapshot and the DOM never flips.
+    await expect(page.locator('#autosaveUnsetRow')).toBeVisible();
+    await expect(page.locator('#autosaveSetRow')).toBeHidden();
+  });
+
+  test('picking a folder in Settings suppresses the first-launch banner on next load without ever touching the banner (Gap B regression)', async ({ page }) => {
+    await expect(page.locator('.autosave-banner')).toBeVisible();
+
+    await page.locator('button.settingsTrigger').click();
+    await page.click('#autosavePickBtn');
+    await expect(page.locator('#autosaveSetRow')).toBeVisible();
+    await page.click('#settingsCancel');
+
+    await page.reload();
+
+    await expect(page.locator('.autosave-banner')).toHaveCount(0);
+  });
 });
