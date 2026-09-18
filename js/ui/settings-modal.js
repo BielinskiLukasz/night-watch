@@ -114,8 +114,6 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
     if (targetSleepEl) targetSleepEl.value = String(s.targetSleepMinutes ?? 600);
     const eveningHourEl = form.elements.namedItem('eveningHour');
     if (eveningHourEl) eveningHourEl.value = String(s.eveningHour ?? 18);
-    const noNapOffsetEl = form.elements.namedItem('noNapBedtimeOffsetMinutes');
-    if (noNapOffsetEl) noNapOffsetEl.value = String(s.noNapBedtimeOffsetMinutes ?? 30);
     const tifOptionsEl = document.getElementById('tifOptions');
     const classicOptionsEl = document.getElementById('classicOptions');
     const blendOptionsEl = document.getElementById('blendOptions');
@@ -204,7 +202,6 @@ export function openSettings({ settings, eventLog, storage, id, autosave }) {
         blendTrimPct:     Number(data.get('blendTrimPct') ?? 25),
         blendShrinkage:   Number(data.get('blendShrinkage') ?? 0.3),
         eveningHour:               Number(data.get('eveningHour') ?? 18),
-        noNapBedtimeOffsetMinutes: Number(data.get('noNapBedtimeOffsetMinutes') ?? 30),
         intenseDayOffsetMinutes:   settings.get().intenseDayOffsetMinutes ?? 30,
         intenseDays:               settings.get().intenseDays || [],
         firstDayOfWeek:            String(data.get('firstDayOfWeek') ?? 'monday'),
