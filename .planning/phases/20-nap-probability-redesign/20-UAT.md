@@ -3,7 +3,7 @@ status: diagnosed
 phase: 20-nap-probability-redesign
 source: [20-01-SUMMARY.md, 20-02-SUMMARY.md, 20-03-SUMMARY.md]
 started: 2026-09-16T00:00:00Z
-updated: 2026-09-18T00:05:00Z
+updated: 2026-09-18T01:00:00Z
 ---
 
 ## Current Test
@@ -118,7 +118,9 @@ skipped: 0
 
 - gap_id: G-20-15
   truth: "User can see details of the next predicted event, with distinct bedtime-with-nap / bedtime-without-nap detail views"
-  status: failed
+  status: resolved
+  resolved_by: 20-06-PLAN.md
+  resolved_at: 2026-09-18
   reason: "User reported: cannot see details of next predicted event (change later today to details and show details of all events, include bedtime with/without nap separation)"
   severity: major
   test: 15
@@ -136,7 +138,9 @@ skipped: 0
 
 - gap_id: G-20-16
   truth: "Bedtime prediction algorithm differs for with-nap vs without-nap days; without-nap should not calculate past the nap activity window"
-  status: failed
+  status: resolved
+  resolved_by: 20-04-PLAN.md, 20-05-PLAN.md, 20-06-PLAN.md
+  resolved_at: 2026-09-18
   reason: "User reported: bedtime prediction is calculated with same algorithm for bedtime with/without nap, and it should be different ones (bedtime without nap shouldnt calculate after nap activity window for example)"
   severity: major
   test: 16
@@ -159,7 +163,9 @@ skipped: 0
 
 - gap_id: G-20-17
   truth: "Accuracy tab table is usable on mobile, scrollable like the Metrics tab"
-  status: failed
+  status: resolved
+  resolved_by: 20-07-PLAN.md
+  resolved_at: 2026-09-18
   reason: "User reported: on mobile accuracy tab table is not displaying correctly, could it be done like metrics (scrollable)"
   severity: minor
   test: 17
