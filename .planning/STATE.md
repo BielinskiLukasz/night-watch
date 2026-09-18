@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 Phase: 25
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-09-18 — Phase 25 complete
+Last activity: 2026-09-18 - Completed quick task 260918-s1x: Rename in-progress milestone from v2.0 to v1.5 (Prediction Engine & Autosave) across .planning docs
 
 ## Phases
 
@@ -225,6 +225,7 @@ Last activity: 2026-09-18 — Phase 25 complete
 | 2026-08-28 | fix-tif-aggregate-rows-in-metrics-screen | Fix TIF aggregate rows in metrics screen: replace averages of algMin/algMax with per-column trimmedMinMax over the TIF rolling window, skipping rejected rows, covering all 16 metric columns not just event types |
 | 2026-08-29 | move-algorithm-selector-to-top-of-foreca | Move algorithm selector to top of Forecast & Prediction fieldset; show/hide classic-only and TIF-only fields based on selection |
 | 2026-09-08 | fix-sleepdebtproxy-to-use-overnight-pair | fix sleepDebtProxy to use overnight pairing (prevDay.bedtime → day.wake) matching aggregateMetrics Comb column |
+| 2026-09-18 | rename-in-progress-milestone-from-v2-0-t | Rename in-progress milestone from v2.0 to v1.5 (Prediction Engine & Autosave) across .planning docs |
 
 ### Pending Todos
 
