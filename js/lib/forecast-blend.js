@@ -136,7 +136,8 @@ export function stabilityCheck(intervals, central, shrinkage) {
 }
 
 // ---------------------------------------------------------------------------
-// wrapToDay — private, reserved for Plan 25-02's anchored duration bands
+// wrapToDay — private; used by Plan 25-02's wake-/nap-end-anchored bedtime
+// duration bands (D-03/D-04), which can project past midnight.
 // ---------------------------------------------------------------------------
 
 const DAY = 24 * 60;
@@ -147,6 +148,38 @@ function wrapToDay(m) {
 }
 
 // ---------------------------------------------------------------------------
+// combineModels — shared 0/1/N-model combiner (Plan 25-02, D-07..D-10/D-03..D-06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Combine 0, 1, or N already-computed models into a single raw-minutes band.
+ *
+ * - 0 models  → `{central:null, min:null, max:null}` — the universal
+ *   null-on-no-data contract (matching forecast.js/tifForecast).
+ * - 1 model   → that model's own median/min/max, no stability check.
+ * - 2+ models → average of medians as the raw central, then `stabilityCheck`
+ *   resolves the group intersection/union and shrinks central if it falls
+ *   outside — the same pattern wake's A1/A2 blend already established, now
+ *   shared by napStart (2 models), napEnd (2 models), and bedtime (3 models).
+ *
+ * @param {{min:number,max:number,median:number}[]} models  non-null models only
+ * @param {number} shrinkage  0.0-1.0 shrinkage factor (D-13)
+ * @returns {{central:number|null, min:number|null, max:number|null}}
+ */
+function combineModels(models, shrinkage) {
+  if (models.length === 0) {
+    return { central: null, min: null, max: null };
+  }
+  if (models.length === 1) {
+    const [m] = models;
+    return { central: m.median, min: m.min, max: m.max };
+  }
+  const rawCentral = models.reduce((sum, m) => sum + m.median, 0) / models.length;
+  const sc = stabilityCheck(models, rawCentral, shrinkage);
+  return { central: sc.central, min: sc.min, max: sc.max };
+}
+
+// ---------------------------------------------------------------------------
 // blendForecast — main export
 // ---------------------------------------------------------------------------
 
@@ -154,16 +187,18 @@ function wrapToDay(m) {
  * Algorithm C: dual/multi-model trim-then-percentile blend with interval
  * stability checks.
  *
- * This plan (25-01) fully implements wake (D-01/D-02); bedtime/napStart/napEnd
- * are explicit `{central:null,min:null,max:null}` stubs pending Plan 25-02.
+ * Plan 25-01 implemented wake (D-01/D-02) and napStart/napEnd/bedtime were
+ * stubs. This plan (25-02) implements napStart (D-07/D-08) and napEnd
+ * (D-09/D-10) fully; bedtime remains an explicit
+ * `{central:null,min:null,max:null}` stub pending Task 2.
  *
  * @param {object[]} dayRecords              pre-bucketed day records
  * @param {object}   settings                needs minDays, blendWindowDays,
  *                                            blendTrimPct, blendShrinkage
- * @param {object}   [activityLog={}]        unused by this plan's wake blend;
- *                                            reserved for Plan 25-02
- * @param {boolean}  [isNoNapDay=false]      unused by this plan's wake blend;
- *                                            reserved for Plan 25-02
+ * @param {object}   [activityLog={}]        unused so far; reserved for
+ *                                            bedtime's Task 2 implementation
+ * @param {boolean}  [isNoNapDay=false]      unused so far; reserved for
+ *                                            bedtime's Task 2 implementation
  * @returns {{isColdStart:boolean, wake:object|null, bedtime:object|null, napStart:object|null, napEnd:object|null}}
  */
 export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay = false) {
@@ -182,6 +217,102 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
 
   const blendTrimPct   = settings.blendTrimPct ?? 25;
   const blendShrinkage = settings.blendShrinkage ?? 0.3;
+
+  // Resolved once, near the top of the non-cold-start branch — reused by
+  // nap-start, nap-end (this plan) and bedtime (Task 2's D-03/D-04 anchors).
+  const todayRecord             = dayRecords[dayRecords.length - 1];
+  const todayActualWakeHHMM     = extractTime(todayRecord.wake);
+  const todayActualNapStartHHMM = extractTime(todayRecord.napStart);
+
+  // ---------------------------------------------------------------------
+  // Nap-start (D-07/D-08)
+  // ---------------------------------------------------------------------
+  const napGaps = buildNapGapSeries(acceptedWindow);
+  const wakeAnchorMin = todayActualWakeHHMM != null ? timeToMinutes(todayActualWakeHHMM) : null;
+
+  // Model 1 — wake-anchored gap: only when today's wake is actually logged
+  // (mirroring forecast-tif.js's wakeAnchorForNap, which never resolves to a
+  // predicted wake since nap-start is computed before wake in both files).
+  let napStartModel1 = null;
+  if (wakeAnchorMin != null && napGaps.length > 0) {
+    const gapBand = trimmedBand([...napGaps].sort((a, b) => a - b), blendTrimPct, rejectedInWindow);
+    if (gapBand) {
+      napStartModel1 = {
+        min:    wakeAnchorMin + gapBand.min,
+        max:    wakeAnchorMin + gapBand.max,
+        median: wakeAnchorMin + gapBand.median,
+      };
+    }
+  }
+
+  // Model 2 — historic nap-start time-of-day band (always attempted).
+  const napStartTimes = acceptedWindow
+    .map(d => extractTime(d.napStart))
+    .filter(t => t != null)
+    .map(timeToMinutes)
+    .sort((a, b) => a - b);
+  const napStartModel2 = trimmedBand(napStartTimes, blendTrimPct, rejectedInWindow);
+
+  const napStartCombined = combineModels(
+    [napStartModel1, napStartModel2].filter(m => m != null),
+    blendShrinkage
+  );
+  const napStart = napStartCombined.central == null
+    ? { central: null, min: null, max: null }
+    : {
+        central: minutesToTime(napStartCombined.central),
+        min:     minutesToTime(napStartCombined.min),
+        max:     minutesToTime(napStartCombined.max),
+      };
+
+  // ---------------------------------------------------------------------
+  // Nap-end (D-09/D-10)
+  // ---------------------------------------------------------------------
+  const napDurations = buildNapDurationSeries(acceptedWindow);
+
+  // durBand2 depends only on historic durations (not on any anchor), so it is
+  // computed once and shared by both Model 1 (chained) and Model 2 (D-10).
+  const durBand2 = trimmedBand([...napDurations].sort((a, b) => a - b), blendTrimPct, rejectedInWindow);
+
+  // Model 1 — fully chained wake-anchored gap+duration: only when today's
+  // wake is actually logged.
+  let napEndModel1 = null;
+  if (wakeAnchorMin != null) {
+    const gapBand2 = trimmedBand([...napGaps].sort((a, b) => a - b), blendTrimPct, rejectedInWindow);
+    if (gapBand2 && durBand2) {
+      napEndModel1 = {
+        min:    wakeAnchorMin + gapBand2.min    + durBand2.min,
+        max:    wakeAnchorMin + gapBand2.max    + durBand2.max,
+        median: wakeAnchorMin + gapBand2.median + durBand2.median,
+      };
+    }
+  }
+
+  // Model 2 — nap-start-anchored duration band. Anchor is today's ACTUAL
+  // logged nap-start if present, else the nap-start prediction's own central
+  // value already computed above (D-10).
+  const napStartAnchorHHMM = todayActualNapStartHHMM ?? napStart.central;
+  let napEndModel2 = null;
+  if (napStartAnchorHHMM != null && durBand2) {
+    const napStartAnchorMin = timeToMinutes(napStartAnchorHHMM);
+    napEndModel2 = {
+      min:    napStartAnchorMin + durBand2.min,
+      max:    napStartAnchorMin + durBand2.max,
+      median: napStartAnchorMin + durBand2.median,
+    };
+  }
+
+  const napEndCombined = combineModels(
+    [napEndModel1, napEndModel2].filter(m => m != null),
+    blendShrinkage
+  );
+  const napEnd = napEndCombined.central == null
+    ? { central: null, min: null, max: null }
+    : {
+        central: minutesToTime(napEndCombined.central),
+        min:     minutesToTime(napEndCombined.min),
+        max:     minutesToTime(napEndCombined.max),
+      };
 
   // Step 3 — A1: historic wake-up time-of-day band.
   const a1Times = acceptedWindow
@@ -237,13 +368,12 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
     wake = { central: minutesToTime(sc.central), min: minutesToTime(sc.min), max: minutesToTime(sc.max) };
   }
 
-  // Step 7 — bedtime/napStart/napEnd stubs.
-  // Plan 25-02 replaces these three stubs with real D-03..D-10 blends.
+  // Step 7 — bedtime stub. Task 2 replaces this with the real D-03..D-06 blend.
   return {
     isColdStart: false,
     wake,
-    bedtime:  { central: null, min: null, max: null },
-    napStart: { central: null, min: null, max: null },
-    napEnd:   { central: null, min: null, max: null },
+    bedtime: { central: null, min: null, max: null },
+    napStart,
+    napEnd,
   };
 }
