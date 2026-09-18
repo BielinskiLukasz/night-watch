@@ -33,7 +33,7 @@ describe('RULES export', () => {
     assert.equal(Object.isFrozen(RULES), true);
   });
 
-  it('has entries for all 22 field names (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 fields; noNapBedtimeOffsetMinutes removed D-10)', () => {
+  it('has entries for all 25 field names (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 + 3 Phase 25 fields; noNapBedtimeOffsetMinutes removed D-10)', () => {
     const expected = [
       'subjectName', 'cutoverHour', 'groupingMode', 'rejectedDays', 'timeFormat',
       'autoOutlier', 'maxDelta', 'minDays', 'windowDays', 'statBlend',
@@ -41,11 +41,12 @@ describe('RULES export', () => {
       'forecastAlgorithm', 'trimPct', 'precisionTarget',
       'intenseDays', 'eveningHour', 'intenseDayOffsetMinutes',
       'tifRollingDays', 'firstDayOfWeek', 'targetSleepMinutes',
+      'blendWindowDays', 'blendTrimPct', 'blendShrinkage',
     ];
     for (const field of expected) {
       assert.ok(field in RULES, `Expected RULES to have key: ${field}`);
     }
-    assert.equal(Object.keys(RULES).length, 22);
+    assert.equal(Object.keys(RULES).length, 25);
     assert.ok(!('noNapBedtimeOffsetMinutes' in RULES), 'noNapBedtimeOffsetMinutes must not be in RULES (D-10)');
   });
 });
@@ -62,10 +63,10 @@ describe('validateSettings mode:\'save\' — valid defaults', () => {
     assert.ok(result.normalized, 'normalized should be present');
   });
 
-  it('normalized contains all 22 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18; noNapBedtimeOffsetMinutes removed D-10)', () => {
+  it('normalized contains all 25 keys (16 prior + 3 Phase 12 + 1 Phase 13 + 1 Phase 17 + 1 Phase 18 + 3 Phase 25; noNapBedtimeOffsetMinutes removed D-10)', () => {
     const result = validateSettings(valid(), { mode: 'save' });
     const keys = Object.keys(result.normalized);
-    assert.equal(keys.length, 22);
+    assert.equal(keys.length, 25);
     for (const field of Object.keys(DEFAULT_SETTINGS)) {
       assert.ok(field in result.normalized, `normalized missing: ${field}`);
     }
@@ -423,6 +424,7 @@ describe('validateSettings mode:\'save\' — stages (D6-01)', () => {
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
     firstDayOfWeek: 'monday', targetSleepMinutes: 600,
+    blendWindowDays: 90, blendTrimPct: 25, blendShrinkage: 0.3,
   };
 
   it('accepts empty stages array', () => {
@@ -493,6 +495,7 @@ describe('validateSettings — activeStageId (D6-02)', () => {
     forecastAlgorithm: 'classic', trimPct: 10, precisionTarget: 60, tifRollingDays: 7,
     intenseDays: [], eveningHour: 18, noNapBedtimeOffsetMinutes: 30, intenseDayOffsetMinutes: 30,
     firstDayOfWeek: 'monday', targetSleepMinutes: 600,
+    blendWindowDays: 90, blendTrimPct: 25, blendShrinkage: 0.3,
   };
 
   it('accepts null activeStageId', () => {
@@ -580,6 +583,12 @@ describe('validateSettings — forecastAlgorithm (TIF-01)', () => {
 
   it('accepts \'tif\'', () => {
     const result = validateSettings(valid({ forecastAlgorithm: 'tif' }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'forecastAlgorithm'), 'Unexpected error for forecastAlgorithm');
+  });
+
+  it('accepts \'blend\'', () => {
+    const result = validateSettings(valid({ forecastAlgorithm: 'blend' }), { mode: 'save' });
     assert.equal(result.ok, true);
     assert.ok(!result.errors.some((e) => e.field === 'forecastAlgorithm'), 'Unexpected error for forecastAlgorithm');
   });
@@ -737,6 +746,164 @@ describe('validateSettings — tifRollingDays (TIF-13)', () => {
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.field === 'tifRollingDays'),
       'Expected error for non-integer tifRollingDays');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — blendWindowDays (D-11, Phase 25)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — blendWindowDays (D-11)', () => {
+  it('DEFAULT_SETTINGS.blendWindowDays is 90', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendWindowDays, 90);
+  });
+
+  it('accepts boundary value 14', () => {
+    const result = validateSettings(valid({ blendWindowDays: 14 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendWindowDays'), 'Unexpected error for blendWindowDays');
+  });
+
+  it('accepts boundary value 180', () => {
+    const result = validateSettings(valid({ blendWindowDays: 180 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendWindowDays'), 'Unexpected error for blendWindowDays');
+  });
+
+  it('accepts default value 90', () => {
+    const result = validateSettings(valid({ blendWindowDays: 90 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendWindowDays'), 'Unexpected error for blendWindowDays');
+  });
+
+  it('rejects 13 (below min) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendWindowDays: 13 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendWindowDays'), 'Expected error for blendWindowDays field');
+  });
+
+  it('rejects 181 (above max) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendWindowDays: 181 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendWindowDays'), 'Expected error for blendWindowDays field');
+  });
+
+  it('rejects non-integer 7.5 in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendWindowDays: 7.5 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendWindowDays'), 'Expected error for non-integer blendWindowDays');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — blendTrimPct (D-12, Phase 25)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — blendTrimPct (D-12)', () => {
+  it('DEFAULT_SETTINGS.blendTrimPct is 25', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendTrimPct, 25);
+  });
+
+  it('accepts boundary value 0', () => {
+    const result = validateSettings(valid({ blendTrimPct: 0 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendTrimPct'), 'Unexpected error for blendTrimPct');
+  });
+
+  it('accepts boundary value 40', () => {
+    const result = validateSettings(valid({ blendTrimPct: 40 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendTrimPct'), 'Unexpected error for blendTrimPct');
+  });
+
+  it('accepts default value 25', () => {
+    const result = validateSettings(valid({ blendTrimPct: 25 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendTrimPct'), 'Unexpected error for blendTrimPct');
+  });
+
+  it('rejects -1 (below min) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendTrimPct: -1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendTrimPct'), 'Expected error for blendTrimPct field');
+  });
+
+  it('rejects 41 (above max) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendTrimPct: 41 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendTrimPct'), 'Expected error for blendTrimPct field');
+  });
+
+  it('rejects non-numeric string \'twenty\' in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendTrimPct: 'twenty' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendTrimPct'), 'Expected error for blendTrimPct field');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSettings — blendShrinkage (D-13, Phase 25)
+// ---------------------------------------------------------------------------
+
+describe('validateSettings — blendShrinkage (D-13)', () => {
+  it('DEFAULT_SETTINGS.blendShrinkage is 0.3', () => {
+    assert.strictEqual(DEFAULT_SETTINGS.blendShrinkage, 0.3);
+  });
+
+  it('accepts boundary value 0.0', () => {
+    const result = validateSettings(valid({ blendShrinkage: 0.0 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendShrinkage'), 'Unexpected error for blendShrinkage');
+  });
+
+  it('accepts boundary value 1.0', () => {
+    const result = validateSettings(valid({ blendShrinkage: 1.0 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendShrinkage'), 'Unexpected error for blendShrinkage');
+  });
+
+  it('accepts default fractional value 0.3, proving the "number" rule type (not "integer") governs this field', () => {
+    const result = validateSettings(valid({ blendShrinkage: 0.3 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendShrinkage'), 'Unexpected error for blendShrinkage');
+  });
+
+  it('accepts in-range fractional value 0.15', () => {
+    const result = validateSettings(valid({ blendShrinkage: 0.15 }), { mode: 'save' });
+    assert.equal(result.ok, true);
+    assert.ok(!result.errors.some((e) => e.field === 'blendShrinkage'), 'Unexpected error for blendShrinkage');
+  });
+
+  it('rejects -0.1 (below min) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendShrinkage: -0.1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendShrinkage'), 'Expected error for blendShrinkage field');
+  });
+
+  it('rejects 1.1 (above max) in mode:\'save\'', () => {
+    const result = validateSettings(valid({ blendShrinkage: 1.1 }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendShrinkage'), 'Expected error for blendShrinkage field');
+  });
+
+  it('rejects non-numeric string \'not-a-number\' in mode:\'save\' with a blendShrinkage error entry', () => {
+    const result = validateSettings(valid({ blendShrinkage: 'not-a-number' }), { mode: 'save' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.field === 'blendShrinkage'), 'Expected error for blendShrinkage field');
+  });
+
+  it('mode:\'load\' resets out-of-range value 2.0 to DEFAULT_SETTINGS.blendShrinkage (0.3) silently', () => {
+    const warnSpy = mock.method(console, 'warn', () => {});
+    try {
+      warnSpy.mock.resetCalls();
+      const result = validateSettings(valid({ blendShrinkage: 2.0 }), { mode: 'load' });
+      assert.equal(result.ok, true);
+      assert.strictEqual(result.normalized.blendShrinkage, DEFAULT_SETTINGS.blendShrinkage,
+        'out-of-range value must reset to DEFAULT_SETTINGS.blendShrinkage in lenient mode');
+      assert.ok(warnSpy.mock.calls.length >= 1, 'Expected at least one console.warn call');
+    } finally {
+      warnSpy.mock.restore();
+    }
   });
 });
 
