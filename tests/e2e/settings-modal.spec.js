@@ -147,6 +147,25 @@ test('CFG-02..04, CFG-06..07: forecast-tuning + time/day fields round-trip Save 
   await expect(page.locator('#settings input[name="autoOutlier"]')).toBeChecked();
 });
 
+test('CR-01 gap-closure: noNapBedtimeOffsetMinutes input no longer exists, and eveningHour still round-trips correctly (25-06)', async ({ page }) => {
+  await page.locator('button.settingsTrigger').click();
+
+  // Proves the orphan input is gone from the DOM, not merely hidden.
+  await expect(page.locator('#settings input[name="noNapBedtimeOffsetMinutes"]')).toHaveCount(0);
+
+  // Sibling field directly above the removed block — value distinct from default (18).
+  await page.locator('#settings input[name="eveningHour"]').fill('21');
+  await page.locator('#settings button[type="submit"]').click();
+
+  await page.reload();
+  await page.locator('button.settingsTrigger').click();
+
+  // eveningHour round-trips correctly, proving the removal was surgical.
+  await expect(page.locator('#settings input[name="eveningHour"]')).toHaveValue('21');
+  // Field was not silently reintroduced by the migration path.
+  await expect(page.locator('#settings input[name="noNapBedtimeOffsetMinutes"]')).toHaveCount(0);
+});
+
 test('a11y: dialog#settings has aria-labelledby="settingsTitle" (D2-13)', async ({ page }) => {
   await expect(page.locator('dialog#settings')).toHaveAttribute('aria-labelledby', 'settingsTitle');
   await expect(page.locator('#settingsTitle')).toHaveText('Settings');
