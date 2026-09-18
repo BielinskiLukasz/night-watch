@@ -1,9 +1,9 @@
-# Requirements: Nightwatch v2.0
+# Requirements: Nightwatch v1.5
 
 **Defined:** 2026-09-08
 **Core Value:** Given enough sleep history, predict the next wake/bed/nap events accurately enough to be useful — and surface accuracy transparently over time.
 
-## v2.0 Requirements
+## v1.5 Requirements
 
 ### Prediction Engine (Algorithm C)
 
@@ -53,7 +53,7 @@
 - [x] **PLAT-03**: `restoreHandle()` — retrieves the persisted handle from IndexedDB on app launch; prompts the user to re-confirm permission if the handle exists but `queryPermission` returns `'prompt'`
 - [x] **PLAT-04**: Graceful fallback when File System Access API is unavailable (Firefox, Safari, `file://` context) — autosave section in Settings shows an explanatory note and a manual Export button instead of the directory picker
 
-## Out of Scope (v2.0)
+## Out of Scope (v1.5)
 
 | Feature | Reason |
 |---------|--------|
@@ -98,7 +98,7 @@
 
 **Coverage:**
 
-- v2.0 requirements: 27 total
+- v1.5 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0
 

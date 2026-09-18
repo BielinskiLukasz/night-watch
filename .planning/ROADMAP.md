@@ -7,7 +7,7 @@
 - **[v1.2](milestones/v1.2-ROADMAP.md)** — 2 phases, 15 plans, 17/17 requirements; shipped 2026-08-24 (tag: `v1.2.0`)
 - **[v1.3](milestones/v1.3-ROADMAP.md)** — 3 phases, prediction logic refinements + TIF extensions; shipped 2026-08-27
 - **[v1.4](milestones/v1.4-ROADMAP.md)** — 4 phases, 8 plans, 11/11 requirements, 918 tests; shipped 2026-09-08
-- **v2.0** — 7 phases (19–25), 27 requirements; prediction engine Algorithm C + autosave; **in progress**
+- **v1.5** — 7 phases (19–25), 27 requirements; prediction engine Algorithm C + autosave; **in progress**
 
 ## Phases
 
@@ -51,7 +51,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 
 </details>
 
-## v2.0 Prediction Engine & Autosave (Phases 19–25)
+## v1.5 Prediction Engine & Autosave (Phases 19–25)
 
 - [x] **Phase 19: Split Bedtime & Wake-Anchored Nap** — Extend `forecast-blend.js` with `buildBedtimeSeriesNapDay` / `buildBedtimeSeriesNoNapDay` (separate P10/P50/P90 distributions) and probability-weighted blending when today's nap status is undetermined; add `buildNapGapSeries(dayRecords)` and `buildNapDurationSeries(dayRecords)` to `js/lib/forecast.js` so the Classic algorithm anchors nap-start to today's actual wake time via gap percentiles and derives nap-end via duration percentiles; unit tests cover split-series selection and wake-anchor arithmetic (requirements: PRED-18, PRED-19, PRED-20, PRED-21, PRED-22) (completed 2026-09-14)
   **Plans:** 2 plans
@@ -106,7 +106,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
 
 ## Phase Details
 
-> Detail sections for the v2.0 milestone (Phases 19-25) — added retroactively to
+> Detail sections for the v1.5 milestone (Phases 19-25) — added retroactively to
 > restore the dual checklist+detail format the roadmap tooling expects (the
 > checklist above existed alone; `roadmap.get-phase` needs both). Content is a
 > direct restructuring of the checklist bullets, not new scope.
