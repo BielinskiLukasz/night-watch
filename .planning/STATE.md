@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 25
 current_phase_name: Algorithm C & Settings Modal
 status: executing
-stopped_at: Completed 25-06-PLAN.md
-last_updated: "2026-09-18T13:41:03.264Z"
+stopped_at: Completed 25-07-PLAN.md
+last_updated: "2026-09-18T13:55:31.707Z"
 last_activity: 2026-09-18
 last_activity_desc: Phase 25 execution started
-state_head: d8fd33e9332aee47c8ec4ed3b2755e2a04b73cd1
+state_head: e97a1773ecd62c3510f6ce3bdd01cfa1532242a4
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
   percent: 86
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 ## Current Position
 
 Phase: 25 (Algorithm C & Settings Modal) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-09-18 — Phase 25 execution started
 
@@ -115,6 +115,7 @@ Last activity: 2026-09-18 — Phase 25 execution started
 | Phase 25 P04 | 8min | 3 tasks | 3 files |
 | Phase 25 P05 | 12min | 2 tasks | 1 files |
 | Phase 25 P06 | 8min | 2 tasks | 3 files |
+| Phase 25 P07 | 15min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -206,6 +207,7 @@ Last activity: 2026-09-18 — Phase 25 execution started
 - [Phase 25]: Phase 25 Plan 5: split single-file two-task plan into two atomic commits by writing Task 1's content first, verifying/committing, then adding Task 2's content, verifying/committing
 - [Phase 25]: Phase 25 Plan 5: installed missing Playwright Chromium browser binary (npx playwright install chromium) as Rule 3 blocking-issue fix, not a new package install
 - [Phase 25]: Phase 25 Plan 06: removed orphan noNapBedtimeOffsetMinutes UI field (CR-01 gap-closure) — pure subtraction honoring Phase 19 D-10, no new decisions
+- [Phase 25]: Phase 25 Plan 07: wrapToDay() exported from forecast-blend.js and applied to napStartModel1/napEndModel1/napEndModel2 before combineModels()/stabilityCheck() (WR-01 gap-closure)
 
 ### Quick Tasks Completed
 
@@ -230,8 +232,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T13:40:56.956Z
-Stopped at: Completed 25-06-PLAN.md
+Last session: 2026-09-18T13:55:26.003Z
+Stopped at: Completed 25-07-PLAN.md
 Resume file: None
 
 ## Deferred Items

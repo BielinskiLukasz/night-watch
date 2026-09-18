@@ -265,7 +265,7 @@ Plans:
   5. `forecast-blend.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   6. Unit tests (RED→GREEN) cover all blend and stability logic; E2E test covers selector visibility
 
-**Plans:** 6/7 plans executed; 2 gap-closure plans pending (25-06, 25-07)
+**Plans:** 7/7 plans executed; 2 gap-closure plans pending (25-06, 25-07)
 
 Plans:
 **Wave 1**
@@ -285,7 +285,7 @@ Plans:
 **Gap closure** *(from 25-VERIFICATION.md gaps_found)*
 
 - [x] 25-06-PLAN.md — Remove orphan noNapBedtimeOffsetMinutes input from index.html/settings-modal.js (gap 1 / CR-01)
-- [ ] 25-07-PLAN.md — Wrap napStart/napEnd anchor sums into [0,1440) before stabilityCheck (gap 2 / WR-01)
+- [x] 25-07-PLAN.md — Wrap napStart/napEnd anchor sums into [0,1440) before stabilityCheck (gap 2 / WR-01)
 
 ## Backlog
 
