@@ -14,7 +14,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { trimmedBand, stabilityCheck, blendForecast, wrapToDay } from '../../js/lib/forecast-blend.js';
+import { trimmedBand, stabilityCheck, blendForecast, wrapToDay, circularTrimmedBand } from '../../js/lib/forecast-blend.js';
 import { timeToMinutes, minutesToTime } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -121,6 +121,39 @@ describe('trimmedBand(sortedValues, trimPct, manualExcludedCount)', () => {
 
   it('100% trimPct → all values trimmed → null', () => {
     assert.strictEqual(trimmedBand([400, 410, 420, 430, 440], 100, 0), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// circularTrimmedBand — fixes CR-01's raw-sample root cause (Plan 25-09)
+// ---------------------------------------------------------------------------
+
+describe('circularTrimmedBand(rawValues, trimPct, manualExcludedCount)', () => {
+  it('empty array → null', () => {
+    assert.strictEqual(circularTrimmedBand([], 10, 0), null);
+  });
+
+  it('no wrap needed → degenerates to plain trimmedBand', () => {
+    const result = circularTrimmedBand([400, 410, 420, 430, 440], 10, 0);
+    assert.deepStrictEqual(result, { min: 400, max: 440, median: 420 });
+  });
+
+  it('CR-01 root-cause repro: 10 samples alternating 23:50/00:10 → circular median is midnight, not noon', () => {
+    // Pre-fix comparison: calling the unchanged trimmedBand directly on the plain-sorted
+    // version of this same raw array returns {min:10, max:1430, median:720} — median 720
+    // (noon) is the exact wrong value 25-REVIEW.md's CR-01 section illustrates by hand.
+    const preFixSorted = [10, 10, 10, 10, 10, 1430, 1430, 1430, 1430, 1430];
+    assert.deepStrictEqual(trimmedBand(preFixSorted, 25, 0), { min: 10, max: 1430, median: 720 });
+
+    const rawValues = [1430, 10, 1430, 10, 1430, 10, 1430, 10, 1430, 10];
+    const result = circularTrimmedBand(rawValues, 25, 0);
+    assert.deepStrictEqual(result, { min: 1430, max: 10, median: 0 });
+  });
+
+  it('order-independence: swapping which sample occupies index 0 produces the identical wrapped result', () => {
+    const rawValues = [10, 1430, 10, 1430, 10, 1430, 10, 1430, 10, 1430];
+    const result = circularTrimmedBand(rawValues, 25, 0);
+    assert.deepStrictEqual(result, { min: 1430, max: 10, median: 0 });
   });
 });
 
@@ -512,5 +545,51 @@ describe('blendForecast — full four-event integration (PRED-13/PRED-17)', () =
       assert.strictEqual(typeof result[key].min, 'string', `${key}.min should be a string`);
       assert.strictEqual(typeof result[key].max, 'string', `${key}.max should be a string`);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fixture helpers — CR-01 root-cause circular-median gap-closure (Plan 25-09)
+// ---------------------------------------------------------------------------
+
+/**
+ * n days, wake alternating '23:55'/'00:05' (i%2===0 -> '23:55' else '00:05'),
+ * bedtime always null (A2 unavailable, forcing the A1-alone fallback that
+ * never calls stabilityCheck/combineModels) — isolates circularTrimmedBand's
+ * fix on a1Times alone, with zero dependency on Task 2's circularMean fix.
+ */
+function buildMidnightWakeNoBedtimeFixture(n = 20) {
+  return Array.from({ length: n }, (_, i) => makeDay(i % 2 === 0 ? '23:55' : '00:05', null));
+}
+
+/**
+ * n days, wake fixed '06:00' except the LAST day's wake set to null (forces
+ * wakeAnchorMin to be null, so napStartModel1 stays null regardless of
+ * napGaps — mirrors the existing "Model 1 unavailable" test's exact
+ * technique), napStart alternating '23:50'/'00:10' for ALL n days including
+ * today, bedtime/napEnd always null.
+ */
+function buildMidnightNapStartFixture(n = 20) {
+  return Array.from({ length: n }, (_, i) => {
+    const isLast = i === n - 1;
+    return makeDay(isLast ? null : '06:00', null, i % 2 === 0 ? '23:50' : '00:10', null);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// blendForecast — CR-01 root-cause circular-median gap-closure (Plan 25-09)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — CR-01 root-cause circular-median gap-closure (Plan 25-09)', () => {
+  it('wake, A1-alone: circular-median fix applies to a1Times, not just bedtimeTimes', () => {
+    const dayRecords = buildMidnightWakeNoBedtimeFixture(20);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.deepStrictEqual(result.wake, { central: '23:55', min: '23:55', max: '00:05' });
+  });
+
+  it('napStart, Model-2-alone: circular-median fix applies to napStartTimes, not just bedtimeTimes', () => {
+    const dayRecords = buildMidnightNapStartFixture(20);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.deepStrictEqual(result.napStart, { central: '23:50', min: '23:50', max: '00:10' });
   });
 });
