@@ -54,7 +54,7 @@ export const RULES = Object.freeze({
   stages:        { type: 'stage[]' },         // D6-01: array of life-stage objects
   activeStageId: { type: 'null-or-string' },  // D6-02: selected stage id or null
   confirmBeforeLogging: { type: 'boolean' },  // CFG-10 / D9-13: confirm before quick-log
-  forecastAlgorithm: { type: 'enum', values: new Set(['classic', 'tif']) },  // TIF-01 / D10-11
+  forecastAlgorithm: { type: 'enum', values: new Set(['classic', 'tif', 'blend']) },  // TIF-01 / D10-11 / D-14
   trimPct:           { type: 'integer', min: 0, max: 40 },                   // TIF-02 / D10-13
   precisionTarget:   { type: 'integer', min: 1, max: 300 },                  // TIF-03 / D10-13
   tifRollingDays:    { type: 'integer', min: 3, max: 90 },                   // TIF-13 / D-07
@@ -63,6 +63,9 @@ export const RULES = Object.freeze({
   intenseDayOffsetMinutes:   { type: 'integer', min: 0, max: 120 },          // PRED-10 / D-08
   firstDayOfWeek:   { type: 'enum', values: new Set(['monday', 'sunday']) }, // D-10 / MET-12
   targetSleepMinutes: { type: 'integer', min: 1, max: 1440 },               // MET-13 / D-02: positive integer, 1 min to 24h
+  blendWindowDays: { type: 'integer', min: 14, max: 180 },                  // D-11: Algorithm C rolling window
+  blendTrimPct:    { type: 'integer', min: 0,  max: 40 },                   // D-12: Algorithm C extreme-discard fraction (%)
+  blendShrinkage:  { type: 'number',  min: 0.0, max: 1.0 },                 // D-13: Algorithm C shrinkage factor (fractional)
 });
 
 // ---------------------------------------------------------------------------
@@ -147,6 +150,20 @@ function checkField(field, raw, rule) {
         return {
           ok: false,
           message: `${field} must be an integer between ${rule.min} and ${rule.max}.`,
+        };
+      }
+      return { ok: true, value: n };
+    }
+
+    case 'number': {
+      // Float-permitting counterpart to 'integer' (first introduced by
+      // blendShrinkage, D-13): uses Number.isFinite instead of
+      // Number.isInteger so fractional values like 0.3 or 0.05 pass.
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < rule.min || n > rule.max) {
+        return {
+          ok: false,
+          message: `${field} must be a number between ${rule.min} and ${rule.max}.`,
         };
       }
       return { ok: true, value: n };
