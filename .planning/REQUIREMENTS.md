@@ -8,7 +8,7 @@
 ### Prediction Engine (Algorithm C)
 
 - [ ] **PRED-13**: `js/lib/forecast-blend.js` exports `blendForecast(dayRecords, snap)` — Algorithm C entry point returning the same top-level prediction shape as Classic and TIF so `today-screen.js` can swap between all three transparently
-- [ ] **PRED-14**: Algorithm C wake prediction — dual-model median blend of A1 (historic wake-up band) and A2 (sleep-length band projected from last bedtime); median of each model's trimmed distribution, final central = average of the two medians
+- [x] **PRED-14**: Algorithm C wake prediction — dual-model median blend of A1 (historic wake-up band) and A2 (sleep-length band projected from last bedtime); median of each model's trimmed distribution, final central = average of the two medians
 - [ ] **PRED-15**: Algorithm C bedtime prediction — three-band blend: Historic bedtime band + Day-length band + Activity-after-nap band (AA band); central = average of the three trimmed medians
 - [ ] **PRED-16**: Algorithm C interval stability check for each event — if per-model intervals overlap, use intersection (with shrinkage toward intersection center when central lies outside); if no overlap, use combined union range
 - [ ] **PRED-17**: Algorithm C covers all 4 events: wake, bedtime, nap-start, nap-end (nap-start and nap-end use wake-anchored gaps, see PRED-19/PRED-20)
@@ -69,7 +69,7 @@
 | Requirement | Backlog | Phase | Status |
 |-------------|---------|-------|--------|
 | PRED-13 | B-050 | Phase 25 | Pending |
-| PRED-14 | B-050 | Phase 25 | Pending |
+| PRED-14 | B-050 | Phase 25 | Complete |
 | PRED-15 | B-050 | Phase 25 | Pending |
 | PRED-16 | B-050 | Phase 25 | Pending |
 | PRED-17 | B-050 | Phase 25 | Pending |

@@ -5,17 +5,17 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 25
 current_phase_name: Algorithm C & Settings Modal
 status: executing
-stopped_at: Phase 24 complete, ready to plan Phase 25
-last_updated: "2026-09-18T10:05:59.401Z"
+stopped_at: Completed 25-01-PLAN.md
+last_updated: "2026-09-18T11:06:07.518Z"
 last_activity: 2026-09-18
-last_activity_desc: Phase 24 complete, transitioned to Phase 25
-state_head: c13191da7b1e03e6d2312360c5a4e8c354480aff
+last_activity_desc: Phase 25 execution started
+state_head: cc714dc63e6b43cd68fddfba36cfa419c972cbbb
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 23
-  completed_plans: 18
-  percent: 78
+  completed_plans: 19
+  percent: 83
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 
 ## Current Position
 
-Phase: 25 (Algorithm C & Settings Modal) — READY TO EXECUTE
-Plan: Not started
+Phase: 25 (Algorithm C & Settings Modal) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-09-18 — Phase 24 complete, transitioned to Phase 25
+Last activity: 2026-09-18 — Phase 25 execution started
 
 ## Phases
 
@@ -109,6 +109,7 @@ Last activity: 2026-09-18 — Phase 24 complete, transitioned to Phase 25
 | Phase 24 P02 | 7min | 2 tasks | 1 files |
 | Phase 24 P03 | 25min | 3 tasks | 3 files |
 | Phase 24 P05 | 15min | 2 tasks | 2 files |
+| Phase 25 P01 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Last activity: 2026-09-18 — Phase 24 complete, transitioned to Phase 25
 - [Phase 24]: Phase 24 Plan 03: OPFS root handle .name is empty string per spec — E2E test asserts row-state transition and DOM attachment, not non-empty folder name text
 - [Phase 24]: Phase 24 Plan 05: Gap B fixed via Option B (settings-modal.js sets the shared autosaveBannerDismissed flag on a granted pick) — rejected Option A per the plan's design-rationale record since it races against restoreHandle()'s async resolution
 - [Phase 24]: Phase 24 Plan 05: banner-dismissal flag write gated on state.status === 'granted' so a cancelled/AbortError pick (D-06) never falsely suppresses the discovery banner
+- [Phase 25]: Phase 25 Plan 01: A2's bedtime-anchored sleep-length band needs wrapToDay() normalization into [0,1440) before stabilityCheck runs, so it shares A1's numeric reference frame (Rule 1 bug fix)
+- [Phase 25]: Phase 25 Plan 01: sw.js PRECACHE_LIST insertion for forecast-blend.js follows the plan's explicit position (between forecast-tif.js and forecast-utils.js) rather than strict ASCII order
 
 ### Quick Tasks Completed
 
@@ -214,8 +217,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18
-Stopped at: Phase 24 complete, ready to plan Phase 25
+Last session: 2026-09-18T11:06:02.535Z
+Stopped at: Completed 25-01-PLAN.md
 Resume file: None
 
 ## Deferred Items
