@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 20
 current_phase_name: Nap Probability Redesign
 status: executing
-stopped_at: Completed 20-04-PLAN.md (gap closure G-20-16 item 1)
-last_updated: "2026-09-18T19:56:39.361Z"
+stopped_at: Completed 20-05-PLAN.md (gap closure G-20-16 item 3)
+last_updated: "2026-09-18T20:04:23.537Z"
 last_activity: 2026-09-18
 last_activity_desc: Phase 20 execution started
-state_head: a5e37654524a6dd59db2fd2723c49212126d4423
+state_head: de92fe32e4c639c42820325f98abf00705b5a9a6
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
   percent: 86
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 ## Current Position
 
 Phase: 20 (Nap Probability Redesign) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-09-18 — Phase 20 execution started
 
@@ -119,6 +119,7 @@ Last activity: 2026-09-18 — Phase 20 execution started
 | Phase 25 P08 | 21min | 1 tasks | 2 files |
 | Phase 25 P09 | 20min | 2 tasks | 2 files |
 | Phase 20 P04 | 15min | 1 tasks | 2 files |
+| Phase 20 P05 | 12min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -215,6 +216,7 @@ Last activity: 2026-09-18 — Phase 20 execution started
 - [Phase 25]: Phase 25 Plan 08: stabilityCheck() hardened via self-unwrap (selfUnwrapInterval) + align-to-reference (alignNearReference) + re-wrap, closing CR-01 circular-interval defect with zero changes to combineModels() or the 6 model-construction call sites
 - [Phase 25]: [Phase 25 Plan 09]: circularTrimmedBand()/circularMean() reuse Plan 25-08's alignNearReference()/wrapToDay() primitives upstream at the raw-sample and cross-model-averaging layers, closing CR-01's remaining root cause without touching stabilityCheck() itself
 - [Phase 20]: Phase 20 Plan 04: gate PRED-19 bedtime blend on napProbabilityScore.napWindowClosed — closed window routes to pure no-nap-day series, bypassing the score blend (G-20-16)
+- [Phase 20]: Phase 20 Plan 05: No minDays gate on the no-nap-day historic bedtime substitute band, matching forecast-blend.js Model 3's graceful-degradation contract (G-20-16 item 3)
 
 ### Quick Tasks Completed
 
@@ -240,8 +242,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T19:56:32.433Z
-Stopped at: Completed 20-04-PLAN.md (gap closure G-20-16 item 1)
+Last session: 2026-09-18T20:04:17.578Z
+Stopped at: Completed 20-05-PLAN.md (gap closure G-20-16 item 3)
 Resume file: None
 
 ## Deferred Items

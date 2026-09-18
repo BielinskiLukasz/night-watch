@@ -66,7 +66,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 20-02-PLAN.md — forecast.js + today-screen.js consumption wiring (D-04/D-07)
   - [x] 20-03-PLAN.md — Gap closure: CR-01 day-record ordering fix (forecast/tifForecast/napProbability + metrics-screen parity) + CR-02 local-date lookup fix (20-REVIEW.md blockers)
   - [x] 20-04-PLAN.md — Gap closure: gate PRED-19 bedtime blend on napWindowClosed (G-20-16 item 1, 20-UAT.md)
-  - [ ] 20-05-PLAN.md — Gap closure: gate forecast-tif.js Activity-after-nap band on isNoNapDay (G-20-16 item 3, 20-UAT.md)
+  - [x] 20-05-PLAN.md — Gap closure: gate forecast-tif.js Activity-after-nap band on isNoNapDay (G-20-16 item 3, 20-UAT.md)
   - [ ] 20-06-PLAN.md — Gap closure: Details section (hero's own type + bedtime/bedtimeAfterWake substitution + distinct labels) (G-20-15, G-20-16 item 2, 20-UAT.md)
   - [ ] 20-07-PLAN.md — Gap closure: Accuracy screen TIF per-day table mobile scroll wrapper (G-20-17, 20-UAT.md)
 
