@@ -696,9 +696,24 @@ export function tifForecast(dayRecords, settings, activityLog = {}, isNoNapDay =
     if (dayLenBand) bedtimeLabelledWindows.push({ label: dayLengthLabel, ...dayLenBand });
   }
 
-  if (napEndAnchor !== null) {
-    const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, rejectedInWindow);
-    if (actAfterBand) bedtimeLabelledWindows.push({ label: 'Activity-after-nap band', ...actAfterBand });
+  // On a nap day (isNoNapDay=false), anchor the Activity-after-nap band to napEnd.
+  // On a no-nap day (isNoNapDay=true), that band is meaningless — no nap occurred —
+  // so it is REPLACED by a raw historic bedtime band built only from no-nap-day
+  // records (mirrors forecast-blend.js's Model 3, G-20-16 item 3). Deliberately no
+  // minDays gate on the substitute: thin no-nap history simply omits the band
+  // rather than falling back to the Activity-after-nap band.
+  if (!isNoNapDay) {
+    if (napEndAnchor !== null) {
+      const actAfterBand = buildDurationBand(actAfterNap, napEndAnchor, trimPct, rejectedInWindow);
+      if (actAfterBand) bedtimeLabelledWindows.push({ label: 'Activity-after-nap band', ...actAfterBand });
+    }
+  } else {
+    const noNapBedtimeTimes = noNapDayWindow
+      .map(d => extractTime(d.bedtime))
+      .filter(t => t != null)
+      .map(timeToMinutes);
+    const noNapBedtimeBand = buildHistoricBand(noNapBedtimeTimes, trimPct, 0);
+    if (noNapBedtimeBand) bedtimeLabelledWindows.push({ label: 'Historic bedtime band (no-nap days)', ...noNapBedtimeBand });
   }
 
   const bedtimePred = buildPrediction(bedtimeLabelledWindows, precisionTarget);
