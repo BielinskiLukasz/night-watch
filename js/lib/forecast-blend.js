@@ -88,50 +88,117 @@ export function trimmedBand(sortedValues, trimPct, manualExcludedCount) {
 }
 
 // ---------------------------------------------------------------------------
-// stabilityCheck — exported for unit testing (D-02)
+// stabilityCheck — exported for unit testing (D-02); hardened for circular/
+// wrapped intervals by Plan 25-08 (CR-01 gap-closure, 25-VERIFICATION.md).
+// `DAY` is declared here (moved from its old spot just above wrapToDay,
+// below) since stabilityCheck's own self-unwrap/align helpers now need it
+// too; wrapToDay keeps reading the same single module-level constant.
 // ---------------------------------------------------------------------------
+
+const DAY = 24 * 60;
+
+/**
+ * Self-unwrap a single interval whose independently-wrapToDay()'d fields
+ * inverted order (min > max because its raw pre-wrap band crossed the
+ * 1440-minute boundary). Reconstructs the interval's true un-wrapped span by
+ * pushing `max` one full day forward; leaves a normal (min <= max) interval
+ * untouched. Fixes CR-01 (25-VERIFICATION.md / 25-REVIEW.md, Plan 25-08).
+ *
+ * @param {{min:number,max:number}} iv
+ * @returns {{min:number,max:number}}
+ */
+function selfUnwrapInterval(iv) {
+  return iv.min <= iv.max ? iv : { min: iv.min, max: iv.max + DAY };
+}
+
+/**
+ * Shift `value` by whole days (-DAY, 0, +DAY) to whichever candidate lands
+ * closest to `reference` on the number line. This is what lets every
+ * self-unwrapped interval (and the raw central estimate) be compared on one
+ * shared, non-circular reference frame before the plain min/max reductions
+ * run — the core of CR-01's fix (25-VERIFICATION.md / 25-REVIEW.md, Plan
+ * 25-08). Ties keep `value` itself (zero shift).
+ *
+ * @param {number} value
+ * @param {number} reference
+ * @returns {number}
+ */
+function alignNearReference(value, reference) {
+  const candidates = [value - DAY, value, value + DAY];
+  return candidates.reduce((best, c) =>
+    Math.abs(c - reference) < Math.abs(best - reference) ? c : best
+  );
+}
 
 /**
  * Generalized N-interval overlap/shrinkage/union stability check.
  *
- * If all intervals overlap (max(mins) <= min(maxs), inclusive of touching —
- * matching forecast-tif.js's computeIntersection convention where only
- * finalStart > finalEnd counts as non-overlap): report the intersection band;
- * if `central` lies outside it, shrink toward the intersection's center via
+ * Inputs may have `min > max` — an interval whose own independently-
+ * wrapToDay()'d fields inverted because its raw pre-wrap band crossed the
+ * 1440-minute boundary (this can happen to any one input model while its
+ * siblings stay normal — the "asymmetric straddle" CR-01 defect). Before
+ * comparing, every interval is self-unwrapped (selfUnwrapInterval) onto its
+ * true un-wrapped span, then aligned (alignNearReference) onto the same
+ * shared reference frame anchored on the first self-unwrapped interval's
+ * `min` — so no input interval's min/max signal is ever excluded from the
+ * overlap/union reductions below (the specific "signal silently dropped"
+ * symptom CR-01 named). The raw `central` estimate is aligned the same way.
+ *
+ * If all aligned intervals overlap (max(mins) <= min(maxs), inclusive of
+ * touching — matching forecast-tif.js's computeIntersection convention where
+ * only finalStart > finalEnd counts as non-overlap): report the intersection
+ * band; if the aligned `central` lies outside it, shrink toward the
+ * intersection's center via
  * `final = (1 - shrinkage) * central + shrinkage * center(intersection)`.
  *
  * If any pair does not overlap: report the union envelope
- * [min(all mins), max(all maxs)] with `central` unchanged (D-02's explicit
- * resolution — no optional shrink-toward-closer-interval).
+ * [min(all aligned mins), max(all aligned maxs)] with `central` unchanged
+ * (D-02's explicit resolution — no optional shrink-toward-closer-interval).
+ *
+ * The three returned fields (`min`, `max`, `central`) are re-wrapped into
+ * [0, DAY) via `wrapToDay()` before returning — so the RETURNED band may
+ * itself legitimately have `min > max` when the true intersection/union
+ * crosses midnight, exactly like a single wrapped model already could
+ * before this fix. Existing wrap-aware callers (e.g. this file's own test
+ * suite's `centralWithinBand()`) need no changes.
  *
  * This same 2-interval test generalizes unchanged to 3+ intervals (Plan
  * 25-02's bedtime blend, D-06) because 1-D interval pairwise-overlap and
  * group-overlap are mathematically equivalent (Helly's theorem in one
  * dimension): max(...mins) <= min(...maxs) is simultaneously the pairwise
  * overlap test AND the N-way common-intersection test, so no separate 3-way
- * branching is ever needed.
+ * branching is ever needed — the self-unwrap-and-align step above is applied
+ * identically regardless of interval count.
  *
- * @param {{min:number,max:number}[]} intervals  2 or more intervals
+ * @param {{min:number,max:number}[]} intervals  2 or more intervals; any may have min > max
  * @param {number} central    raw (pre-stability-check) central prediction, minutes
  * @param {number} shrinkage  0.0–1.0 shrinkage factor (D-13)
  * @returns {{min:number,max:number,central:number}}
  */
 export function stabilityCheck(intervals, central, shrinkage) {
-  const interStart = Math.max(...intervals.map(iv => iv.min));
-  const interEnd   = Math.min(...intervals.map(iv => iv.max));
+  const unwrapped = intervals.map(selfUnwrapInterval);
+  const reference = unwrapped[0].min;
+  const aligned = unwrapped.map(iv => {
+    const shift = alignNearReference(iv.min, reference) - iv.min;
+    return { min: iv.min + shift, max: iv.max + shift };
+  });
+  const alignedCentral = alignNearReference(central, reference);
+
+  const interStart = Math.max(...aligned.map(iv => iv.min));
+  const interEnd   = Math.min(...aligned.map(iv => iv.max));
 
   if (interStart <= interEnd) {
     const center = (interStart + interEnd) / 2;
-    const finalCentral = (central >= interStart && central <= interEnd)
-      ? central
-      : (1 - shrinkage) * central + shrinkage * center;
-    return { min: interStart, max: interEnd, central: finalCentral };
+    const finalCentral = (alignedCentral >= interStart && alignedCentral <= interEnd)
+      ? alignedCentral
+      : (1 - shrinkage) * alignedCentral + shrinkage * center;
+    return { min: wrapToDay(interStart), max: wrapToDay(interEnd), central: wrapToDay(finalCentral) };
   }
 
   return {
-    min: Math.min(...intervals.map(iv => iv.min)),
-    max: Math.max(...intervals.map(iv => iv.max)),
-    central,
+    min: wrapToDay(Math.min(...aligned.map(iv => iv.min))),
+    max: wrapToDay(Math.max(...aligned.map(iv => iv.max))),
+    central: wrapToDay(alignedCentral),
   };
 }
 
@@ -141,10 +208,11 @@ export function stabilityCheck(intervals, central, shrinkage) {
 // napStartModel1/napEndModel1/napEndModel2 (Plan 25-07) — every anchor+gap/
 // duration sum that can project past midnight is wrapped into [0, DAY)
 // before combineModels()/stabilityCheck() compares it against sibling models
-// built from already-wrapped 'HH:MM' clock-time strings.
+// built from already-wrapped 'HH:MM' clock-time strings. Also now used
+// internally by stabilityCheck() itself (Plan 25-08, CR-01 circular-interval
+// hardening) to re-wrap its own aligned result; `DAY` is declared once,
+// above, before the stabilityCheck section.
 // ---------------------------------------------------------------------------
-
-const DAY = 24 * 60;
 
 /** Wrap a raw-minutes value back into [0, DAY). */
 export function wrapToDay(m) {
