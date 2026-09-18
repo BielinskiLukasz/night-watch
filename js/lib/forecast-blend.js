@@ -25,6 +25,9 @@
 //          computation circular-aware, closing 25-VERIFICATION.md's
 //          remaining CR-01 root cause (the linear-sort-then-median bug,
 //          distinct from Plan 25-08's individually-wrapped-interval fix).
+//   Plan 25-09 — circularMean() makes combineModels()'s and wake's own
+//          cross-model central averaging circular-aware, completing the
+//          CR-01 fix.
 
 import { timeToMinutes, minutesToTime, detectColdStart, buildNapGapSeries, buildNapDurationSeries } from './forecast.js';
 import { sleepDuration, dayLength, activityAfterNap } from './metrics.js';
@@ -265,6 +268,27 @@ export function circularTrimmedBand(rawValues, trimPct, manualExcludedCount) {
   };
 }
 
+/**
+ * Circular-aware mean of 2+ already-computed medians. A plain arithmetic
+ * mean compounds CR-01's error one level up: `combineModels()`'s N-model
+ * `rawCentral` and wake's own inline 2-model `rawCentral` plain-average
+ * already-wrapped medians, which is wrong whenever those medians straddle
+ * the midnight boundary relative to each other (25-VERIFICATION.md/
+ * 25-REVIEW.md, Plan 25-09). Aligns every value onto a shared reference
+ * frame (the first value) via `alignNearReference()`, averages the aligned
+ * values, then re-wraps the result via `wrapToDay()` — the same primitives
+ * `circularTrimmedBand()` and Plan 25-08's `stabilityCheck()` already reuse.
+ *
+ * @param {number[]} values  2+ already-computed model medians, minutes
+ * @returns {number}
+ */
+export function circularMean(values) {
+  const reference = values[0];
+  const aligned = values.map(value => alignNearReference(value, reference));
+  const mean = aligned.reduce((sum, v) => sum + v, 0) / aligned.length;
+  return wrapToDay(mean);
+}
+
 // ---------------------------------------------------------------------------
 // combineModels — shared 0/1/N-model combiner (Plan 25-02, D-07..D-10/D-03..D-06)
 // ---------------------------------------------------------------------------
@@ -292,7 +316,7 @@ function combineModels(models, shrinkage) {
     const [m] = models;
     return { central: m.median, min: m.min, max: m.max };
   }
-  const rawCentral = models.reduce((sum, m) => sum + m.median, 0) / models.length;
+  const rawCentral = circularMean(models.map(m => m.median));
   const sc = stabilityCheck(models, rawCentral, shrinkage);
   return { central: sc.central, min: sc.min, max: sc.max };
 }
@@ -481,7 +505,7 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
     // A2 unavailable (no bedtime ever logged) — A1-only fallback, no stability check.
     wake = { central: minutesToTime(a1.median), min: minutesToTime(a1.min), max: minutesToTime(a1.max) };
   } else {
-    const rawCentral = (a1.median + a2.median) / 2;
+    const rawCentral = circularMean([a1.median, a2.median]);
     const sc = stabilityCheck([a1, a2], rawCentral, blendShrinkage);
     wake = { central: minutesToTime(sc.central), min: minutesToTime(sc.min), max: minutesToTime(sc.max) };
   }
