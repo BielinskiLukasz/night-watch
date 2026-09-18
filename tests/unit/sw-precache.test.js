@@ -118,6 +118,10 @@ describe('sw.js PRECACHE_LIST', () => {
     assert.ok(precacheList.includes('./js/lib/forecast-tif.js'), 'forecast-tif.js missing from PRECACHE_LIST');
   });
 
+  test('contains forecast-blend.js (Algorithm C module)', () => {
+    assert.ok(precacheList.includes('./js/lib/forecast-blend.js'), 'forecast-blend.js missing from PRECACHE_LIST');
+  });
+
   test('contains forecast-utils.js (event-reachability utilities module)', () => {
     assert.ok(precacheList.includes('./js/lib/forecast-utils.js'), 'forecast-utils.js missing from PRECACHE_LIST');
   });

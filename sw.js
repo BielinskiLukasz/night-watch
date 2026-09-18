@@ -41,6 +41,7 @@ const PRECACHE_LIST = Object.freeze([
   './js/lib/day-bucket.js',
   './js/lib/db-shape.js',
   './js/lib/forecast-tif.js',
+  './js/lib/forecast-blend.js',
   './js/lib/forecast-utils.js',
   './js/lib/forecast.js',
   './js/lib/id.js',
