@@ -66,7 +66,7 @@ Add `eventAccuracyScore(forecastMinutes, actualMinutes, toleranceMinutes)` to `j
 ### Requirements & Roadmap
 - `.planning/REQUIREMENTS.md` §ACC-01, ACC-02, ACC-03, ACC-04 — functional requirements for this phase
 - `.planning/ROADMAP.md` §"Phase 22: Accuracy Scoring" — phase summary with file targets and acceptance criteria
-- `.planning/PROJECT.md` §"Current Milestone: v2.0" — "Linear-decay per-event accuracy scoring with tolerance window (B-049)" target-feature framing
+- `.planning/PROJECT.md` §"Current Milestone: v1.5" — "Linear-decay per-event accuracy scoring with tolerance window (B-049)" target-feature framing
 
 ### Core Modules Being Changed
 - `js/lib/accuracy.js` — primary file being rewritten: `ACCURACY_CONFIG`, `extractActualMinutes`, `buildAccuracyResult`, `computeAccuracy` all change per D-03/D-04/D-08/D-09

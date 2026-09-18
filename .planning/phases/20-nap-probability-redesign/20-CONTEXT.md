@@ -87,9 +87,9 @@ This phase also changes `napProbability()`'s return contract from a bare `null |
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Requirements & Roadmap
-- `.planning/ROADMAP.md` §"Phase 20: Nap Probability Redesign" (v2.0 section) — phase summary with file targets
+- `.planning/ROADMAP.md` §"Phase 20: Nap Probability Redesign" (v1.5 section) — phase summary with file targets
 - `.planning/REQUIREMENTS.md` §NAP-01, NAP-02, NAP-03, NAP-04 — functional requirements for this phase
-- `.planning/PROJECT.md` §"Current Milestone: v2.0" — "Nap probability redesign: data-driven, time-independent (B-047)" target-feature framing
+- `.planning/PROJECT.md` §"Current Milestone: v1.5" — "Nap probability redesign: data-driven, time-independent (B-047)" target-feature framing
 
 ### Core Algorithm Module (being changed)
 - `js/lib/forecast.js:990-1095` — `NAP_SCORE_WEIGHTS` constant and `napProbability()` function; both being rewritten

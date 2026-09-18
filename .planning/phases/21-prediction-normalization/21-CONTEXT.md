@@ -78,9 +78,9 @@ Restructure how the Today screen surfaces predictions so it shows only what's re
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Requirements & Roadmap
-- `.planning/ROADMAP.md` §"Phase 21: Prediction Normalization" (v2.0 section) — phase summary with file targets
+- `.planning/ROADMAP.md` §"Phase 21: Prediction Normalization" (v1.5 section) — phase summary with file targets
 - `.planning/REQUIREMENTS.md` §PRED-23, PRED-24, UI-13 — functional requirements for this phase
-- `.planning/PROJECT.md` §"Current Milestone: v2.0" — "Prediction normalization: show only next reachable event (B-038)"
+- `.planning/PROJECT.md` §"Current Milestone: v1.5" — "Prediction normalization: show only next reachable event (B-038)"
 
 ### Backlog Origin (richest source of intent — read before planning)
 - `.planning/BACKLOG.md` §B-038 "Normalize prediction: show only the next relevant event" (~line 897) — original capture: open questions about hide-vs-dim, threshold definition, and the `nextReachableEvent(lastEvent, currentHour, settings)` helper signature this phase implements

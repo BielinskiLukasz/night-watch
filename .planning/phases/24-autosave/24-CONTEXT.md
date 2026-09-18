@@ -61,9 +61,9 @@ Create `js/lib/autosave.js` exporting `pickSaveDirectory()` (calls `window.showD
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Requirements & Roadmap
-- `.planning/ROADMAP.md` §"Phase 24: Autosave" (v2.0 section) — phase summary with file targets and locked behaviors (debounce timing, event-store-only trigger, `queryPermission` re-prompt on `'prompt'`)
+- `.planning/ROADMAP.md` §"Phase 24: Autosave" (v1.5 section) — phase summary with file targets and locked behaviors (debounce timing, event-store-only trigger, `queryPermission` re-prompt on `'prompt'`)
 - `.planning/REQUIREMENTS.md` §PLAT-01, PLAT-02, PLAT-03, PLAT-04 — functional requirements for this phase
-- `.planning/PROJECT.md` §"Current Milestone: v2.0" — "Autosave export to user-chosen directory via File System Access API (B-051)" target-feature framing
+- `.planning/PROJECT.md` §"Current Milestone: v1.5" — "Autosave export to user-chosen directory via File System Access API (B-051)" target-feature framing
 - `.planning/BACKLOG.md` §"B-051 · Autosave export to user-chosen folder" — original design notes, open questions (several resolved by this discussion — see D-01 through D-11), and implementation notes (module shape, guard pattern, wiring targets)
 
 ### Existing Export/Download Pattern (being reused, not duplicated)
