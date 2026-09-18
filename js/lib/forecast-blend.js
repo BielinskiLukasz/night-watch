@@ -21,6 +21,10 @@
 //          no overlap → union envelope, central unchanged.
 //   D-11/D-12/D-13 — blendWindowDays/blendTrimPct/blendShrinkage are user
 //          settings (not baked into BLEND_CONFIG).
+//   Plan 25-09 — circularTrimmedBand() makes raw clock-time-of-day median
+//          computation circular-aware, closing 25-VERIFICATION.md's
+//          remaining CR-01 root cause (the linear-sort-then-median bug,
+//          distinct from Plan 25-08's individually-wrapped-interval fix).
 
 import { timeToMinutes, minutesToTime, detectColdStart, buildNapGapSeries, buildNapDurationSeries } from './forecast.js';
 import { sleepDuration, dayLength, activityAfterNap } from './metrics.js';
@@ -220,6 +224,48 @@ export function wrapToDay(m) {
 }
 
 // ---------------------------------------------------------------------------
+// circularTrimmedBand — exported for unit testing; fixes CR-01's raw-sample
+// root cause, 25-VERIFICATION.md/25-REVIEW.md, Plan 25-09.
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the trimmed min/max/median of a RAW (unsorted) clock-time-of-day
+ * sample array, circular-aware. The plain `trimmedBand` sorts its input as
+ * plain linear numbers, so a distribution that legitimately clusters across
+ * the midnight boundary (e.g. bedtime alternating 23:50/00:10) sorts into two
+ * separated blocks and produces a median nowhere near the true circular
+ * center (CR-01, 25-VERIFICATION.md/25-REVIEW.md). This function self-unwraps
+ * that problem the same way Plan 25-08's `stabilityCheck()` already does for
+ * intervals: align every raw sample onto a shared reference frame (the first
+ * raw sample) via `alignNearReference()`, sort the aligned values, delegate
+ * to the UNCHANGED plain `trimmedBand` for the budget/split/median math, then
+ * re-wrap the result's three fields via `wrapToDay()`.
+ *
+ * The returned band may itself legitimately have `min > max` when the true
+ * circular band crosses midnight — the same contract `stabilityCheck()`'s
+ * own output already has.
+ *
+ * @param {number[]} rawValues            RAW (unsorted) minutes-since-midnight samples
+ * @param {number}   trimPct              0–40 percent to trim total
+ * @param {number}   manualExcludedCount  already-excluded count (counts against budget)
+ * @returns {{ min: number, max: number, median: number }|null}
+ */
+export function circularTrimmedBand(rawValues, trimPct, manualExcludedCount) {
+  if (rawValues.length === 0) return null;
+  const reference = rawValues[0];
+  const aligned = rawValues
+    .map(value => alignNearReference(value, reference))
+    .sort((a, b) => a - b);
+  const result = trimmedBand(aligned, trimPct, manualExcludedCount);
+  if (result == null) return null;
+  return {
+    min:    wrapToDay(result.min),
+    max:    wrapToDay(result.max),
+    median: wrapToDay(result.median),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // combineModels — shared 0/1/N-model combiner (Plan 25-02, D-07..D-10/D-03..D-06)
 // ---------------------------------------------------------------------------
 
@@ -323,9 +369,8 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
   const napStartTimes = acceptedWindow
     .map(d => extractTime(d.napStart))
     .filter(t => t != null)
-    .map(timeToMinutes)
-    .sort((a, b) => a - b);
-  const napStartModel2 = trimmedBand(napStartTimes, blendTrimPct, rejectedInWindow);
+    .map(timeToMinutes);
+  const napStartModel2 = circularTrimmedBand(napStartTimes, blendTrimPct, rejectedInWindow);
 
   const napStartCombined = combineModels(
     [napStartModel1, napStartModel2].filter(m => m != null),
@@ -392,9 +437,8 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
   const a1Times = acceptedWindow
     .map(d => extractTime(d.wake))
     .filter(t => t != null)
-    .map(timeToMinutes)
-    .sort((a, b) => a - b);
-  const a1 = trimmedBand(a1Times, blendTrimPct, rejectedInWindow);
+    .map(timeToMinutes);
+  const a1 = circularTrimmedBand(a1Times, blendTrimPct, rejectedInWindow);
 
   // Step 4 — resolve lastBedtimeHHMM via backward scan over `window` (not
   // acceptedWindow — matches forecast.js's own scan for this anchor lookup).
@@ -462,9 +506,8 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
   const bedtimeTimes = acceptedWindow
     .map(d => extractTime(d.bedtime))
     .filter(t => t != null)
-    .map(timeToMinutes)
-    .sort((a, b) => a - b);
-  const bedtimeModel1 = trimmedBand(bedtimeTimes, blendTrimPct, rejectedInWindow);
+    .map(timeToMinutes);
+  const bedtimeModel1 = circularTrimmedBand(bedtimeTimes, blendTrimPct, rejectedInWindow);
 
   // Model 2 — wake-anchored day-length band. Raw anchor+duration can cross
   // midnight (bedtime is naturally the "far end" of the day from wake), so
@@ -508,9 +551,8 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
       .filter(d => extractTime(d.napStart) == null)
       .map(d => extractTime(d.bedtime))
       .filter(t => t != null)
-      .map(timeToMinutes)
-      .sort((a, b) => a - b);
-    bedtimeModel3 = trimmedBand(noNapBedtimeTimes, blendTrimPct, 0);
+      .map(timeToMinutes);
+    bedtimeModel3 = circularTrimmedBand(noNapBedtimeTimes, blendTrimPct, 0);
   }
 
   const bedtimeCombined = combineModels(
