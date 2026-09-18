@@ -96,6 +96,13 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
 
 - [ ] **Phase 25: Algorithm C & Settings Modal** — Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` with dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), interval stability check (intersection/shrinkage), and coverage for all 4 events; add three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide in the Settings modal; add `forecast-blend.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests RED→GREEN for all blend and stability logic, E2E test for selector visibility (requirements: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12)
+  **Plans:** 5 plans
+  Plans:
+  - [ ] 25-01-PLAN.md — forecast-blend.js wake dual-model blend + shared trim/stability helpers + sw precache (TDD tracer + expansion)
+  - [ ] 25-02-PLAN.md — forecast-blend.js bedtime/napStart/napEnd blends, completing all 4 events
+  - [ ] 25-03-PLAN.md — DEFAULT_SETTINGS + RULES for blendWindowDays/blendTrimPct/blendShrinkage
+  - [ ] 25-04-PLAN.md — Settings modal three-way selector + #blendOptions fieldset + today-screen.js dispatch
+  - [ ] 25-05-PLAN.md — E2E coverage for selector visibility and real-prediction rendering
 
 ## Phase Details
 
@@ -258,9 +265,22 @@ Plans:
   5. `forecast-blend.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   6. Unit tests (RED→GREEN) cover all blend and stability logic; E2E test covers selector visibility
 
-**Plans**: TBD
+**Plans:** 0/5 plans complete
 
 Plans:
+**Wave 1**
+
+- [ ] 25-01-PLAN.md — forecast-blend.js wake dual-model blend + shared trim/stability helpers + sw precache (TDD tracer + expansion)
+- [ ] 25-03-PLAN.md — DEFAULT_SETTINGS + RULES for blendWindowDays/blendTrimPct/blendShrinkage
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 25-02-PLAN.md — forecast-blend.js bedtime/napStart/napEnd blends, completing all 4 events
+- [ ] 25-04-PLAN.md — Settings modal three-way selector + #blendOptions fieldset + today-screen.js dispatch
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 25-05-PLAN.md — E2E coverage for selector visibility and real-prediction rendering
 
 ## Backlog
 
