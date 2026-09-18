@@ -87,12 +87,13 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 23-02-PLAN.md — Remove TIF_COLUMNS and all rendering call sites from Metrics screen; update E2E specs
 
 - [ ] **Phase 24: Autosave** — Create `js/lib/autosave.js` exporting `pickSaveDirectory()` (calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a minimal inline wrapper), `saveToDisk(handle, jsonString)` (debounced 500ms, fires after every event-store mutation), and `restoreHandle()` (retrieves handle on launch, prompts re-permission if `queryPermission` returns `'prompt'`); wire into `app.js` via event-store subscription; add a Settings UI row for the autosave directory with graceful fallback copy and a manual Export button when the File System Access API is unavailable (Firefox, Safari, `file://`); add `autosave.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states (requirements: PLAT-01, PLAT-02, PLAT-03, PLAT-04)
-  **Plans:** 4 plans
+  **Plans:** 5 plans (4 executed + 1 gap-closure)
   Plans:
   - [x] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
   - [x] 24-02-PLAN.md — app.js composition-root wiring: boot restore, debounced event-log subscription, autosaveActions
   - [x] 24-03-PLAN.md — Settings modal Backup fieldset (index.html markup + rendering/wiring + E2E)
   - [x] 24-04-PLAN.md — First-launch banner on Today screen (today-screen.js + CSS + E2E)
+  - [x] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
 
 - [ ] **Phase 25: Algorithm C & Settings Modal** — Create `js/lib/forecast-blend.js` exporting `blendForecast(dayRecords, snap)` with dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), interval stability check (intersection/shrinkage), and coverage for all 4 events; add three-option algorithm selector (Classic / TIF / Algorithm C) with context-sensitive fieldset show/hide in the Settings modal; add `forecast-blend.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests RED→GREEN for all blend and stability logic, E2E test for selector visibility (requirements: PRED-13, PRED-14, PRED-15, PRED-16, PRED-17, UI-12)
 
@@ -223,7 +224,7 @@ Plans:
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
 
-**Plans:** 5 plans (4 executed + 1 gap-closure)
+**Plans:** 5/5 plans executed (4 executed + 1 gap-closure)
 
 Plans:
 **Wave 1**
@@ -241,7 +242,7 @@ Plans:
 
 **Gap closure** *(from 24-VERIFICATION.md gaps_found)*
 
-- [ ] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
+- [x] 24-05-PLAN.md — Fix Settings Remove-handler await race (Gap A/WR-01) + Settings-configured banner suppression (Gap B/WR-02)
 
 ### Phase 25: Algorithm C & Settings Modal
 

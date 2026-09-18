@@ -113,6 +113,13 @@ None - no external service configuration required.
 - Phase 24 (Autosave) is now ready to be marked complete; all four PLAT-01..04 requirements are satisfied and the phase goal (autosave works end-to-end with graceful fallback) is fully achieved with no known gaps.
 - Remaining WARNING-level code-review items (WR-03: `createIndexedDbHandleStore` never closes IndexedDB connections; WR-04: boot-time `restoreHandle()` failure is silently swallowed with no diagnostic trail) were explicitly out of scope for this gap-closure plan and remain open as non-blocking follow-ups if the project wants to address them later.
 
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/24-autosave/24-05-SUMMARY.md`
+- FOUND: `7249e9a` (fix commit)
+- FOUND: `1521d4a` (test commit)
+- FOUND: `4f54c7d` (docs commit)
+
 ---
 *Phase: 24-autosave*
 *Completed: 2026-09-18*

@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 24
-current_phase_name: autosave
-status: executing
-stopped_at: Completed 24-03-PLAN.md
-last_updated: "2026-09-17T16:09:27.521Z"
-last_activity: 2026-09-17
-last_activity_desc: Phase 24 execution started
-state_head: c33cf61ac47a94959531f98f15da53c50bd4ea8b
+current_phase_name: Autosave
+status: completed
+stopped_at: Completed 24-05-PLAN.md — Phase 24 (Autosave) gap closure done, all 5 plans executed, both verification gaps closed
+last_updated: "2026-09-18T08:40:05.246Z"
+last_activity: 2026-09-18
+state_head: 4f54c7d59603febe4b127f3e7580c7f68722c518
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
   percent: 71
+last_activity_desc: Phase 24 execution started
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 
 ## Current Position
 
-Phase: 24 (autosave) — READY TO EXECUTE
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-09-17 — Phase 24 execution started
+Phase: 24 (Autosave) — COMPLETE
+Plan: 5 of 5
+Status: Phase 24 complete - all 5 plans executed, gaps closed
+Last activity: 2026-09-18
 
 ## Phases
 
@@ -108,6 +108,7 @@ Last activity: 2026-09-17 — Phase 24 execution started
 | Phase 24 P01 | 20min | 3 tasks | 4 files |
 | Phase 24 P02 | 7min | 2 tasks | 1 files |
 | Phase 24 P03 | 25min | 3 tasks | 3 files |
+| Phase 24 P05 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,8 @@ Last activity: 2026-09-17 — Phase 24 execution started
 - [Phase 24]: Phase 24 Plan 01: createIndexedDbHandleStore uses one object store ('handles') in db 'nightwatch-autosave' v1, one fixed key ('directoryHandle') — Claude's Discretion per 24-CONTEXT.md
 - [Phase 24]: Phase 24 Plan 02: app.js changes verified via full test suite + grep acceptance criteria (no DOM shim exists for app.js unit testing)
 - [Phase 24]: Phase 24 Plan 03: OPFS root handle .name is empty string per spec — E2E test asserts row-state transition and DOM attachment, not non-empty folder name text
+- [Phase 24]: Phase 24 Plan 05: Gap B fixed via Option B (settings-modal.js sets the shared autosaveBannerDismissed flag on a granted pick) — rejected Option A per the plan's design-rationale record since it races against restoreHandle()'s async resolution
+- [Phase 24]: Phase 24 Plan 05: banner-dismissal flag write gated on state.status === 'granted' so a cancelled/AbortError pick (D-06) never falsely suppresses the discovery banner
 
 ### Quick Tasks Completed
 
@@ -211,8 +214,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-17T14:52:58.982Z
-Stopped at: Completed 24-03-PLAN.md
+Last session: 2026-09-18T08:39:57.981Z
+Stopped at: Completed 24-05-PLAN.md — Phase 24 (Autosave) gap closure done, all 5 plans executed, both verification gaps closed
 Resume file: None
 
 ## Deferred Items

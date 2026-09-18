@@ -48,10 +48,10 @@
 
 ### Autosave
 
-- [ ] **PLAT-01**: `js/lib/autosave.js` exports `pickSaveDirectory()` — calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a small inline wrapper (no npm package)
-- [ ] **PLAT-02**: `saveToDisk(handle, jsonString)` — writes the canonical JSON export to the persisted directory handle; debounced (500 ms) trigger fires after every event add, edit, or delete
-- [ ] **PLAT-03**: `restoreHandle()` — retrieves the persisted handle from IndexedDB on app launch; prompts the user to re-confirm permission if the handle exists but `queryPermission` returns `'prompt'`
-- [ ] **PLAT-04**: Graceful fallback when File System Access API is unavailable (Firefox, Safari, `file://` context) — autosave section in Settings shows an explanatory note and a manual Export button instead of the directory picker
+- [x] **PLAT-01**: `js/lib/autosave.js` exports `pickSaveDirectory()` — calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a small inline wrapper (no npm package)
+- [x] **PLAT-02**: `saveToDisk(handle, jsonString)` — writes the canonical JSON export to the persisted directory handle; debounced (500 ms) trigger fires after every event add, edit, or delete
+- [x] **PLAT-03**: `restoreHandle()` — retrieves the persisted handle from IndexedDB on app launch; prompts the user to re-confirm permission if the handle exists but `queryPermission` returns `'prompt'`
+- [x] **PLAT-04**: Graceful fallback when File System Access API is unavailable (Firefox, Safari, `file://` context) — autosave section in Settings shows an explanatory note and a manual Export button instead of the directory picker
 
 ## Out of Scope (v2.0)
 
@@ -91,10 +91,10 @@
 | UI-11 | B-041 | Phase 23 | Complete |
 | UI-12 | B-032 | Phase 25 | Pending |
 | UI-13 | B-038 | Phase 21 | Complete |
-| PLAT-01 | B-051 | Phase 24 | Gaps Found |
-| PLAT-02 | B-051 | Phase 24 | Gaps Found |
-| PLAT-03 | B-051 | Phase 24 | Gaps Found |
-| PLAT-04 | B-051 | Phase 24 | Gaps Found |
+| PLAT-01 | B-051 | Phase 24 | Complete |
+| PLAT-02 | B-051 | Phase 24 | Complete |
+| PLAT-03 | B-051 | Phase 24 | Complete |
+| PLAT-04 | B-051 | Phase 24 | Complete |
 
 **Coverage:**
 
