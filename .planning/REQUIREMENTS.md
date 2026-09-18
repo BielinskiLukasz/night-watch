@@ -43,7 +43,7 @@
 ### Screen Changes
 
 - [x] **UI-11**: Move TIF window columns (per-event lower/upper bounds, confidence score, window width) from Metrics screen to Accuracy screen — clean separation: Metrics = what happened, Accuracy = how well predicted
-- [ ] **UI-12**: Settings modal Algorithm selector exposes three options: Classic / TIF / Algorithm C; algorithm-specific settings (Classic trim/rolling, TIF precision, Blend shrinkage) show/hide based on active selection; selector rendered at top of Forecast & Prediction fieldset (consistent with v1.3 placement)
+- [x] **UI-12**: Settings modal Algorithm selector exposes three options: Classic / TIF / Algorithm C; algorithm-specific settings (Classic trim/rolling, TIF precision, Blend shrinkage) show/hide based on active selection; selector rendered at top of Forecast & Prediction fieldset (consistent with v1.3 placement)
 - [x] **UI-13**: Today screen renders only the next reachable event card prominently using `nextReachableEvent`; secondary events remain accessible but de-emphasized; nap cards hidden (not collapsed) when window is closed
 
 ### Autosave
@@ -89,7 +89,7 @@
 | ACC-03 | B-049 | Phase 22 | Complete |
 | ACC-04 | B-049 | Phase 22 | Complete |
 | UI-11 | B-041 | Phase 23 | Complete |
-| UI-12 | B-032 | Phase 25 | Gaps Found |
+| UI-12 | B-032 | Phase 25 | Complete |
 | UI-13 | B-038 | Phase 21 | Complete |
 | PLAT-01 | B-051 | Phase 24 | Complete |
 | PLAT-02 | B-051 | Phase 24 | Complete |
