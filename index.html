@@ -266,6 +266,7 @@
           <select name="forecastAlgorithm">
             <option value="classic">Classic</option>
             <option value="tif">TIF</option>
+            <option value="blend">Algorithm C</option>
           </select>
         </label>
         <div id="classicOptions">
@@ -319,6 +320,20 @@
           <label>
             Precision target (minutes)
             <input type="number" name="precisionTarget" min="1">
+          </label>
+        </div>
+        <div id="blendOptions" hidden>
+          <label>
+            Blend history window (days)
+            <input type="number" name="blendWindowDays" min="14" max="180" step="1">
+          </label>
+          <label>
+            Blend trim percentage (0-40)
+            <input type="number" name="blendTrimPct" min="0" max="40" step="1">
+          </label>
+          <label>
+            Blend shrinkage (0.0-1.0)
+            <input type="number" name="blendShrinkage" min="0" max="1" step="0.05">
           </label>
         </div>
       </fieldset>
