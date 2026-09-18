@@ -86,7 +86,7 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 23-01-PLAN.md — Add per-day TIF window table to Accuracy screen (buildTifPerDayTable, CSS, E2E coverage)
   - [x] 23-02-PLAN.md — Remove TIF_COLUMNS and all rendering call sites from Metrics screen; update E2E specs
 
-- [ ] **Phase 24: Autosave** — Create `js/lib/autosave.js` exporting `pickSaveDirectory()` (calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a minimal inline wrapper), `saveToDisk(handle, jsonString)` (debounced 500ms, fires after every event-store mutation), and `restoreHandle()` (retrieves handle on launch, prompts re-permission if `queryPermission` returns `'prompt'`); wire into `app.js` via event-store subscription; add a Settings UI row for the autosave directory with graceful fallback copy and a manual Export button when the File System Access API is unavailable (Firefox, Safari, `file://`); add `autosave.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states (requirements: PLAT-01, PLAT-02, PLAT-03, PLAT-04)
+- [x] **Phase 24: Autosave** — Create `js/lib/autosave.js` exporting `pickSaveDirectory()` (calls `window.showDirectoryPicker()` and persists the `FileSystemDirectoryHandle` to IndexedDB via a minimal inline wrapper), `saveToDisk(handle, jsonString)` (debounced 500ms, fires after every event-store mutation), and `restoreHandle()` (retrieves handle on launch, prompts re-permission if `queryPermission` returns `'prompt'`); wire into `app.js` via event-store subscription; add a Settings UI row for the autosave directory with graceful fallback copy and a manual Export button when the File System Access API is unavailable (Firefox, Safari, `file://`); add `autosave.js` to `PRECACHE_LIST` in `sw.js` and `tests/unit/sw-precache.test.js`; unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states (requirements: PLAT-01, PLAT-02, PLAT-03, PLAT-04) (completed 2026-09-18)
   **Plans:** 5 plans (4 executed + 1 gap-closure)
   Plans:
   - [x] 24-01-PLAN.md — autosave.js core round trip (pick/persist/restore/write) + debounce + support detection + sw.js precache (TDD tracer + expansion)
@@ -224,7 +224,7 @@ Plans:
   4. `autosave.js` is added to `PRECACHE_LIST` in `sw.js` and to `tests/unit/sw-precache.test.js`
   5. Unit tests cover debounce, handle persistence round-trip, and fallback detection; E2E test covers the Settings UI row in both supported and fallback states
 
-**Plans:** 5/5 plans executed (4 executed + 1 gap-closure)
+**Plans:** 5/5 plans complete
 
 Plans:
 **Wave 1**
