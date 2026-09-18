@@ -60,11 +60,15 @@ See [v1.4 archive](milestones/v1.4-ROADMAP.md) for full phase details.
   - [x] 19-02-PLAN.md — forecast() split bedtime routing + wake-anchored nap + schema cleanup (D-09/D-10 checkpoint)
 
 - [x] **Phase 20: Nap Probability Redesign** — Refactor `napProbabilityScore` in `js/lib/forecast.js`: drop clock-based `elapsedWakeTime` (30%) and `windowPassed` (10%) inputs, add `dayOfWeekNapRate` (30%) from `dayOfWeekAverages()` in `metrics.js` and `sleepDebtSignal` (20%) from `sleepDebtProxy()` in `metrics.js`, keep `napFrequency` (35%) and `noNapStreakPenalty` (15%); weights sum to 100%; unit tests cover all five signals and weight totals; no circular imports (`forecast.js` may import from `metrics.js` — verify direction) (requirements: NAP-01, NAP-02, NAP-03, NAP-04) (completed 2026-09-16)
-  **Plans:** 3 plans
+  **Plans:** 7 plans (2 executed + 5 gap-closure)
   Plans:
   - [x] 20-01-PLAN.md — napProbability() 4-signal engine rewrite + dayOfWeekAverages() extension (TDD tracer + expansion)
   - [x] 20-02-PLAN.md — forecast.js + today-screen.js consumption wiring (D-04/D-07)
   - [x] 20-03-PLAN.md — Gap closure: CR-01 day-record ordering fix (forecast/tifForecast/napProbability + metrics-screen parity) + CR-02 local-date lookup fix (20-REVIEW.md blockers)
+  - [ ] 20-04-PLAN.md — Gap closure: gate PRED-19 bedtime blend on napWindowClosed (G-20-16 item 1, 20-UAT.md)
+  - [ ] 20-05-PLAN.md — Gap closure: gate forecast-tif.js Activity-after-nap band on isNoNapDay (G-20-16 item 3, 20-UAT.md)
+  - [ ] 20-06-PLAN.md — Gap closure: Details section (hero's own type + bedtime/bedtimeAfterWake substitution + distinct labels) (G-20-15, G-20-16 item 2, 20-UAT.md)
+  - [ ] 20-07-PLAN.md — Gap closure: Accuracy screen TIF per-day table mobile scroll wrapper (G-20-17, 20-UAT.md)
 
 - [x] **Phase 21: Prediction Normalization** — Add `nextReachableEvent(lastEvent, currentHour, settings)` helper (pure function, new export in `js/lib/forecast.js` or a dedicated `js/lib/forecast-utils.js`); update `today-screen.js` to render only the next reachable event card prominently and to fully hide (not collapse) nap cards when the nap window is closed via a dedicated UI flag; if `forecast-utils.js` is new it must be added to `PRECACHE_LIST` and `sw-precache.test.js`; E2E tests cover event-card visibility for each reachable-event state (requirements: PRED-23, PRED-24, UI-13) (completed 2026-09-16)
   **Plans:** 3 plans
