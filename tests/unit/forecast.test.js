@@ -2781,6 +2781,49 @@ describe('forecast() split bedtime routing (PRED-18/19)', () => {
     assert.strictEqual(result.bedtime.central, '21:30',
       'thin sub-series should fall back to overall without offset (21:30), not PRED-11 shifted (21:00)');
   });
+
+  it('napWindowClosed=true with both sub-series >= minDays: routes to pure no-nap-day series, not the score blend (G-20-16)', () => {
+    // Same 3-nap/3-no-nap fixture as the score=70 blend test above, but napWindowClosed:true.
+    // Blend test's expected central is "21:20" (Math.round(0.7*1260+0.3*1320)=1278 → "21:20").
+    // Once the window has closed, the blend must NOT fire — expect the no-nap-day
+    // sub-series' own central instead (all 3 no-nap-day bedtimes are 22:00=1320).
+    const records = [
+      napDayRecord(), napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: false,
+      napProbabilityScore: { score: 70, signalsUsed: [], confidence: 'partial', napWindowClosed: true },
+      isIntenseToday: false, currentHour: 10,
+    });
+    const expectedSeries = buildBedtimeSeriesNoNapDay(records, splitSettings);
+    assert.ok(!result.isColdStart);
+    assert.ok(!result.bedtime.probabilityBand, 'should be normal prediction shape, not probability band');
+    assert.strictEqual(result.bedtime.central, minutesToTime(expectedSeries.central),
+      'napWindowClosed=true should route to pure no-nap-day series ("22:00"), not the score-blended value ("21:20")');
+  });
+
+  it('napWindowClosed=true but no-nap-day sub-series thin (< minDays): falls through to overall, same as undetermined thin fallback (G-20-16)', () => {
+    // Same 2-nap/2-no-nap fixture as the thin-fallback test above, but napWindowClosed:true.
+    // buildBedtimeSeriesNoNapDay returns null (2 < minDays=3) so control must fall through
+    // to Step 2 (intense-day, off here) / overall percentiles — exactly like the
+    // undetermined-and-thin case already does — never a thrown error or dead end.
+    const records = [
+      napDayRecord(), napDayRecord(),
+      noNapDayRecord(), noNapDayRecord(),
+    ];
+    const result = forecast(records, splitSettings, {
+      napStartLogged: false,
+      napProbabilityScore: { score: 70, signalsUsed: [], confidence: 'partial', napWindowClosed: true },
+      isIntenseToday: false, currentHour: 22,
+    });
+    assert.strictEqual(buildBedtimeSeriesNoNapDay(records, splitSettings), null,
+      'fixture sanity check: no-nap-day sub-series must actually be thin for this test to be meaningful');
+    assert.ok(!result.isColdStart, 'should not be cold start: 4 non-rejected records >= minDays=3');
+    assert.ok(!result.bedtime.probabilityBand);
+    assert.strictEqual(result.bedtime.central, '21:30',
+      'thin no-nap-day sub-series with napWindowClosed=true should fall back to overall (21:30), same as the undetermined thin-fallback test');
+  });
 });
 
 // ---------------------------------------------------------------------------
