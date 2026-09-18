@@ -575,7 +575,13 @@ export function mountAccuracyScreen({ root, eventLog, settings }) {
     // T-07-06-01: textContent only — static string.
     h3.textContent = 'Per-Day TIF Windows';
     section.appendChild(h3);
-    section.appendChild(buildTifPerDayTable(days, tifBoundsHistory, snap));
+
+    // G-20-17: wrap the table in a scroll container, mirroring
+    // metrics-screen.js's .metricsTableScroll pattern for mobile overflow.
+    const tableScroll = document.createElement('div');
+    tableScroll.className = 'tifPerDayTableScroll';
+    tableScroll.appendChild(buildTifPerDayTable(days, tifBoundsHistory, snap));
+    section.appendChild(tableScroll);
 
     root.replaceChildren(section);
   }

@@ -1852,6 +1852,16 @@ button[data-log] {
  * columns formerly rendered on the Metrics screen.
  */
 
+/* G-20-17: scroll wrapper counterpart to .metricsTableScroll, closing the
+ * mobile horizontal-overflow gap flagged in the Phase 23 code review. */
+.tifPerDayTableScroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 8rem);
+  margin: 0;
+  padding: 0;
+}
+
 .tifPerDayTable {
   border-collapse: collapse;
   font-size: 0.9rem;
