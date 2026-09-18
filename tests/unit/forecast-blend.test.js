@@ -51,6 +51,44 @@ function buildNoBedtimeFixture(n = 10) {
 }
 
 // ---------------------------------------------------------------------------
+// Fixture helpers — nap-start / nap-end (Plan 25-02, D-07..D-10)
+// ---------------------------------------------------------------------------
+
+/**
+ * n days, wake fixed at 06:00 (constant anchor so Model 1's wake-anchored
+ * gap band and Model 2's raw historic band land on the same numeric range —
+ * avoids a degenerate single-point Model 1 that would otherwise collapse the
+ * combined band). napStart = wake + 180min + a 12-value 0-55min jitter cycle
+ * (real spread for both models). Optionally nulls the last day's wake to
+ * exercise the Model-1-unavailable fallback (D-08).
+ */
+function buildNapStartFixture(n = 30, { lastWakeNull = false } = {}) {
+  return Array.from({ length: n }, (_, i) => {
+    const wake = '06:00';
+    const napStart = fmt(timeToMinutes(wake) + 180 + (i % 12) * 5);
+    const isLast = i === n - 1;
+    return makeDay(isLast && lastWakeNull ? null : wake, null, napStart, null);
+  });
+}
+
+/**
+ * n days, wake fixed at 06:00, napStart = wake + 180min + a 12-value jitter
+ * cycle (optionally shifted by gapOffsetMinutes to build a distinguishable
+ * historic cluster), napEnd = napStart + 90min + a 4-value jitter cycle.
+ * Optionally nulls the last day's napStart to exercise the D-10
+ * actual-else-predicted anchor fallback.
+ */
+function buildNapEndFixture(n = 30, { todayNapStartLogged = true, gapOffsetMinutes = 0 } = {}) {
+  return Array.from({ length: n }, (_, i) => {
+    const wake = '06:00';
+    const napStart = fmt(timeToMinutes(wake) + 180 + gapOffsetMinutes + (i % 12) * 5);
+    const napEnd = fmt(timeToMinutes(napStart) + 90 + (i % 4) * 5);
+    const isLast = i === n - 1;
+    return makeDay(wake, '20:30', (isLast && !todayNapStartLogged) ? null : napStart, napEnd);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // trimmedBand
 // ---------------------------------------------------------------------------
 
@@ -143,6 +181,71 @@ describe('blendForecast(dayRecords, settings, activityLog, isNoNapDay)', () => {
     const result = blendForecast(dayRecords, BLEND_SETTINGS);
     assert.deepStrictEqual(result.bedtime, { central: null, min: null, max: null });
     assert.deepStrictEqual(result.napStart, { central: null, min: null, max: null });
+    assert.deepStrictEqual(result.napEnd, { central: null, min: null, max: null });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// blendForecast — nap-start (D-07/D-08)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — nap-start (D-07/D-08)', () => {
+  it('both models available: returns a valid non-null HH:MM band', () => {
+    const dayRecords = buildNapStartFixture(30);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(typeof result.napStart.central, 'string');
+    assert.strictEqual(typeof result.napStart.min, 'string');
+    assert.strictEqual(typeof result.napStart.max, 'string');
+    assert.ok(result.napStart.min <= result.napStart.central,
+      `min ${result.napStart.min} should be <= central ${result.napStart.central}`);
+    assert.ok(result.napStart.central <= result.napStart.max,
+      `central ${result.napStart.central} should be <= max ${result.napStart.max}`);
+  });
+
+  it("Model 1 unavailable (today's wake not logged): falls back to Model 2 (raw historic napStart band) alone", () => {
+    const dayRecords = buildNapStartFixture(30, { lastWakeNull: true });
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    const napStartTimesSorted = dayRecords
+      .filter(d => !d.rejected)
+      .map(d => d.napStart)
+      .filter(t => t != null)
+      .map(timeToMinutes)
+      .sort((a, b) => a - b);
+    const expectedModel2 = trimmedBand(napStartTimesSorted, BLEND_SETTINGS.blendTrimPct, 0);
+    assert.strictEqual(result.napStart.central, minutesToTime(expectedModel2.median));
+    assert.strictEqual(result.napStart.min, minutesToTime(expectedModel2.min));
+    assert.strictEqual(result.napStart.max, minutesToTime(expectedModel2.max));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// blendForecast — nap-end (D-09/D-10)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — nap-end (D-09/D-10)', () => {
+  it('both models available: returns a valid non-null HH:MM band', () => {
+    const dayRecords = buildNapEndFixture(30);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(typeof result.napEnd.central, 'string');
+    assert.strictEqual(typeof result.napEnd.min, 'string');
+    assert.strictEqual(typeof result.napEnd.max, 'string');
+    assert.ok(result.napEnd.min <= result.napEnd.central,
+      `min ${result.napEnd.min} should be <= central ${result.napEnd.central}`);
+    assert.ok(result.napEnd.central <= result.napEnd.max,
+      `central ${result.napEnd.central} should be <= max ${result.napEnd.max}`);
+  });
+
+  it('Model 2 anchor precedence (D-10): actual logged nap-start vs predicted fallback produce different napEnd.central', () => {
+    const fixtureActual    = buildNapEndFixture(30, { todayNapStartLogged: true,  gapOffsetMinutes: 0 });
+    const fixturePredicted = buildNapEndFixture(30, { todayNapStartLogged: false, gapOffsetMinutes: 120 });
+    const resultActual    = blendForecast(fixtureActual, BLEND_SETTINGS);
+    const resultPredicted = blendForecast(fixturePredicted, BLEND_SETTINGS);
+    assert.notStrictEqual(resultActual.napEnd.central, resultPredicted.napEnd.central);
+  });
+
+  it('both models unavailable (no wake or nap-start ever logged): returns explicit null triple, no throw', () => {
+    const dayRecords = Array.from({ length: 10 }, () => makeDay(null, '20:30', null, null));
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
     assert.deepStrictEqual(result.napEnd, { central: null, min: null, max: null });
   });
 });
