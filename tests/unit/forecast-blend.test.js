@@ -176,13 +176,6 @@ describe('blendForecast(dayRecords, settings, activityLog, isNoNapDay)', () => {
     assert.strictEqual(result.wake.max, minutesToTime(expectedA1.max));
   });
 
-  it('bedtime/napStart/napEnd are explicit {central:null,min:null,max:null} stubs (Plan 25-02 placeholder)', () => {
-    const dayRecords = buildOverlapFixture(30);
-    const result = blendForecast(dayRecords, BLEND_SETTINGS);
-    assert.deepStrictEqual(result.bedtime, { central: null, min: null, max: null });
-    assert.deepStrictEqual(result.napStart, { central: null, min: null, max: null });
-    assert.deepStrictEqual(result.napEnd, { central: null, min: null, max: null });
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -247,5 +240,114 @@ describe('blendForecast — nap-end (D-09/D-10)', () => {
     const dayRecords = Array.from({ length: 10 }, () => makeDay(null, '20:30', null, null));
     const result = blendForecast(dayRecords, BLEND_SETTINGS);
     assert.deepStrictEqual(result.napEnd, { central: null, min: null, max: null });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fixture helpers — bedtime (Plan 25-02, D-03..D-06) + full integration
+// ---------------------------------------------------------------------------
+
+/**
+ * n days, fully populated (wake spread 06:00-06:55, bedtime fixed 20:30,
+ * napStart = wake+180min, napEnd = napStart+90min) — every day is a nap day.
+ * Used for bedtime's three-model happy path and the substitute-unavailable
+ * degradation case (no no-nap-day records exist at all).
+ */
+function buildFullDayFixture(n) {
+  return Array.from({ length: n }, (_, i) => {
+    const wake = fmt(360 + (i % 12) * 5);
+    const napStart = fmt(timeToMinutes(wake) + 180);
+    const napEnd = fmt(timeToMinutes(napStart) + 90);
+    return makeDay(wake, '20:30', napStart, napEnd);
+  });
+}
+
+/** buildFullDayFixture(n) with today's (last day's) wake and napEnd nulled — D-03/D-10 anchor-fallback fixture. */
+function buildFullDayFixtureTodayThin(n) {
+  const days = buildFullDayFixture(n);
+  const last = days[days.length - 1];
+  days[days.length - 1] = { ...last, wake: null, napEnd: null };
+  return days;
+}
+
+/**
+ * 10 historic nap days with a late bedtime cluster (~23:30-23:50 — the range
+ * an AA-anchored band would land in) followed by 20 no-nap days (today
+ * included) with an earlier bedtime cluster (~21:00-21:20) — D-05's
+ * no-nap-day substitution fixture. The nap-day cluster exists specifically so
+ * a regression that ignores isNoNapDay and computes the AA-band anyway would
+ * be caught (its median would land far outside the no-nap cluster).
+ */
+function buildBedtimeSubstitutionFixture() {
+  const days = [];
+  for (let i = 0; i < 10; i++) {
+    const wake = fmt(360 + (i % 5) * 5);
+    const napStart = fmt(timeToMinutes(wake) + 180);
+    const napEnd = fmt(timeToMinutes(napStart) + 90);
+    const bedtime = fmt(1410 + (i % 5) * 5);
+    days.push(makeDay(wake, bedtime, napStart, napEnd));
+  }
+  for (let i = 0; i < 20; i++) {
+    const wake = fmt(360 + (i % 5) * 5);
+    const bedtime = fmt(1260 + (i % 5) * 5);
+    days.push(makeDay(wake, bedtime, null, null));
+  }
+  return days;
+}
+
+// ---------------------------------------------------------------------------
+// blendForecast — bedtime (D-03..D-06)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — bedtime (D-03..D-06)', () => {
+  it('all three models available, nap day: returns a valid non-null HH:MM band', () => {
+    const dayRecords = buildFullDayFixture(30);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(typeof result.bedtime.central, 'string');
+    assert.strictEqual(typeof result.bedtime.min, 'string');
+    assert.strictEqual(typeof result.bedtime.max, 'string');
+  });
+
+  it('no-nap-day substitution (D-05): Model 3 reflects the no-nap-day bedtime cluster, not the AA-band', () => {
+    const dayRecords = buildBedtimeSubstitutionFixture();
+    const result = blendForecast(dayRecords, BLEND_SETTINGS, {}, true);
+    const centralMinutes = timeToMinutes(result.bedtime.central);
+    assert.ok(centralMinutes > 1200 && centralMinutes < 1350,
+      `expected central within the no-nap cluster (~1260-1290 min), got ${result.bedtime.central} (${centralMinutes} min) — a value near 1410-1430 would indicate the AA-band leaked in despite isNoNapDay=true`);
+  });
+
+  it('no-nap-day substitute unavailable (< minDays no-nap-day records exist): degrades gracefully, no throw', () => {
+    // Every day is a nap day — no no-nap-day records exist for the D-05 substitute band.
+    const dayRecords = buildFullDayFixture(30);
+    assert.doesNotThrow(() => blendForecast(dayRecords, BLEND_SETTINGS, {}, true));
+    const result = blendForecast(dayRecords, BLEND_SETTINGS, {}, true);
+    assert.strictEqual(typeof result.bedtime.central, 'string');
+    assert.strictEqual(typeof result.bedtime.min, 'string');
+    assert.strictEqual(typeof result.bedtime.max, 'string');
+  });
+
+  it("Model 2/3 anchor fallback (today's wake and nap-end not logged): falls back to predicted anchors, no throw", () => {
+    const dayRecords = buildFullDayFixtureTodayThin(30);
+    assert.doesNotThrow(() => blendForecast(dayRecords, BLEND_SETTINGS));
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(typeof result.bedtime.central, 'string');
+    assert.strictEqual(typeof result.bedtime.min, 'string');
+    assert.strictEqual(typeof result.bedtime.max, 'string');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// blendForecast — full four-event integration (PRED-13/PRED-17)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — full four-event integration (PRED-13/PRED-17)', () => {
+  it('rich fixture produces non-null HH:MM triples for all four events — no stub survives', () => {
+    const dayRecords = buildFullDayFixture(100);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    for (const key of ['wake', 'bedtime', 'napStart', 'napEnd']) {
+      assert.strictEqual(typeof result[key].central, 'string', `${key}.central should be a string`);
+      assert.strictEqual(typeof result[key].min, 'string', `${key}.min should be a string`);
+      assert.strictEqual(typeof result[key].max, 'string', `${key}.max should be a string`);
+    }
   });
 });
