@@ -14,7 +14,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { trimmedBand, stabilityCheck, blendForecast } from '../../js/lib/forecast-blend.js';
+import { trimmedBand, stabilityCheck, blendForecast, wrapToDay } from '../../js/lib/forecast-blend.js';
 import { timeToMinutes, minutesToTime } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -31,6 +31,18 @@ function fmt(mins) {
   const h = Math.floor(mins / 60) % 24;
   const m = mins % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Wrap-aware "is central inside [min, max]" check (WR-01 gap-closure, Plan 25-07).
+ * Handles a band that itself crosses midnight (min > max, e.g. min='23:30',
+ * max='00:30') by treating it as the union of [min, 1440) and [0, max].
+ */
+function centralWithinBand(minStr, maxStr, centralStr) {
+  const min = timeToMinutes(minStr);
+  const max = timeToMinutes(maxStr);
+  const central = timeToMinutes(centralStr);
+  return min <= max ? (central >= min && central <= max) : (central >= min || central <= max);
 }
 
 const BLEND_SETTINGS = Object.freeze({
@@ -240,6 +252,102 @@ describe('blendForecast — nap-end (D-09/D-10)', () => {
     const dayRecords = Array.from({ length: 10 }, () => makeDay(null, '20:30', null, null));
     const result = blendForecast(dayRecords, BLEND_SETTINGS);
     assert.deepStrictEqual(result.napEnd, { central: null, min: null, max: null });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fixture helpers — WR-01 midnight-wrap normalization (gap-closure Plan 25-07)
+// ---------------------------------------------------------------------------
+
+/**
+ * n days, every day (including today) has wake fixed at '23:00' (1380 raw
+ * minutes) and napStart = wake + 60min + a 12-value 0-55min jitter cycle
+ * (raw sums 1440-1495 — fmt()'s built-in % 24 hour wrap stores these as
+ * '00:00'-'00:55', a realistic "napped just after midnight" data set).
+ * Exercises napStartModel1's wake-anchored gap band, which must be wrapped
+ * into [0,1440) before combining against napStartModel2's already-wrapped
+ * historic band (WR-01).
+ */
+function buildLateWakeNapStartFixture(n = 30) {
+  return Array.from({ length: n }, (_, i) => {
+    const wake = '23:00';
+    const napStart = fmt(timeToMinutes(wake) + 60 + (i % 12) * 5);
+    return makeDay(wake, null, napStart, null);
+  });
+}
+
+/**
+ * n days, every day has wake fixed at '22:00' (1320 raw minutes), napStart =
+ * wake + 90min + a 12-value jitter cycle (raw 1410-1465, so roughly half the
+ * jitter cycle wraps past midnight and half does not), napEnd = that day's
+ * (already-wrapped) napStart + 90min + a 4-value jitter cycle (duration
+ * 90-105, always a positive elapsed time). The last day's napStart is then
+ * overridden to the literal '00:15' (today's actual logged nap-start,
+ * napEndModel2's D-10 "actual" precedence input) while wake stays '22:00'
+ * (still feeds napEndModel1's wakeAnchorMin). Exercises napEndModel1's fully
+ * chained wake-anchored gap+duration sum, which must be wrapped into
+ * [0,1440) before combining against napEndModel2 (WR-01).
+ */
+function buildLateWakeNapEndFixture(n = 30) {
+  const days = Array.from({ length: n }, (_, i) => {
+    const wake = '22:00';
+    const napStart = fmt(timeToMinutes(wake) + 90 + (i % 12) * 5);
+    const napEnd = fmt(timeToMinutes(napStart) + 90 + (i % 4) * 5);
+    return makeDay(wake, null, napStart, napEnd);
+  });
+  days[days.length - 1] = { ...days[days.length - 1], napStart: '00:15' };
+  return days;
+}
+
+// ---------------------------------------------------------------------------
+// blendForecast — WR-01 midnight-wrap normalization (gap-closure Plan 25-07)
+// ---------------------------------------------------------------------------
+
+describe('blendForecast — WR-01 midnight-wrap normalization (gap-closure Plan 25-07)', () => {
+  describe('wrapToDay(m) — direct [0,1440) boundary contract', () => {
+    it('wrapToDay(0) === 0', () => {
+      assert.strictEqual(wrapToDay(0), 0);
+    });
+
+    it('wrapToDay(1439) === 1439', () => {
+      assert.strictEqual(wrapToDay(1439), 1439);
+    });
+
+    it('wrapToDay(1440) === 0 — the exact midnight-rollover boundary', () => {
+      assert.strictEqual(wrapToDay(1440), 0);
+    });
+
+    it('wrapToDay(1441) === 1 — one step past the boundary', () => {
+      assert.strictEqual(wrapToDay(1441), 1);
+    });
+
+    it('wrapToDay(2880) === 0 — two full days', () => {
+      assert.strictEqual(wrapToDay(2880), 0);
+    });
+
+    it('wrapToDay(-5) === 1435 — defensive negative-input wrap', () => {
+      assert.strictEqual(wrapToDay(-5), 1435);
+    });
+  });
+
+  it('napStart, late wake crossing midnight: central lies within the reported band (not a false non-overlap union)', () => {
+    const dayRecords = buildLateWakeNapStartFixture(30);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(
+      centralWithinBand(result.napStart.min, result.napStart.max, result.napStart.central),
+      true,
+      `napStart.central ${result.napStart.central} should lie within [${result.napStart.min}, ${result.napStart.max}]`
+    );
+  });
+
+  it('napEnd, late wake crossing midnight: central lies within the reported band (not a false non-overlap union)', () => {
+    const dayRecords = buildLateWakeNapEndFixture(30);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(
+      centralWithinBand(result.napEnd.min, result.napEnd.max, result.napEnd.central),
+      true,
+      `napEnd.central ${result.napEnd.central} should lie within [${result.napEnd.min}, ${result.napEnd.max}]`
+    );
   });
 });
 
