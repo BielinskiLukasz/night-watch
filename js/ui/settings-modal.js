@@ -457,7 +457,11 @@ function wireBackupButtons(autosave) {
 
   const pickOrChange = async () => {
     await autosave.pick();
-    renderBackupSection(autosave.getState());
+    const state = autosave.getState();
+    renderBackupSection(state);
+    if (state.status === 'granted') {
+      localStorage.setItem('autosaveBannerDismissed', '1'); // gsd:allow-storage-local
+    }
   };
 
   if (pickBtn) {
@@ -474,8 +478,8 @@ function wireBackupButtons(autosave) {
 
   if (removeBtn) {
     if (_autosaveRemoveHandler) removeBtn.removeEventListener('click', _autosaveRemoveHandler);
-    _autosaveRemoveHandler = () => {
-      autosave.remove();
+    _autosaveRemoveHandler = async () => {
+      await autosave.remove();
       renderBackupSection(autosave.getState());
     };
     removeBtn.addEventListener('click', _autosaveRemoveHandler);
