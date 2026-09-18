@@ -5,11 +5,11 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 25
 current_phase_name: Algorithm C & Settings Modal
 status: executing
-stopped_at: Completed 25-01-PLAN.md
-last_updated: "2026-09-18T11:06:07.518Z"
+stopped_at: Completed 25-02-PLAN.md
+last_updated: "2026-09-18T11:28:08.210Z"
 last_activity: 2026-09-18
 last_activity_desc: Phase 25 execution started
-state_head: cc714dc63e6b43cd68fddfba36cfa419c972cbbb
+state_head: 5eece4124cd23158cfff417676eb02c7f37742dd
 progress:
   total_phases: 7
   completed_phases: 6
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 ## Current Position
 
 Phase: 25 (Algorithm C & Settings Modal) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-18 — Phase 25 execution started
 
@@ -110,6 +110,7 @@ Last activity: 2026-09-18 — Phase 25 execution started
 | Phase 24 P03 | 25min | 3 tasks | 3 files |
 | Phase 24 P05 | 15min | 2 tasks | 2 files |
 | Phase 25 P01 | 20min | 2 tasks | 4 files |
+| Phase 25 P02 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,8 @@ Last activity: 2026-09-18 — Phase 25 execution started
 - [Phase 24]: Phase 24 Plan 05: banner-dismissal flag write gated on state.status === 'granted' so a cancelled/AbortError pick (D-06) never falsely suppresses the discovery banner
 - [Phase 25]: Phase 25 Plan 01: A2's bedtime-anchored sleep-length band needs wrapToDay() normalization into [0,1440) before stabilityCheck runs, so it shares A1's numeric reference frame (Rule 1 bug fix)
 - [Phase 25]: Phase 25 Plan 01: sw.js PRECACHE_LIST insertion for forecast-blend.js follows the plan's explicit position (between forecast-tif.js and forecast-utils.js) rather than strict ASCII order
+- [Phase 25]: Phase 25 Plan 02: combineModels(models, shrinkage) shared 0/1/N-model combiner reused by napStart, napEnd, and bedtime — 0 models returns the null-on-no-data triple, 1 model passes through unchanged, 2+ delegates to stabilityCheck (Plan 25-01, unchanged)
+- [Phase 25]: Phase 25 Plan 02: PRED-13 stayed blocked in requirements.mark-complete because a later sibling plan in the phase still declares it; PRED-15/16/17 marked complete
 
 ### Quick Tasks Completed
 
@@ -217,8 +220,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T11:06:02.535Z
-Stopped at: Completed 25-01-PLAN.md
+Last session: 2026-09-18T11:28:02.280Z
+Stopped at: Completed 25-02-PLAN.md
 Resume file: None
 
 ## Deferred Items
