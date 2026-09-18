@@ -333,4 +333,26 @@ test.describe('Accuracy screen — Per-Day TIF Windows table (UI-11, D-01..D-08)
     await expect(page.locator('#accuracy-screen .tifPerDayTable')).toHaveCount(0);
   });
 
+  // G-20-17: mobile horizontal-scroll wrapper around the per-day TIF table,
+  // mirroring the Metrics screen's .metricsTableScroll pattern.
+  test('per-day TIF table is wrapped in a horizontally-scrollable container (G-20-17)', async ({ page }) => {
+    const db = makeBaselineDb({ forecastAlgorithm: 'tif' });
+    await seedAndReload(page, db);
+
+    await page.locator('#bottom-nav button[data-tab="accuracy"]').click();
+
+    const scrollWrapper = page.locator('#accuracy-screen .tifPerDayTableScroll');
+    await expect(scrollWrapper).toBeAttached();
+
+    // Wrapper contains exactly the one per-day table, and the existing
+    // #accuracy-screen .tifPerDayTable selector (used elsewhere in this file)
+    // must keep resolving with the wrapper in place.
+    await expect(scrollWrapper.locator('.tifPerDayTable')).toHaveCount(1);
+    await expect(page.locator('#accuracy-screen .tifPerDayTable')).toHaveCount(1);
+
+    // Computed overflow-x must be 'auto' (from the .tifPerDayTableScroll CSS rule).
+    const overflowX = await scrollWrapper.evaluate((el) => getComputedStyle(el).overflowX);
+    expect(overflowX).toBe('auto');
+  });
+
 });
