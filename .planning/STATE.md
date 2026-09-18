@@ -5,16 +5,16 @@ milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 25
 current_phase_name: Algorithm C & Settings Modal
 status: executing
-stopped_at: Completed 25-03-PLAN.md
-last_updated: "2026-09-18T11:43:18.058Z"
+stopped_at: Completed 25-04-PLAN.md
+last_updated: "2026-09-18T11:55:20.045Z"
 last_activity: 2026-09-18
 last_activity_desc: Phase 25 execution started
-state_head: 8c2a65f250c018f25294c7727c3b4fa859eda233
+state_head: 187756e1329bd293274ca90a1842ae56564023f7
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
   percent: 86
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 ## Current Position
 
 Phase: 25 (Algorithm C & Settings Modal) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-09-18 — Phase 25 execution started
 
@@ -112,6 +112,7 @@ Last activity: 2026-09-18 — Phase 25 execution started
 | Phase 25 P01 | 20min | 2 tasks | 4 files |
 | Phase 25 P02 | 25min | 2 tasks | 2 files |
 | Phase 25 P03 | 20min | 2 tasks | 4 files |
+| Phase 25 P04 | 8min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Last activity: 2026-09-18 — Phase 25 execution started
 - [Phase 25]: Phase 25 Plan 02: combineModels(models, shrinkage) shared 0/1/N-model combiner reused by napStart, napEnd, and bedtime — 0 models returns the null-on-no-data triple, 1 model passes through unchanged, 2+ delegates to stabilityCheck (Plan 25-01, unchanged)
 - [Phase 25]: Phase 25 Plan 02: PRED-13 stayed blocked in requirements.mark-complete because a later sibling plan in the phase still declares it; PRED-15/16/17 marked complete
 - [Phase 25]: Phase 25 Plan 03: followed exact tifRollingDays forward-compat idiom for blendWindowDays/blendTrimPct/blendShrinkage; checkField's new 'number' case mirrors 'integer' with Number.isFinite substituted for Number.isInteger
+- [Phase 25]: Confirmed via read_first that renderForecastSection's dispatch is keyed on precisionScore/isLowConfidence presence, not forecastAlgorithm value — zero rendering changes needed for Algorithm C
+- [Phase 25]: Rewrote two-way hidden-toggle conditions to symmetric three-way pattern (each branch checks its own value) for long-term maintainability
 
 ### Quick Tasks Completed
 
@@ -222,8 +225,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-09-18T11:43:12.634Z
-Stopped at: Completed 25-03-PLAN.md
+Last session: 2026-09-18T11:55:14.502Z
+Stopped at: Completed 25-04-PLAN.md
 Resume file: None
 
 ## Deferred Items
