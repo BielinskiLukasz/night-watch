@@ -38,6 +38,9 @@
  *   precisionTarget: number,
  *   firstDayOfWeek: string,
  *   targetSleepMinutes: number,
+ *   blendWindowDays: number,
+ *   blendTrimPct: number,
+ *   blendShrinkage: number,
  * }>}
  */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -66,6 +69,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   intenseDayOffsetMinutes:   30,  // PRED-10 / D-08: minutes to shift bedtime on intense days
   firstDayOfWeek:        'monday',  // D-10 / MET-12: first day shown in DoW table ('monday'|'sunday')
   targetSleepMinutes:    600,       // MET-13 / D-01: per-day sleep target in minutes (default 10h)
+  blendWindowDays: 90, // PRED-13..17 / D-11: Algorithm C rolling window (days), independent of Classic's windowDays
+  blendTrimPct: 25,    // D-12: extreme-discard fraction (%) before percentile computation
+  blendShrinkage: 0.3, // D-13: shrinkage factor when central falls outside the stability-check intersection
 });
 
 /**
@@ -141,6 +147,16 @@ export function migrateV1ToV2(blob, defaultSettings) {
     // Phase 13 forward-compat: inject tifRollingDays for blobs predating Phase 13
     if (blob.settings && !('tifRollingDays' in blob.settings)) {
       blob.settings.tifRollingDays = 7;
+    }
+    // Phase 25 forward-compat: inject Algorithm C blend settings for blobs predating Phase 25
+    if (blob.settings && !('blendWindowDays' in blob.settings)) {
+      blob.settings.blendWindowDays = 90;
+    }
+    if (blob.settings && !('blendTrimPct' in blob.settings)) {
+      blob.settings.blendTrimPct = 25;
+    }
+    if (blob.settings && !('blendShrinkage' in blob.settings)) {
+      blob.settings.blendShrinkage = 0.3;
     }
     return blob;
   }
