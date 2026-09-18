@@ -1,6 +1,6 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
+milestone: v1.5
 milestone_name: Prediction Engine & Autosave (Phases 19–25)
 current_phase: 25
 status: completed
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-09-18)
 
 **Core value:** Given a sufficient history of sleep events, predict the next wake/bed/nap times accurately enough to be useful — with explicit uncertainty handling, precision scoring, and transparent accuracy tracking.
 
-**Current focus:** v2.0 milestone complete (Phases 19-25) — ready for `/gsd-complete-milestone v2.0`
+**Current focus:** v1.5 milestone complete (Phases 19-25) — ready for `/gsd-complete-milestone v1.5`
 
 ## Current Position
 
@@ -254,7 +254,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- Phase 25 (Algorithm C & Settings Modal) complete and verified — 9/9 plans (incl. 4 gap-closure plans: 25-06, 25-07, 25-08, 25-09), PRED-13..17 + UI-12 fully satisfied, goal verification passed 6/6 must-haves, 984 unit/integration + 150 E2E tests passing. **This was the last phase of v2.0** — milestone is 100% complete (7/7 phases). Next: `/gsd-complete-milestone v2.0` to archive and prepare for the next milestone.
+- Phase 25 (Algorithm C & Settings Modal) complete and verified — 9/9 plans (incl. 4 gap-closure plans: 25-06, 25-07, 25-08, 25-09), PRED-13..17 + UI-12 fully satisfied, goal verification passed 6/6 must-haves, 984 unit/integration + 150 E2E tests passing. **This was the last phase of v1.5** — milestone is 100% complete (7/7 phases). Next: `/gsd-complete-milestone v1.5` to archive and prepare for the next milestone.
 - Follow-up (non-blocking, from 25-REVIEW.md): `alignNearReference()`'s tie-break contradicts its own docstring (favors value-DAY on exact 720-min ties, not "ties keep value") — reused unchanged by the new 25-09 circular-median code, so worth fixing the doc or the behavior together.
 - Follow-up (non-blocking, from 25-REVIEW.md): `blendForecast()`'s cold-start branch drops `detectColdStart()`'s `minDaysRemaining` (mirrors tifForecast's existing shape) — `today-screen.js`'s `renderColdStartMessage()` reads that field for every algorithm, so a cold-started Algorithm C (or TIF) user sees "Log 0 more days" instead of the real count. Pre-existing TIF gap since Phase 10, newly inherited by Algorithm C.
 - Follow-up (non-blocking, from 25-REVIEW.md): no E2E Save→reload round-trip test for `blendWindowDays`/`blendTrimPct`/`blendShrinkage`; a stray `console.log` in the CSV import handler; a stale `noNapBedtimeOffsetMinutes` literal in two `settings-validate.test.js` fixtures; blank-input-coerces-to-0 in `settings-modal.js`'s numeric FormData handling.

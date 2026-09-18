@@ -99,32 +99,32 @@ compared to reality.
 - ✓ MET-13: Sleep debt proxy column (S.Debt(7d)) in Metrics per-day table and rolling aggregates — v1.4
 - ✓ MET-14: targetSleepMinutes setting (default 600 min) with median hint from event log — v1.4
 
-**v2.0 — Prediction Engine & Autosave (Phase 19, 2026-09-14)**
+**v1.5 — Prediction Engine & Autosave (Phase 19, 2026-09-14)**
 - ✓ Split bedtime model: separate nap-day vs no-nap-day P10/P50/P90 distributions with probability-weighted blend — Phase 19 (PRED-18, PRED-19)
 - ✓ Wake-anchored nap-start/end: Classic nap anchored to today's wake via activity-gap percentiles; nap-end via duration percentiles — Phase 19 (PRED-20, PRED-21, PRED-22)
 
-**v2.0 — Prediction Engine & Autosave (Phase 20, 2026-09-16)**
+**v1.5 — Prediction Engine & Autosave (Phase 20, 2026-09-16)**
 - ✓ Nap probability redesign: `napProbability()` rewritten to return `{score, signalsUsed, confidence}` with weight redistribution across 4 signal-availability combinations, decoupled from time-of-day — Phase 20 (PRED-23 groundwork)
 
-**v2.0 — Prediction Engine & Autosave (Phase 21, 2026-09-16)**
+**v1.5 — Prediction Engine & Autosave (Phase 21, 2026-09-16)**
 - ✓ Prediction normalization: `nextReachableEvent`/`selectNextEvent` 5-path event-reachability model extracted to `js/lib/forecast-utils.js`; napStart card fully hidden (not collapsed) once its window closes; `napWindowClosed` fully decoupled from the nap score — Phase 21 (PRED-23, PRED-24)
 - ✓ Dual hero cards + `predictions.bedtimeAfterWake` + collapsed-by-default "Later today" section replacing the flat 4-card grid — Phase 21 (PRED-24, UI-13)
 
-**v2.0 — Prediction Engine & Autosave (Phase 22, 2026-09-17)**
+**v1.5 — Prediction Engine & Autosave (Phase 22, 2026-09-17)**
 - ✓ Linear-decay per-event accuracy formula: `eventAccuracyScore()` (D≤W→100−(50/W)×D; W<D≤2W→50−(50/W)×(D−W); D>2W→0) replaces the old binary within-max-delta/within-half-delta/inside-band hit-miss counters — Phase 22 (ACC-01, ACC-02)
 - ✓ Daily/overall accuracy is the arithmetic mean of per-event scores, with a mean-of-daily-means overall headline score — Phase 22 (ACC-03)
 - ✓ Bedtime nap-day/no-nap-day split applied consistently across `accuracy.js` and `accuracy-tif.js`, plus band-approximated score marker — Phase 22 (ACC-04)
 - ✓ `accuracy-screen.js` rewritten to render the new score-based shapes (single avgScore column, overall headline, approximated-score footnote, matching TIF table split) — Phase 22 (ACC-04)
 
-**v2.0 — Prediction Engine & Autosave (Phase 23, 2026-09-17)**
+**v1.5 — Prediction Engine & Autosave (Phase 23, 2026-09-17)**
 - ✓ Per-day TIF prediction-window table (12 per-event min/max/confidence columns) added to the Accuracy screen, sourced from the full stage-filtered `days` array so warm-up days render dashed rather than being silently dropped — Phase 23 (UI-11)
 - ✓ Same 12 TIF window columns and their rendering/data-prep pipeline fully removed from the Metrics screen (31→19 columns); `isTif`/TIF aggregate rows/`tifForecast` override left untouched — Phase 23 (UI-11)
 
-**v2.0 — Prediction Engine & Autosave (Phase 24, 2026-09-18)**
+**v1.5 — Prediction Engine & Autosave (Phase 24, 2026-09-18)**
 - ✓ Autosave to a user-picked local directory via the File System Access API: pick/persist/restore round trip through an inline IndexedDB handle store, debounced (500ms) write on every event-log mutation, graceful fallback (manual Export button + explanatory note) when the API is unavailable — Phase 24 (PLAT-01, PLAT-02, PLAT-03, PLAT-04)
 - ✓ Settings "Backup" fieldset with 4 folder-row states (unsupported/unset/denied/set) and a first-launch discovery banner on the Today screen, both writing/reading a shared `autosaveBannerDismissed` flag so dismissal state stays consistent across either entry point — Phase 24
 
-**v2.0 — Prediction Engine & Autosave (Phase 25, 2026-09-18)**
+**v1.5 — Prediction Engine & Autosave (Phase 25, 2026-09-18)**
 - ✓ Algorithm C: `js/lib/forecast-blend.js` exports `blendForecast(dayRecords, snap)` covering all 4 events — dual-model wake blend (A1 historic band + A2 sleep-length projection), three-band bedtime blend (historic + day-length + AA), nap-start/nap-end blends — Phase 25 (PRED-13, PRED-14, PRED-15, PRED-17)
 - ✓ Interval stability check (circular/modular-aware intersection/shrinkage when intervals overlap, union range when they don't) applied to all 4 events, including raw clock-time-of-day samples that straddle the midnight boundary — Phase 25 (PRED-16)
 - ✓ Three-option algorithm selector (Classic / TIF / Algorithm C) in the Settings modal with context-sensitive fieldset show/hide — Phase 25 (UI-12)
@@ -208,7 +208,7 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 | Phase 25: raw clock-time-of-day samples (bedtime/wake/napStart) require circular-aware median/mean, not linear sort/arithmetic mean | A 50/50 split of e.g. 23:50/00:10 samples has a true circular center near midnight, but a linear sort puts the median at noon — `trimmedBand()`'s sort and `combineModels()`'s arithmetic mean were both silently wrong near the wrap boundary even after Plan 25-08 correctly hardened the final interval-comparison layer, because that layer received an already-wrong scalar | ✓ Fixed Phase 25 (Plan 25-09: `circularTrimmedBand()`/`circularMean()` align-then-delegate to the existing linear primitives) |
 | Phase 25 code review: `blendForecast()`'s cold-start branch discards `detectColdStart()`'s `minDaysRemaining` (mirrors tifForecast's existing shape) | `today-screen.js`'s `renderColdStartMessage()` reads that field for every algorithm, so a cold-started Algorithm C (or TIF) user sees "Log 0 more days" instead of the real count | ⚠ Open follow-up — pre-existing TIF gap since Phase 10, newly inherited by Algorithm C |
 
-## Current Milestone: v2.0 Prediction Engine & Autosave
+## Current Milestone: v1.5 Prediction Engine & Autosave
 
 **Goal:** Overhaul the forecasting engine with a new multi-band algorithm for all 4 events, redesign the accuracy scoring system, improve nap prediction quality, and add file autosave.
 
@@ -222,11 +222,11 @@ This schema is the source of truth for the app's data model. Nightwatch effectiv
 - ~~Move TIF window columns from Metrics → Accuracy screen (B-041)~~ ✓ Phase 23
 - ~~Autosave export to user-chosen directory via File System Access API (B-051)~~ ✓ Phase 24
 
-## Current State (v2.0 — Phase 25 complete 2026-09-18, all 7 phases shipped)
+## Current State (v1.5 — Phase 25 complete 2026-09-18, all 7 phases shipped)
 
-Phases 19-25 complete — v2.0 milestone fully shipped. 984 unit + integration tests, 150 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22); the 12 per-event TIF window columns migrated from Metrics to a new per-day table on the Accuracy screen (Phase 23); autosave to a user-picked local directory via the File System Access API with an inline IndexedDB handle store, debounced writes, a Settings "Backup" fieldset, and a first-launch discovery banner — including a gap-closure pass fixing a Remove-handler race and a banner-dismissal detection gap (Phase 24); Algorithm C — a third selectable prediction algorithm blending multiple models per event (dual-model wake, three-band bedtime, nap-start/end), with a three-way Settings selector and a circular-aware median/mean fix for raw clock-time-of-day samples crossing the midnight boundary, closed across 4 gap-closure plans (Phase 25).
+Phases 19-25 complete — v1.5 milestone fully shipped. 984 unit + integration tests, 150 E2E tests, 0 failures. Split bedtime model and wake-anchored nap predictions (Phase 19); data-driven nap-probability redesign decoupled from time-of-day (Phase 20); prediction normalization — 5-path `nextReachableEvent` model, napStart card fully hidden once its window closes, dual hero cards, `predictions.bedtimeAfterWake`, and a collapsed-by-default "Later today" section (Phase 21); accuracy scoring rewritten to a linear-decay per-event formula with bedtime nap-day split and an overall headline score, across both the classic and TIF algorithms and the Accuracy screen (Phase 22); the 12 per-event TIF window columns migrated from Metrics to a new per-day table on the Accuracy screen (Phase 23); autosave to a user-picked local directory via the File System Access API with an inline IndexedDB handle store, debounced writes, a Settings "Backup" fieldset, and a first-launch discovery banner — including a gap-closure pass fixing a Remove-handler race and a banner-dismissal detection gap (Phase 24); Algorithm C — a third selectable prediction algorithm blending multiple models per event (dual-model wake, three-band bedtime, nap-start/end), with a three-way Settings selector and a circular-aware median/mean fix for raw clock-time-of-day samples crossing the midnight boundary, closed across 4 gap-closure plans (Phase 25).
 
-**Next:** v2.0 milestone is 100% complete — run `/gsd-complete-milestone v2.0` to archive and prepare for the next milestone.
+**Next:** v1.5 milestone is 100% complete — run `/gsd-complete-milestone v1.5` to archive and prepare for the next milestone.
 
 **Known open follow-ups:**
 - Phase 23 code review flagged the new Accuracy per-day TIF table as missing a horizontal-scroll wrapper on narrow/mobile viewports (`.tifAccuracyTable` also lacks styling) — not a blocker, but worth a small follow-up pass.
@@ -283,7 +283,7 @@ Archive: `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQU
 v1.0 requirements archived to `.planning/milestones/v1.0-REQUIREMENTS.md`.  
 v1.1 requirements archived to `.planning/milestones/v1.1-REQUIREMENTS.md`.  
 v1.4 requirements archived to `.planning/milestones/v1.4-REQUIREMENTS.md`.  
-v2.0 requirements defined in `.planning/REQUIREMENTS.md`.
+v1.5 requirements defined in `.planning/REQUIREMENTS.md`.
 
 ## Evolution
 
@@ -303,4 +303,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-18 after Phase 25 (Algorithm C & Settings Modal) — v2.0 milestone complete*
+*Last updated: 2026-09-18 after Phase 25 (Algorithm C & Settings Modal) — v1.5 milestone complete*
