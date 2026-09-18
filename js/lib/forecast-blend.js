@@ -187,18 +187,20 @@ function combineModels(models, shrinkage) {
  * Algorithm C: dual/multi-model trim-then-percentile blend with interval
  * stability checks.
  *
- * Plan 25-01 implemented wake (D-01/D-02) and napStart/napEnd/bedtime were
- * stubs. This plan (25-02) implements napStart (D-07/D-08) and napEnd
- * (D-09/D-10) fully; bedtime remains an explicit
- * `{central:null,min:null,max:null}` stub pending Task 2.
+ * Plan 25-01 implemented wake (D-01/D-02). Plan 25-02 (this plan) completes
+ * napStart (D-07/D-08), napEnd (D-09/D-10), and bedtime (D-03..D-06) — every
+ * Algorithm C event (PRED-17) now produces a real prediction.
  *
  * @param {object[]} dayRecords              pre-bucketed day records
  * @param {object}   settings                needs minDays, blendWindowDays,
  *                                            blendTrimPct, blendShrinkage
- * @param {object}   [activityLog={}]        unused so far; reserved for
- *                                            bedtime's Task 2 implementation
- * @param {boolean}  [isNoNapDay=false]      unused so far; reserved for
- *                                            bedtime's Task 2 implementation
+ * @param {object}   [activityLog={}]        unused by Algorithm C (reserved
+ *                                            for parity with tifForecast's
+ *                                            signature; not consumed here)
+ * @param {boolean}  [isNoNapDay=false]      D-05 — when true, bedtime's
+ *                                            Model 3 substitutes a no-nap-day
+ *                                            historic bedtime band instead of
+ *                                            the nap-end-anchored AA band
  * @returns {{isColdStart:boolean, wake:object|null, bedtime:object|null, napStart:object|null, napEnd:object|null}}
  */
 export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay = false) {
@@ -368,11 +370,93 @@ export function blendForecast(dayRecords, settings, activityLog = {}, isNoNapDay
     wake = { central: minutesToTime(sc.central), min: minutesToTime(sc.min), max: minutesToTime(sc.max) };
   }
 
-  // Step 7 — bedtime stub. Task 2 replaces this with the real D-03..D-06 blend.
+  // ---------------------------------------------------------------------
+  // Bedtime (D-03..D-06) — last computation; depends on `wake` and `napEnd`
+  // already being resolved above.
+  // ---------------------------------------------------------------------
+
+  // Anchor 1 — today's wake, actual if logged else the wake prediction's own
+  // central (D-03 extends D-10's actual-else-predicted rule to this anchor).
+  const todayWakeAnchorHHMM = todayActualWakeHHMM ?? wake.central;
+  const todayWakeAnchorMin = todayWakeAnchorHHMM != null ? timeToMinutes(todayWakeAnchorHHMM) : null;
+
+  // Anchor 2 — today's nap-end, actual if logged else the nap-end
+  // prediction's own central (same actual-else-predicted rule).
+  const todayActualNapEndHHMM = extractTime(todayRecord.napEnd);
+  const todayNapEndAnchorHHMM = todayActualNapEndHHMM ?? napEnd.central;
+  const todayNapEndAnchorMin = todayNapEndAnchorHHMM != null ? timeToMinutes(todayNapEndAnchorHHMM) : null;
+
+  // Model 1 — historic bedtime time-of-day band (always attempted).
+  const bedtimeTimes = acceptedWindow
+    .map(d => extractTime(d.bedtime))
+    .filter(t => t != null)
+    .map(timeToMinutes)
+    .sort((a, b) => a - b);
+  const bedtimeModel1 = trimmedBand(bedtimeTimes, blendTrimPct, rejectedInWindow);
+
+  // Model 2 — wake-anchored day-length band. Raw anchor+duration can cross
+  // midnight (bedtime is naturally the "far end" of the day from wake), so
+  // wrap into [0, 1440) before combining, same as wake's own A2 (Plan 25-01).
+  let bedtimeModel2 = null;
+  if (todayWakeAnchorMin != null) {
+    const dayLengths = acceptedWindow.map(dayLength).filter(v => v != null).sort((a, b) => a - b);
+    const dlBand = trimmedBand(dayLengths, blendTrimPct, rejectedInWindow);
+    if (dlBand) {
+      bedtimeModel2 = {
+        min:    wrapToDay(todayWakeAnchorMin + dlBand.min),
+        max:    wrapToDay(todayWakeAnchorMin + dlBand.max),
+        median: wrapToDay(todayWakeAnchorMin + dlBand.median),
+      };
+    }
+  }
+
+  // Model 3 — nap-end-anchored activity-after-nap band on nap days; on
+  // no-nap days (D-05) this is REPLACED by a raw historic bedtime band built
+  // only from days where napStart is null (never a 2-band collapse when that
+  // substitute band is itself available). When the substitute itself is thin
+  // (< minDays no-nap-day records), bedtimeModel3 stays null — the function
+  // does NOT fall back to computing the AA-band anyway; it simply omits
+  // Model 3 from the group per this plan's universal graceful-degradation
+  // contract.
+  let bedtimeModel3 = null;
+  if (!isNoNapDay) {
+    if (todayNapEndAnchorMin != null) {
+      const aaDurations = acceptedWindow.map(activityAfterNap).filter(v => v != null).sort((a, b) => a - b);
+      const aaBand = trimmedBand(aaDurations, blendTrimPct, rejectedInWindow);
+      if (aaBand) {
+        bedtimeModel3 = {
+          min:    wrapToDay(todayNapEndAnchorMin + aaBand.min),
+          max:    wrapToDay(todayNapEndAnchorMin + aaBand.max),
+          median: wrapToDay(todayNapEndAnchorMin + aaBand.median),
+        };
+      }
+    }
+  } else {
+    const noNapBedtimeTimes = acceptedWindow
+      .filter(d => extractTime(d.napStart) == null)
+      .map(d => extractTime(d.bedtime))
+      .filter(t => t != null)
+      .map(timeToMinutes)
+      .sort((a, b) => a - b);
+    bedtimeModel3 = trimmedBand(noNapBedtimeTimes, blendTrimPct, 0);
+  }
+
+  const bedtimeCombined = combineModels(
+    [bedtimeModel1, bedtimeModel2, bedtimeModel3].filter(m => m != null),
+    blendShrinkage
+  );
+  const bedtime = bedtimeCombined.central == null
+    ? { central: null, min: null, max: null }
+    : {
+        central: minutesToTime(bedtimeCombined.central),
+        min:     minutesToTime(bedtimeCombined.min),
+        max:     minutesToTime(bedtimeCombined.max),
+      };
+
   return {
     isColdStart: false,
     wake,
-    bedtime: { central: null, min: null, max: null },
+    bedtime,
     napStart,
     napEnd,
   };
