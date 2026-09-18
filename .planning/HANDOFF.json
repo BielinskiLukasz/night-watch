@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-09-18T21:35:11.957Z",
+  "phase": "20",
+  "phase_name": "Nap Probability Redesign",
+  "phase_dir": ".planning/phases/20-nap-probability-redesign",
+  "plan": 7,
+  "task": null,
+  "total_tasks": 7,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "20-01", "name": "Nap Probability Signal Engine", "status": "done", "commit": "pre-existing"},
+    {"id": "20-02", "name": "Wire napProbability() consumers", "status": "done", "commit": "pre-existing"},
+    {"id": "20-03", "name": "Close BLOCKER findings from 20-REVIEW.md", "status": "done", "commit": "pre-existing"},
+    {"id": "20-04", "name": "Gate PRED-19 bedtime blend on napWindowClosed (G-20-16 item 1)", "status": "done", "commit": "a5e3765"},
+    {"id": "20-05", "name": "Gate TIF activity-after-nap band on isNoNapDay (G-20-16 item 3)", "status": "done", "commit": "de92fe3"},
+    {"id": "20-06", "name": "Rename Later-Today to Details, fix hero exclusion, add bedtimeAfterWake substitution (G-20-15 + G-20-16 item 2)", "status": "done", "commit": "ccc8290"},
+    {"id": "20-07", "name": "Wrap Accuracy TIF per-day table in scroll container for mobile (G-20-17)", "status": "done", "commit": "8aab3ed"}
+  ],
+  "remaining_tasks": [
+    {"id": "uat-test-7", "name": "Confirm Plan 20-01 auto-verified deliverables (nap probability signal engine)", "status": "not_started"},
+    {"id": "uat-test-10", "name": "Confirm nap probability displays correctly in UI (never '[object Object]%')", "status": "not_started"},
+    {"id": "uat-test-13", "name": "Confirm predictions track recent sleep trend (day-ordering fix)", "status": "not_started"},
+    {"id": "uat-test-14", "name": "Confirm Metrics screen historic band matches Today screen (day-ordering parity)", "status": "not_started"},
+    {"id": "reverify", "name": "Re-run /gsd-verify-work 20 canonical verification (currently stale after gap-closure commits)", "status": "not_started"}
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Answer 4 remaining UAT checkpoints (tests 7, 10, 13, 14) in 20-UAT.md via /gsd-verify-work 20", "context": "These are original phase-20 verification items unrelated to the 3 issues just fixed; they were left pending when the user asked to fix the reported issues first", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Treated the 3 user-reported issues (next-event detail visibility, bedtime with/without-nap blending, mobile Accuracy table) as real UAT gaps rather than deferred follow-ups", "rationale": "All 3 were concrete, reproducible defects with clear root causes, not speculative asks", "phase": "20"},
+    {"decision": "Diagnosed root causes with 3 parallel gsd-debugger agents before planning fixes", "rationale": "Standard verify-work gap-closure flow: diagnose before plan", "phase": "20"},
+    {"decision": "Split gap closure into 4 plans (20-04..20-07) instead of 1", "rationale": "Disjoint files per plan (forecast.js / forecast-tif.js / today-screen.js / accuracy-screen.js+style.css), no cross-plan dependencies — planner's own judgment call, verified clean by gsd-plan-checker", "phase": "20"},
+    {"decision": "Executed all 4 gap-closure plans sequentially, one at a time, waiting for each to finish before starting the next", "rationale": "Project config has workflow.use_worktrees=false and parallelization=false; matches this user's standing preference to run plans sequentially rather than in parallel waves", "phase": "20"}
+  ],
+  "uncommitted_files": [
+    ".planning/state.json (modified)",
+    ".planning/milestone.lock (untracked)"
+  ],
+  "next_action": "Run /gsd-verify-work 20 to resume the paused UAT session at test 7, and note verification is stale (needs re-run) since the gap-closure commits landed after the last canonical verification.",
+  "context_notes": "User reported 3 bugs mid-UAT (next-event detail visibility, bedtime with/without-nap algorithm blending, mobile Accuracy table layout), then explicitly asked to fix them now rather than finish UAT first. Followed the full verify-work gap-closure loop: diagnose -> plan -> verify plan -> execute (sequentially) -> full regression (989 unit/integration + 152 E2E, all green) -> marked gaps resolved in 20-UAT.md. The .planning/state.json and .planning/milestone.lock changes are pre-existing from before this session (confirmed by multiple executor agents against the initial git status snapshot) and were deliberately left untouched/uncommitted -- not part of this work."
+}
