@@ -20,12 +20,12 @@ files_reviewed_list:
 findings:
   critical: 1
   warning: 2
-  info: 2
-  total: 5
+  info: 3
+  total: 6
 status: issues_found
 ---
 
-# Phase 25: Code Review Report
+# Phase 25: Code Review Report (Re-Review after Plan 25-08 gap closure)
 
 **Reviewed:** 2026-09-18
 **Depth:** standard
@@ -34,172 +34,229 @@ status: issues_found
 
 ## Summary
 
-This is a fresh full review of the current file state, not an assumption-carryover from the
-prior 25-REVIEW.md. Both previously-reported gap-closure items were independently re-verified
-and confirmed fixed:
+This is a re-review after Plan 25-08 landed a self-unwrap + align-to-reference fix
+for `stabilityCheck()`'s "independently-wrapped models with min > max" defect
+(prior CR-01). I hand-traced all 5 new `stabilityCheck` circular-interval unit
+tests against the implementation line-by-line (selfUnwrapInterval →
+alignNearReference → intersection/union → re-wrap) and every one of them
+computes correctly — **the narrow defect the tests target (an individual
+interval's own `min > max` inversion) is genuinely fixed.**
 
-- **CR-01 (orphan `noNapBedtimeOffsetMinutes` field)** — confirmed removed from
-  `index.html`, `js/ui/settings-modal.js`'s Save-path `raw` object, `js/lib/db-shape.js`'s
-  `DEFAULT_SETTINGS`/migration forward-compat block, and `js/lib/settings-validate.js`'s
-  `RULES`. `tests/e2e/settings-modal.spec.js`'s dedicated regression test
-  (`CR-01 gap-closure: ...`) passes, and only stale references remain in
-  `.planning/` docs and two unrelated test-fixture literal objects (see IN-02).
-- **WR-01 (missing `wrapToDay()` for napStart/napEnd)** — confirmed present:
-  `js/lib/forecast-blend.js` now wraps `napStartModel1`, `napEndModel1`, and
-  `napEndModel2` into `[0, 1440)` via the exported `wrapToDay()`, with dedicated unit
-  tests in `tests/unit/forecast-blend.test.js`.
+However, verifying the *class* of bug ("central value ends up outside its own
+reported band" — the symptom the original CR-01 finding named) rather than
+just the specific repro the tests encode, I found the fix is **incomplete**:
+the same symptom is still reproducible today via a different, untested code
+path — `trimmedBand()`'s median computation and `combineModels()`'s
+raw-central averaging are not circular-aware, and midnight-straddling
+production data (which is common for a bedtime-tracking app — many families'
+bedtimes vary across the midnight boundary night to night) still produces a
+central prediction far outside the reported min/max band. See CR-01 below —
+this is a Critical finding and directly answers the re-review's primary
+question: **no, the circular-interval defect class is not fully resolved.**
 
-All 238 unit tests (`node --test tests/unit/forecast-blend.test.js tests/unit/db-shape.test.js
-tests/unit/settings-validate.test.js tests/unit/sw-precache.test.js`) pass.
-
-However, this fresh review found a **new, unreported correctness defect** in the same area the
-WR-01 fix touched: `wrapToDay()` is applied independently to each of a band's `min`/`median`/`max`
-fields, which does not preserve the `min <= max` ordering whenever the raw (pre-wrap) band
-straddles the `1440`-minute boundary asymmetrically. When such a band is then combined with a
-sibling model via `stabilityCheck()`/`combineModels()` (used for wake's A1/A2 blend, bedtime's
-3-model blend, and now napStart's/napEnd's 2-model blends), the numeric `Math.min`/`Math.max`
-comparisons across models operating in different "wrap phases" can produce a `central` value that
-falls outside the reported `[min, max]` band — a directly user-visible logical inconsistency. See
-CR-01 (this review) below for a concrete, reproducible repro using the module's own exported
-functions.
+The three deferred, previously-known findings (WR-02, IN-01, IN-02) are all
+still present exactly as before — re-flagged below per the task's request,
+not newly discovered.
 
 ## Critical Issues
 
-### CR-01: `stabilityCheck`/`combineModels` can report a `central` value outside the returned `[min, max]` band when a model's independently-wrapped min/max order inverts
+### CR-01: stabilityCheck's circular-interval fix does not cover trimmedBand/combineModels — central-outside-band symptom still reproducible with realistic data
 
-**File:** `js/lib/forecast-blend.js:119-136` (`stabilityCheck`), `173-184` (`combineModels`), and every call site that builds a wrapped model via independent `wrapToDay(anchor + band.min)` / `wrapToDay(anchor + band.max)` / `wrapToDay(anchor + band.median)` — this includes `a2` (wake, lines 354-359), `bedtimeModel2` (lines 409-414), `bedtimeModel3`'s AA-band branch (lines 431-436), `napStartModel1` (lines 246-251), `napEndModel1` (lines 289-294), and `napEndModel2` (lines 304-309).
+**File:** `js/lib/forecast-blend.js:70-88` (`trimmedBand`), `:241-252` (`combineModels`), `:440-442` (wake's inline blend)
 
 **Issue:**
-`wrapToDay()` (line 150-152) wraps a single raw-minutes value into `[0, 1440)`. Every wrapped
-model in this file builds its `min`, `median`, and `max` by wrapping each of `anchor + band.min`,
-`anchor + band.median`, `anchor + band.max` **independently**. Because `band.min <= band.median <=
-band.max` pre-wrap, this is safe for a single model in isolation (modular arithmetic preserves
-cyclic order for a strictly-increasing sequence spanning less than 1440 minutes) — a lone wrapped
-model always self-consistently satisfies `min <= central <= max` on the wrap-aware ("crosses
-midnight") reading, which is exactly what the WR-01 regression tests
-(`centralWithinBand()` in `tests/unit/forecast-blend.test.js`) check.
+Plan 25-08 correctly hardened `stabilityCheck()` against interval-level
+`min > max` inversion (self-unwrap + align-to-reference; verified by hand
+against all 5 new unit tests in `tests/unit/forecast-blend.test.js:152-198`,
+all of which compute exactly as asserted).
 
-The bug appears when **two or more** such models are combined via `combineModels()` →
-`stabilityCheck()`. `stabilityCheck()` computes the overlap/union using plain numeric
-`Math.max(...mins)` / `Math.min(...maxs)` (lines 120-121, 131-133) — this assumes every input
-interval is a conventional `min <= max` interval living in the *same* [0, 1440) reference frame.
-But when the raw (pre-wrap) band of one model straddles the 1440 boundary asymmetrically (raw
-`min < 1440 <= raw max`), independently wrapping `min` and `max` inverts their order for *that
-model* relative to a sibling model that never crossed the boundary — the two models are no longer
-numerically comparable even though both are nominally "minutes in a day". `stabilityCheck()` has
-no circular-interval logic to detect or correct this; it silently produces a wrong band, and
-`combineModels()`'s raw-average-of-medians `central` (line 181) is not re-validated against the
-final min/max it returns.
+But `stabilityCheck()` is only ever handed already-summarized bands
+(`{min, max, median}` from `trimmedBand`) and a `rawCentral` that
+`combineModels()` (and the wake blend's inline equivalent) computes as a
+**plain arithmetic mean of the models' medians** — both of these upstream
+computations treat clock-time-of-day values as linear numbers on `[0, 1440)`,
+not circular. Whenever the real-world distribution of times legitimately
+straddles the midnight boundary (very common for `bedtime`, and possible for
+`wake`/`napStart` too), the median/mean lands on the *opposite* side of the
+clock from the true center, and — critically — `stabilityCheck`'s
+`alignNearReference()` step cannot repair an already-wrong scalar; it can
+only shift a value by whole multiples of 1440 to the nearest matching copy of
+*itself*, which does nothing to fix a mean that was computed incorrectly in
+the first place.
 
-**Concrete reproduction** (using only this module's own exported functions):
+Reproduced end-to-end via the actual public `blendForecast()` API (not just a
+synthetic `stabilityCheck` call) with a plausible fixture — 20 days, wake
+fixed at 06:00, bedtime alternating `23:50` / `00:10` (a child whose bedtime
+hovers right around midnight, varying by ~20 minutes night to night):
+
 ```js
-import { stabilityCheck } from './js/lib/forecast-blend.js';
-
-// modelA: an anchor+band sum whose raw range straddled 1440 asymmetrically,
-// then had min/median/max wrapped independently (exactly what napEndModel1,
-// napStartModel1, wake's a2, bedtimeModel2/3 all do).
-const modelA = { min: 1400, max: 60, median: 10 };   // e.g. raw [1400, 1500] wrapped per-field
-// modelB: a normal, never-wrapped historic band.
-const modelB = { min: 100, max: 160, median: 130 };
-
-const rawCentral = (modelA.median + modelB.median) / 2; // 70
-const result = stabilityCheck([modelA, modelB], rawCentral, 0.3);
-// result = { min: 100, max: 160, central: 70 }
-// central (70) < min (100) — central falls OUTSIDE the reported band.
+import { blendForecast } from './js/lib/forecast-blend.js';
+const days = Array.from({ length: 20 }, (_, i) =>
+  ({ wake: '06:00', bedtime: i % 2 === 0 ? '23:50' : '00:10', napStart: null, napEnd: null, rejected: false })
+);
+blendForecast(days, { minDays: 7, blendWindowDays: 90, blendTrimPct: 25, blendShrinkage: 0.3 }).bedtime;
+// => { central: '08:25', min: '00:10', max: '00:10' }
 ```
-After `minutesToTime()` formatting this renders to the user as, e.g., `min: '01:40', max: '02:40',
-central: '01:10'` — a prediction card whose "best guess" time is displayed *before* the start of
-its own uncertainty band. Beyond the display glitch, `modelA`'s actual signal is silently dropped
-from the union computation (its huge `min: 1400` and small `max: 60` don't win either the
-`Math.min` or `Math.max` reduction), so the reported band ends up representing only `modelB`,
-while `central` still reflects an average that includes the (effectively discarded) `modelA`.
 
-This is reachable from the public `blendForecast()` API whenever real day-record data produces an
-anchor+band sum that straddles midnight asymmetrically for one model while a sibling model for the
-same event does not — plausible for late bedtimes/naps that sometimes tip past midnight and
-sometimes don't (exactly the kind of data the WR-01 fixtures were built to simulate, though the
-specific WR-01 test fixtures happen not to trigger the order-inversion case above).
+`central: '08:25'` (8:25 AM) is nowhere near the reported `[00:10, 00:10]`
+band — this is exactly the "prediction outside its own band" symptom CR-01
+was opened to close, still fully reproducible after the 25-08 fix, via a
+different root cause than the one 25-08 patched.
 
-**Fix:** `stabilityCheck()` needs genuine circular/modular interval comparison (not a linear
-`Math.min`/`Math.max` reduction) whenever it may receive a model whose own `min > max` (i.e., a
-band that itself wraps past midnight). One approach: detect `model.min > model.max` per input and
-normalize by re-expressing each model as an interval in a shared, un-wrapped frame (e.g., shift
-the whole intersection/union computation onto a rotated number line anchored at one model's `min`)
-before comparing, then wrap the final result back into `[0, 1440)`. At minimum, add an assertion/
-guard so that a model with inverted `min > max` is never passed to the current linear
-`stabilityCheck()` un-normalized, and add a unit test asserting `min(band) <= central(band) <=
-max(band)` (numerically, not just via the wrap-tolerant `centralWithinBand()` helper) for the
-2-model-combine paths (wake A1+A2, bedtime's 3 models, napStart's/napEnd's 2 models) using a
-fixture engineered to straddle midnight asymmetrically for exactly one of the combined models
-(the existing WR-01 fixtures avoid this case by chance, not by design — see WR-01 below).
+Root cause chain, isolated:
+1. `trimmedBand()` sorts raw clock-minutes linearly (`forecast-blend.js:462-467`
+   builds `bedtimeTimes`, sorted `(a,b) => a-b`). A 50/50 split between `23:50`
+   (1430) and `00:10` (10) sorts as `[10,10,10,10,10,1430,1430,1430,1430,1430]`;
+   the "median" of that array is `(10+1430)/2 = 720` (noon) — verified
+   directly by calling the exported `trimmedBand([...], 25, 0)` with this
+   input, which returns `{ min: 10, max: 1430, median: 720 }`.
+2. Even when two *different* models are combined, `combineModels()`
+   (`forecast-blend.js:249`) and wake's inline blend (`:440`) average the
+   models' medians with plain `+`/`2` — the same linear-not-circular error,
+   one level up.
+3. `stabilityCheck()`'s union branch (D-02, no-overlap case) explicitly
+   leaves `central` unchanged (`forecast-blend.js:198-202`) — by design, for
+   the narrow case it was fixed for. It has no mechanism to correct a
+   `central` that was already wrong before it got there.
+
+This affects `wake` (a1Times), `bedtime` Model 1 and the no-nap-day Model 3
+substitute (`bedtimeTimes`/`noNapBedtimeTimes`), and `napStart` Model 2
+(`napStartTimes`) — every model built directly from a raw historic
+clock-time-of-day array — plus the cross-model averaging step for all four
+predicted events. Duration-based series (`buildNapGapSeries`,
+`buildNapDurationSeries`, `sleepDuration`, `dayLength`, `activityAfterNap` in
+`js/lib/metrics.js`) are unaffected — they already normalize to
+always-positive elapsed minutes before being fed into `trimmedBand`, so this
+is specifically a time-of-day problem, not a duration problem.
+
+None of the 5 new `stabilityCheck` unit tests exercise this path — they all
+pass pre-fabricated `{min, max}` interval objects and a `central` value chosen
+to already be close to the true circular center, so the upstream
+non-circular-mean bug in `trimmedBand`/`combineModels` was never on the
+critical path of those tests.
+
+**Fix:** Make time-of-day aggregation circular-aware at its source, not just
+at the `stabilityCheck` band-comparison layer:
+- Add a circular variant of the median/trim step for clock-time-of-day
+  inputs — e.g. reuse the same self-unwrap/align-to-reference technique
+  `stabilityCheck` now uses, but applied to the *raw sample array* before
+  sorting/trimming (pick a reference point, such as the first raw sample or
+  a rolling circular mean, shift every sample to its nearest day-aligned
+  copy of that reference, sort/trim/median on the shifted values, then
+  `wrapToDay()` the result) — for `a1Times`, `bedtimeTimes`,
+  `noNapBedtimeTimes`, and `napStartTimes`.
+- In `combineModels()` and the wake blend's inline equivalent, compute
+  `rawCentral` as a circular mean (align every model's median onto a shared
+  reference before averaging — the same primitive `stabilityCheck` already
+  has via `alignNearReference`) instead of a plain arithmetic mean.
+- Add a regression test mirroring the reproduction above (mixed
+  `23:50`/`00:10` bedtime fixture) asserting `centralWithinBand(...)` is
+  `true` — the existing WR-01 tests (`buildLateWakeNapStartFixture`,
+  `buildLateWakeNapEndFixture`) only exercise a *single* model wrapping past
+  midnight, never a raw sample array whose real-world distribution straddles
+  the boundary from both sides.
 
 ## Warnings
 
-### WR-01: WR-01 gap-closure tests validate a weaker "wrap-aware union" invariant than the one `combineModels` actually needs
+### WR-01: `alignNearReference`'s tie-break behavior contradicts its own docstring
 
-**File:** `tests/unit/forecast-blend.test.js:36-46, 313-359`
+**File:** `js/lib/forecast-blend.js:114-131`
 
-**Issue:** The `centralWithinBand()` helper (lines 41-46) treats `min > max` as "the band itself
-wraps past midnight" and accepts `central >= min || central <= max` in that case. This is the
-correct reading for a *single, self-consistent* wrapped model, but it also happens to mask the
-CR-01 defect above: in that repro, `stabilityCheck`'s reported `{min:100, max:160}` does NOT have
-`min > max`, so `centralWithinBand` would report `central=70` as failing (`70 not in [100,160]`),
-which is good — but neither of the two “late wake crossing midnight” fixtures in this file
-(`buildLateWakeNapStartFixture`, `buildLateWakeNapEndFixture`) happens to drive the two combined
-models into the asymmetric-straddle configuration that produces this failure, so the suite is
-green today without the underlying combine-time invariant being actually exercised.
+**Issue:** The docstring states "Ties keep `value` itself (zero shift)"
+(line 120). The actual implementation is:
+```js
+const candidates = [value - DAY, value, value + DAY];
+return candidates.reduce((best, c) =>
+  Math.abs(c - reference) < Math.abs(best - reference) ? c : best
+);
+```
+`Array.prototype.reduce` without an initial value seeds `best` with
+`candidates[0]` (`value - DAY`), and the comparison is strict `<`. When
+`value` and `value - DAY` are exactly equidistant from `reference` (i.e. the
+value is exactly half a day, 720 minutes, from the reference — a real
+possibility for two models 12 hours apart, e.g. a nap-end model vs. a
+bedtime model), the tie is won by `value - DAY`, not `value`, because `best`
+never gets overwritten on a `<` tie. This is a real discrepancy between
+documented and actual behavior; the practical impact is limited (the 720-
+minute-tie case is inherently ambiguous — no shift is objectively "more
+correct" than the other), but it should not ship with a docstring that
+misdescribes the code's own tie-breaking rule.
 
-**Fix:** Add a fixture (or use the CR-01 repro's numeric shape) that forces exactly one of the two
-combined models per event (napStart, napEnd, wake, bedtime) to straddle 1440 asymmetrically while
-the sibling model does not, and assert `result.<event>.min <= result.<event>.central <=
-result.<event>.max` as plain numeric minutes (via `timeToMinutes`), not through the wrap-tolerant
-helper, to catch regressions in the actual invariant `combineModels()`'s callers rely on.
+**Fix:** Either fix the docstring to describe the actual precedence (ties
+favor `value - DAY` over `value`, and `value` over `value + DAY`), or fix the
+reduce to explicitly prefer `value` on ties:
+```js
+return candidates.reduce((best, c) => {
+  const dc = Math.abs(c - reference), db = Math.abs(best - reference);
+  return dc < db || (dc === db && c === value) ? c : best;
+});
+```
 
-### WR-02: No E2E coverage for the three new Algorithm C tuning inputs surviving a Save → reload round trip
+### WR-02 (deferred, still present): No E2E round-trip test for the 3 Algorithm C tuning inputs
 
-**File:** `tests/e2e/algorithm-c.spec.js`, `tests/e2e/settings-modal.spec.js`
+**File:** `tests/e2e/settings-modal.spec.js`, `tests/e2e/algorithm-c.spec.js`
 
-**Issue:** `tests/e2e/settings-modal.spec.js` has a dedicated round-trip test for the Classic/Time
-fields (`CFG-02..04, CFG-06..07: forecast-tuning + time/day fields round-trip Save → reload`,
-lines 118-148) that fills each `<input name="...">`, saves, reloads, and re-reads the DOM value.
-No equivalent test exists for `blendWindowDays`, `blendTrimPct`, or `blendShrinkage` — the only
-E2E reference to these three fields is a comment in `algorithm-c.spec.js` (line 144) noting they
-are *deliberately omitted* from the seed data to test the migration/default-injection path, which
-is a different concern. A regression that mis-wires one of these three `<input name="...">`
-elements (e.g., a typo in the `name` attribute, or a stale element the JS reads via
-`document.getElementById` instead of `form.elements.namedItem`) would not be caught by any
-existing E2E test — only `validateSettings` unit tests exercise the pure-function bounds, and
-those never touch the DOM/FormData wiring in `js/ui/settings-modal.js`.
+**Issue:** Neither spec file fills, saves, reloads, and re-asserts
+`blendWindowDays`, `blendTrimPct`, or `blendShrinkage` the way
+`settings-modal.spec.js:118-148` does for the Classic/Time&Day fields.
+`algorithm-c.spec.js`'s Test 2 explicitly *omits* these three fields from its
+seed on purpose (to test the migration-default-injection path), which is a
+different and narrower guarantee than a Save→reload round-trip of
+user-entered values. Confirmed still absent in this re-review, unchanged from
+the prior 25-REVIEW.md finding — flagged per the task's explicit request to
+re-flag known-deferred items, not as a new discovery.
 
-**Fix:** Add a Save → reload round-trip E2E test for `blendWindowDays`/`blendTrimPct`/
-`blendShrinkage` mirroring the existing CFG-02..07 test's shape.
+**Fix:** Add a test filling all three `#blendOptions` inputs with
+non-default values, saving, reloading, reopening Settings, and asserting the
+three inputs retain those values (mirroring the existing CFG-02..07 round-trip
+test's shape).
 
 ## Info
 
-### IN-01: Leftover `console.log` diagnostic in the CSV import handler
+### IN-01 (deferred, still present): `console.log` left in the CSV import handler
 
 **File:** `js/ui/settings-modal.js:277`
 
-**Issue:** `console.log(\`[Nightwatch] CSV parsed: ${events.length} events, ${skipped.length} skipped\`);`
-is a production-path debug artifact (distinct from the `console.warn` a few lines above it, which
-surfaces something actionable to a developer). It runs on every successful CSV import for every
-user, which is unnecessary console noise in a shipped PWA.
+**Issue:** `console.log(`[Nightwatch] CSV parsed: ${events.length} events, ${skipped.length} skipped`);`
+is a debug-artifact log statement left in production code, unchanged from the
+prior review. (Line 275's `console.warn` for `skipped.length > 0` is a
+legitimate, intentional warning and is not flagged.)
 
-**Fix:** Remove the `console.log` line, or gate it behind a debug flag if it is intentionally kept
-for field-support diagnostics.
+**Fix:** Remove the `console.log` line, or gate it behind a debug flag if it
+is intentionally kept for field-support diagnostics.
 
-### IN-02: Stale `noNapBedtimeOffsetMinutes` literal left in two test fixtures after the CR-01 field removal
+### IN-02 (deferred, still present): Stale `noNapBedtimeOffsetMinutes` literal in two test fixtures
 
-**File:** `tests/unit/settings-validate.test.js:425, 496`
+**File:** `tests/unit/settings-validate.test.js:425`, `tests/unit/settings-validate.test.js:496`
 
-**Issue:** The `validFields` object literals in the `stages (D6-01)` and `activeStageId (D6-02)`
-describe blocks still include `noNapBedtimeOffsetMinutes: 30`, a field that was intentionally
-removed from `DEFAULT_SETTINGS`/`RULES` (D-10, Phase 19; reaffirmed by this phase's CR-01
-gap-closure). It is harmless today because `validateSettings` only iterates `Object.keys(RULES)`
-and ignores unknown extra keys on the input object, but it is a stale reference that could
-confuse a future reader into thinking the field is still expected somewhere.
+**Issue:** Both `validFields` fixture objects still include
+`noNapBedtimeOffsetMinutes: 30`, a field removed from `RULES`/`DEFAULT_SETTINGS`
+per D-10 (Phase 19). Since `checkField` only iterates `Object.entries(RULES)`,
+this extra key is silently ignored rather than causing a test failure — it is
+harmless dead weight but should be cleaned up, unchanged from the prior review.
 
-**Fix:** Delete the `noNapBedtimeOffsetMinutes: 30` line from both `validFields` literals.
+**Fix:** Remove `noNapBedtimeOffsetMinutes: 30` from both `validFields`
+literals (lines 425 and 496).
+
+### IN-03: `blendShrinkage`/other numeric settings-modal fields coerce a blank input to `0` rather than falling back to the stated default
+
+**File:** `js/ui/settings-modal.js:198-208`
+
+**Issue:** `Number(data.get('blendShrinkage') ?? 0.3)` (and the equivalent
+lines for `trimPct`, `precisionTarget`, `tifRollingDays`, `blendWindowDays`,
+`blendTrimPct`, `eveningHour`, `targetSleepMinutes`) only falls back to the
+literal default when `FormData.get()` returns `null`/`undefined`. A blank
+(cleared) `<input>` returns `""` from `FormData.get()`, and `Number("")` is
+`0`, not the intended default — for `blendShrinkage` this happens to still be
+in-range (`[0,1]`) and validates silently as `0` instead of showing an error
+or falling back to `0.3`. This is a pre-existing pattern shared by every
+other numeric field in this form (not introduced by Phase 25), so it is
+informational rather than a regression, but Algorithm C's three new fields
+inherit it.
+
+**Fix:** Out of scope for a targeted fix within Phase 25 (systemic, spans all
+numeric fields); note for a future settings-modal hardening pass, e.g.
+`Number(data.get(field) === '' ? defaultVal : data.get(field) ?? defaultVal)`.
 
 ---
 
