@@ -148,6 +148,54 @@ describe('stabilityCheck(intervals, central, shrinkage)', () => {
     const result = stabilityCheck([{ min: 390, max: 420 }, { min: 400, max: 440 }], 450, 0.5);
     assert.deepStrictEqual(result, { min: 400, max: 420, central: 430 });
   });
+
+  describe('circular/wrapped intervals — CR-01 gap-closure (Plan 25-08)', () => {
+    it('exact 25-REVIEW.md CR-01 repro, no true overlap: inverted model union-aligns past midnight', () => {
+      // Pre-fix (plain Math.max/Math.min): {min:100, max:160, central:70} — central 70 < min 100,
+      // the exact documented defect. Post-fix: modelA self-unwraps to [1400,1500], modelB aligns to
+      // [1540,1600] — no true overlap once aligned, union [1400,160] wraps past midnight; central 70
+      // reads inside [0,160] via the wrap-aware band.
+      const result = stabilityCheck([{ min: 1400, max: 60 }, { min: 100, max: 160 }], 70, 0.3);
+      assert.deepStrictEqual(result, { min: 1400, max: 160, central: 70 });
+    });
+
+    it('one inverted model, one normal model, TRUE overlap: aligned intersection matches the contained model', () => {
+      // Pre-fix: Math.max(1420,10)=1420 > Math.min(40,30)=30 wrongly concludes no overlap, unions to
+      // {min:10, max:40, central:20} (central still happens to sit inside this wrong, too-wide band —
+      // only the band's width reveals the defect, hence the full-object deepStrictEqual). Post-fix:
+      // both align onto one frame (modelA self-unwraps to [1420,1480]), correctly overlap in [10,30].
+      const result = stabilityCheck([{ min: 1420, max: 40 }, { min: 10, max: 30 }], 20, 0.3);
+      assert.deepStrictEqual(result, { min: 10, max: 30, central: 20 });
+    });
+
+    it('3 intervals (bedtime-style group), one inverted, TRUE overlap: fix generalizes to 3+ models', () => {
+      // Pre-fix unions to {min:10, max:40, central:20} for the same reason as the 2-model case above.
+      // Post-fix, all three align and correctly overlap; result matches the third, narrowest model —
+      // proves zero branching by interval count (same Helly's-theorem equivalence as the non-circular case).
+      const result = stabilityCheck(
+        [{ min: 1420, max: 40 }, { min: 10, max: 30 }, { min: 15, max: 25 }],
+        20,
+        0.3
+      );
+      assert.deepStrictEqual(result, { min: 15, max: 25, central: 20 });
+    });
+
+    it('one inverted model, one normal model, TOUCHING at the wrap boundary: shrinks toward the single touch point', () => {
+      // Pre-fix: Math.max(1430,20)=1430 > Math.min(20,50)=20 wrongly concludes no overlap, unions to
+      // {min:20, max:50, central:1450} — central 1450 grossly outside [20,50], the starkest instance of
+      // "prediction outside its own band". Post-fix: modelA self-unwraps to [1430,1460], modelB aligns to
+      // [1460,1490] — correctly touch at 1460; central shrinks 0.7*1450 + 0.3*1460 = 1453, rewraps to 13.
+      const result = stabilityCheck([{ min: 1430, max: 20 }, { min: 20, max: 50 }], 1450, 0.3);
+      assert.deepStrictEqual(result, { min: 20, max: 20, central: 13 });
+    });
+
+    it('order-independence: swapping the two input intervals produces the identical wrapped result', () => {
+      // Same two models as the first case above, swapped — proves the internal choice of which
+      // interval anchors the alignment reference never changes the final wrapped output.
+      const result = stabilityCheck([{ min: 100, max: 160 }, { min: 1400, max: 60 }], 70, 0.3);
+      assert.deepStrictEqual(result, { min: 1400, max: 160, central: 70 });
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
