@@ -14,7 +14,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { trimmedBand, stabilityCheck, blendForecast, wrapToDay, circularTrimmedBand } from '../../js/lib/forecast-blend.js';
+import { trimmedBand, stabilityCheck, blendForecast, wrapToDay, circularTrimmedBand, circularMean } from '../../js/lib/forecast-blend.js';
 import { timeToMinutes, minutesToTime } from '../../js/lib/forecast.js';
 
 // ---------------------------------------------------------------------------
@@ -154,6 +154,32 @@ describe('circularTrimmedBand(rawValues, trimPct, manualExcludedCount)', () => {
     const rawValues = [10, 1430, 10, 1430, 10, 1430, 10, 1430, 10, 1430];
     const result = circularTrimmedBand(rawValues, 25, 0);
     assert.deepStrictEqual(result, { min: 1430, max: 10, median: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// circularMean — fixes CR-01's cross-model averaging root cause (Plan 25-09)
+// ---------------------------------------------------------------------------
+
+describe('circularMean(values)', () => {
+  it('no wrap needed → matches plain arithmetic mean', () => {
+    assert.strictEqual(circularMean([700, 710]), 705);
+  });
+
+  it('2 values symmetric across midnight → circular mean is midnight, not noon', () => {
+    // Pre-fix, a plain arithmetic mean gives (1430+10)/2 = 720 (noon) — the exact
+    // wrong-direction error 25-REVIEW.md's CR-01 names for combineModels'/wake's
+    // own averaging.
+    assert.strictEqual(circularMean([1430, 10]), 0);
+  });
+
+  it('order-independence: swapping the two values produces the identical result', () => {
+    assert.strictEqual(circularMean([10, 1430]), 0);
+  });
+
+  it('3 values (bedtime-style group) generalizes with zero branching by count', () => {
+    // Pre-fix, a plain arithmetic mean gives (1430+1430+20)/3 = 960 (16:00) — wildly wrong.
+    assert.strictEqual(circularMean([1430, 1430, 20]), 0);
   });
 });
 
@@ -576,6 +602,16 @@ function buildMidnightNapStartFixture(n = 20) {
   });
 }
 
+/**
+ * n days, wake fixed '06:00' for ALL days (including today), bedtime
+ * alternating '23:50'/'00:10' (i%2===0 -> '23:50' else '00:10'), napStart/
+ * napEnd always null — the EXACT shape of 25-REVIEW.md's own CR-01
+ * reproduction fixture.
+ */
+function buildMidnightBedtimeFixture(n = 20) {
+  return Array.from({ length: n }, (_, i) => makeDay('06:00', i % 2 === 0 ? '23:50' : '00:10', null, null));
+}
+
 // ---------------------------------------------------------------------------
 // blendForecast — CR-01 root-cause circular-median gap-closure (Plan 25-09)
 // ---------------------------------------------------------------------------
@@ -591,5 +627,26 @@ describe('blendForecast — CR-01 root-cause circular-median gap-closure (Plan 2
     const dayRecords = buildMidnightNapStartFixture(20);
     const result = blendForecast(dayRecords, BLEND_SETTINGS);
     assert.deepStrictEqual(result.napStart, { central: '23:50', min: '23:50', max: '00:10' });
+  });
+
+  it('bedtime, 2-model default path: the exact 25-REVIEW.md repro, central lies within its own reported band', () => {
+    const dayRecords = buildMidnightBedtimeFixture(20);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS);
+    assert.strictEqual(typeof result.bedtime.central, 'string');
+    assert.strictEqual(
+      centralWithinBand(result.bedtime.min, result.bedtime.max, result.bedtime.central),
+      true,
+      `bedtime.central ${result.bedtime.central} should lie within [${result.bedtime.min}, ${result.bedtime.max}]`
+    );
+  });
+
+  it('bedtime, 3-model isNoNapDay=true path: circularMean generalizes to 3 models, central lies within its own reported band', () => {
+    const dayRecords = buildMidnightBedtimeFixture(20);
+    const result = blendForecast(dayRecords, BLEND_SETTINGS, {}, true);
+    assert.strictEqual(
+      centralWithinBand(result.bedtime.min, result.bedtime.max, result.bedtime.central),
+      true,
+      `bedtime.central ${result.bedtime.central} should lie within [${result.bedtime.min}, ${result.bedtime.max}]`
+    );
   });
 });
