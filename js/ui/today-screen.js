@@ -82,9 +82,13 @@ const DEBOUNCE_MS = 300;
 const EVENT_TYPE_LABEL = Object.freeze({
   wake: 'Wake',
   bedtime: 'Bedtime',
-  // Phase 21 D-07: bedtimeAfterWake is a calculation branch for the same
-  // logged 'bedtime' event type — shares the display label with 'bedtime'.
-  bedtimeAfterWake: 'Bedtime',
+  // G-20-15 gap closure: bedtimeAfterWake is a calculation branch for the
+  // same logged 'bedtime' event type (Phase 21 D-07), but forecast.js
+  // computes bedtime and bedtimeAfterWake as genuinely separate series
+  // (bedtimePred vs bedtimeAfterWakePred) — so they now get visually
+  // distinct labels instead of sharing one, letting the Details section
+  // show the user which series a given bedtime card actually reflects.
+  bedtimeAfterWake: 'Bedtime (no nap)',
   napStart: 'Nap start',
   napEnd: 'Nap end',
 });
@@ -195,7 +199,7 @@ function renderOneHeroCard(prediction, timeFormat) {
     }));
     card.appendChild(el('p', {
       className: 'time-band',
-      textContent: 'High uncertainty — see card',
+      textContent: 'High uncertainty — see Details',
     }));
   } else {
     // Normal: central time + band
@@ -299,9 +303,11 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
     isMissed ? 'missed' : '',
   ].filter(Boolean).join(' ');
 
-  // T-21-01: data-event-type is always the fixed eventType parameter (never
-  // derived from imported/user-controlled JSON) — added for E2E targetability.
-  const card = el('div', { className: cardClass, 'data-event-type': eventType });
+  // T-21-01 (extended 20-06 / T-20-06-01): data-event-type is routed through
+  // the existing frozen LOGGABLE_EVENT_TYPE map — always one of the 4 fixed
+  // loggable event-type strings, never derived from imported/user-controlled
+  // JSON, and never the internal-only 'bedtimeAfterWake' calculation branch.
+  const card = el('div', { className: cardClass, 'data-event-type': LOGGABLE_EVENT_TYPE[eventType] ?? eventType });
 
   if (hasProbBand) {
     // UI-09 / D9-05: probability-band cards render collapsed by default.
@@ -396,9 +402,9 @@ export function renderPredictionCard(prediction, eventType, timeFormat) {
  * @returns {HTMLElement}
  */
 function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget) {
-  // T-21-01: data-event-type is always the fixed eventType parameter (never
-  // derived from imported/user-controlled JSON) — added for E2E targetability.
-  const card = el('div', { className: 'prediction-card tif-card collapsed', 'data-event-type': eventType });
+  // T-21-01 (extended 20-06 / T-20-06-01): data-event-type is routed through
+  // the existing frozen LOGGABLE_EVENT_TYPE map — see renderPredictionCard.
+  const card = el('div', { className: 'prediction-card tif-card collapsed', 'data-event-type': LOGGABLE_EVENT_TYPE[eventType] ?? eventType });
 
   const label = EVENT_TYPE_LABEL[eventType] ?? eventType;
   const centralText = prediction.central ? formatHHMM(prediction.central, timeFormat) : '—';
@@ -481,11 +487,11 @@ function renderTifNormalCard(prediction, eventType, timeFormat, precisionTarget)
  * @returns {HTMLElement}
  */
 function renderTifLowConfidenceCard(prediction, eventType, timeFormat) {
-  // T-21-01: data-event-type is always the fixed eventType parameter (never
-  // derived from imported/user-controlled JSON) — added for E2E targetability.
+  // T-21-01 (extended 20-06 / T-20-06-01): data-event-type is routed through
+  // the existing frozen LOGGABLE_EVENT_TYPE map — see renderPredictionCard.
   const card = el('div', {
     className: 'prediction-card probability-band tif-low-confidence collapsed',
-    'data-event-type': eventType,
+    'data-event-type': LOGGABLE_EVENT_TYPE[eventType] ?? eventType,
   });
 
   const rangeText = (prediction.min && prediction.max)
@@ -585,10 +591,16 @@ function findLastEvent(dayRecords) {
  *
  * When isColdStart: shows cold-start message, hides everything else.
  * Otherwise: renders 1-2 hero cards for the event type(s) nextReachableEvent()
- * determines are reachable (Phase 21 D-06/D-07/D-08), and tucks every other
- * non-dropped prediction inside a single collapsed-by-default "Later today"
- * <details> section (D-10/D-11/D-12), reusing the existing per-card renderers
- * unchanged.
+ * determines are reachable (Phase 21 D-06/D-07/D-08), and tucks every
+ * non-dropped reachable prediction type — INCLUDING the hero's own type
+ * (G-20-15 gap closure: the next predicted event always has a detail card
+ * somewhere, not just a vague hero card) — inside a single collapsed-by-
+ * default "Details" section (renamed from "Later today"; D-10/D-11/D-12),
+ * reusing the existing per-card renderers. Once nap is definitively off the
+ * table for today (napStartHiddenToday), the Details section's bedtime slot
+ * substitutes the pure no-nap-day series (predictions.bedtimeAfterWake) for
+ * the possibly-stale blended predictions.bedtime value (G-20-16 item 2),
+ * with a visually distinct label while still carrying data-event-type='bedtime'.
  *
  * @param {object}   predictions  forecast() result
  * @param {object}   settingsSnap  settings.get() snapshot
@@ -670,37 +682,43 @@ export function renderForecastSection(predictions, settingsSnap, dayRecords, nex
   const napStartHiddenToday = lastEventIsWakeOrNone
     && (napWindowClosed || currentHour >= (settingsSnap.eveningHour ?? 18));
 
-  // Hero types already rendered above — the Later-Today loop must not
-  // duplicate them. 'bedtimeAfterWake' represents the same logged event type
-  // as 'bedtime' (D-07's parenthetical), so covering it also skips 'bedtime'.
-  const heroTypes = new Set(heroEntries.map((e) => e.type));
-  if (heroTypes.has('bedtimeAfterWake')) heroTypes.add('bedtime');
-
-  // "Later today" collapsible section (D-10/D-11/D-12): no `open` attribute —
-  // matches Phase 17's DoW-section convention (native <details> collapse
-  // resets on every replaceChildren rebuild, which is fine since this section
-  // is rebuilt fresh on every render() call).
+  // "Details" collapsible section (renamed from "Later today"; D-10/D-11/
+  // D-12): no `open` attribute — matches Phase 17's DoW-section convention
+  // (native <details> collapse resets on every replaceChildren rebuild,
+  // which is fine since this section is rebuilt fresh on every render() call).
   const laterToday = el('details', { className: 'later-today-section' });
-  laterToday.appendChild(el('summary', { textContent: 'Later today' }));
+  laterToday.appendChild(el('summary', { textContent: 'Details' }));
 
   // Fixed event-type order (D3-08, UI-07 / D-16: bedtime last)
   const EVENT_TYPES = ['wake', 'napStart', 'napEnd', 'bedtime'];
   for (const type of EVENT_TYPES) {
-    if (heroTypes.has(type)) continue;
     if (type === 'napStart' && napStartHiddenToday) continue;
-    const pred = predictions[type];
+
+    // G-20-16 item 2: once nap is definitively off the table for today
+    // (napStartHiddenToday) and the classic algorithm has a real no-nap-day
+    // series, the bedtime slot substitutes bedtimeAfterWake's data (rendered
+    // under the 'bedtimeAfterWake' type so its label reads "Bedtime (no nap)")
+    // instead of the possibly-stale blended predictions.bedtime value. TIF/
+    // Algorithm C never populate predictions.bedtimeAfterWake, so this
+    // condition naturally never fires for those algorithms.
+    let renderType = type;
+    let pred = predictions[type];
+    if (type === 'bedtime' && napStartHiddenToday && predictions.bedtimeAfterWake) {
+      renderType = 'bedtimeAfterWake';
+      pred = predictions.bedtimeAfterWake;
+    }
     if (!pred) continue;
 
     if (pred.precisionScore != null || pred.isLowConfidence != null) {
       // TIF rendering path (unchanged — D-12)
       if (pred.isLowConfidence) {
-        laterToday.appendChild(renderTifLowConfidenceCard(pred, type, timeFormat));
+        laterToday.appendChild(renderTifLowConfidenceCard(pred, renderType, timeFormat));
       } else {
-        laterToday.appendChild(renderTifNormalCard(pred, type, timeFormat, settingsSnap.precisionTarget ?? 60));
+        laterToday.appendChild(renderTifNormalCard(pred, renderType, timeFormat, settingsSnap.precisionTarget ?? 60));
       }
     } else {
       // Classic rendering path (unchanged — D-12)
-      laterToday.appendChild(renderPredictionCard(pred, type, timeFormat));
+      laterToday.appendChild(renderPredictionCard(pred, renderType, timeFormat));
     }
   }
 
